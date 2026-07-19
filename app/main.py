@@ -1,0 +1,75 @@
+"""FastAPI application factory and lifespan management."""
+
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.router import create_api_router
+from app.core.config import Settings, get_settings
+from app.core.logging import get_logger, setup_logging
+from app.infrastructure.database.session import dispose_engine, get_engine
+from app.middleware.exception_handlers import register_exception_handlers
+from app.middleware.logging import RequestLoggingMiddleware
+
+logger = get_logger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Application startup and shutdown hooks."""
+    settings: Settings = app.state.settings
+    get_engine(settings)
+    logger.info(
+        "Starting %s v%s [%s]",
+        settings.app_name,
+        settings.app_version,
+        settings.environment,
+    )
+    yield
+    await dispose_engine()
+    logger.info("Shutting down %s", settings.app_name)
+
+
+def create_app(settings: Settings | None = None) -> FastAPI:
+    """Build and configure the FastAPI application."""
+    app_settings = settings or get_settings()
+    setup_logging(app_settings)
+
+    app = FastAPI(
+        title=app_settings.app_name,
+        version=app_settings.app_version,
+        description="AI-powered Healthcare Platform API",
+        docs_url="/docs" if app_settings.is_development else None,
+        redoc_url="/redoc" if app_settings.is_development else None,
+        openapi_url="/openapi.json" if app_settings.is_development else None,
+        lifespan=lifespan,
+    )
+    app.state.settings = app_settings
+
+    # CORS — configured for React web and React Native clients
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=app_settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    app.add_middleware(RequestLoggingMiddleware)
+    register_exception_handlers(app)
+    app.include_router(create_api_router(app_settings.api_v1_prefix))
+
+    @app.get("/", tags=["Root"], include_in_schema=False)
+    async def root() -> dict[str, str]:
+        return {
+            "service": app_settings.app_name,
+            "version": app_settings.app_version,
+            "docs": "/docs",
+        }
+
+    return app
+
+
+app = create_app()
