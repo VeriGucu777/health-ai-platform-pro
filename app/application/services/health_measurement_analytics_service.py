@@ -9,11 +9,18 @@ from app.application.analytics.health_measurement_analytics import (
     compute_metric_statistics,
     metrics_to_include,
 )
+from app.application.analytics.health_measurement_insights import build_insights
 from app.application.dtos.health_measurement_analytics import (
     HealthMeasurementSummaryDTO,
     HealthMeasurementTrendsDTO,
     MetricStatisticsDTO,
     PeriodSummaryDTO,
+)
+from app.application.dtos.health_measurement_insights import (
+    HealthAlertDTO,
+    HealthMeasurementInsightsDTO,
+    HealthRecommendationDTO,
+    MetricInsightDTO,
 )
 from app.application.services.base import BaseService
 from app.core.exceptions import NotFoundError, ValidationError
@@ -98,6 +105,34 @@ class HealthMeasurementAnalyticsService(BaseService):
             total_measurement_count=len(measurements),
             overall=overall,
             periods=period_summaries,
+        )
+
+    async def get_insights(
+        self,
+        owner_id: UUID,
+        *,
+        patient_id: UUID,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+    ) -> HealthMeasurementInsightsDTO:
+        measurements, resolved_from, resolved_to = await self._load_measurements(
+            owner_id,
+            patient_id=patient_id,
+            metric=None,
+            date_from=date_from,
+            date_to=date_to,
+        )
+        insight_payload = build_insights(measurements)
+        return HealthMeasurementInsightsDTO(
+            patient_id=patient_id,
+            date_from=resolved_from,
+            date_to=resolved_to,
+            overall_status=str(insight_payload["overall_status"]),
+            insights=[MetricInsightDTO(**item) for item in insight_payload["insights"]],
+            alerts=[HealthAlertDTO(**item) for item in insight_payload["alerts"]],
+            recommendations=[
+                HealthRecommendationDTO(**item) for item in insight_payload["recommendations"]
+            ],
         )
 
     async def _load_measurements(

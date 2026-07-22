@@ -23,6 +23,7 @@ EXPECTED_OPENAPI_PATHS = {
     "/api/v1/health-measurements/{health_measurement_id}",
     "/api/v1/health-measurements/analytics/summary",
     "/api/v1/health-measurements/analytics/trends",
+    "/api/v1/health-measurements/analytics/insights",
 }
 
 

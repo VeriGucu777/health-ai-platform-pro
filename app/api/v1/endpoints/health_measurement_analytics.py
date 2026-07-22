@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 
 from app.api.deps import CurrentUser, get_health_measurement_analytics_service
 from app.api.schemas.health_measurement_analytics import (
@@ -15,10 +15,17 @@ from app.api.schemas.health_measurement_analytics import (
     MetricStatisticsResponse,
     PeriodSummaryResponse,
 )
+from app.api.schemas.health_measurement_insights import (
+    HealthAlertResponse,
+    HealthMeasurementInsightsResponse,
+    HealthRecommendationResponse,
+    MetricInsightResponse,
+)
 from app.application.dtos.health_measurement_analytics import (
     HealthMeasurementSummaryDTO,
     HealthMeasurementTrendsDTO,
 )
+from app.application.dtos.health_measurement_insights import HealthMeasurementInsightsDTO
 from app.application.services.health_measurement_analytics_service import (
     HealthMeasurementAnalyticsService,
 )
@@ -118,3 +125,44 @@ async def get_health_measurement_trends(
         date_to=date_to,
     )
     return _trends_response(trends)
+
+
+def _insights_response(data: HealthMeasurementInsightsDTO) -> HealthMeasurementInsightsResponse:
+    return HealthMeasurementInsightsResponse(
+        patient_id=data.patient_id,
+        date_from=data.date_from,
+        date_to=data.date_to,
+        overall_status=data.overall_status,
+        insights=[MetricInsightResponse.model_validate(item.model_dump()) for item in data.insights],
+        alerts=[HealthAlertResponse.model_validate(item.model_dump()) for item in data.alerts],
+        recommendations=[
+            HealthRecommendationResponse.model_validate(item.model_dump())
+            for item in data.recommendations
+        ],
+        disclaimer=data.disclaimer,
+    )
+
+
+@router.get(
+    "/insights",
+    response_model=HealthMeasurementInsightsResponse,
+    summary="Get health measurement clinical insights",
+)
+async def get_health_measurement_insights(
+    current_user: CurrentUser,
+    analytics_service: Annotated[
+        HealthMeasurementAnalyticsService,
+        Depends(get_health_measurement_analytics_service),
+    ],
+    patient_id: UUID,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+) -> HealthMeasurementInsightsResponse:
+    """Return rule-based clinical insights and health alerts for one owned patient."""
+    insights = await analytics_service.get_insights(
+        current_user.id,
+        patient_id=patient_id,
+        date_from=date_from,
+        date_to=date_to,
+    )
+    return _insights_response(insights)
