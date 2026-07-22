@@ -45,3 +45,14 @@ class HealthMeasurementRepository(Repository[HealthMeasurement]):
         glucose_context: str | None = None,
     ) -> int:
         """Count health measurements belonging to the given owner."""
+
+    @abstractmethod
+    async def list_by_owner_for_analytics(
+        self,
+        owner_id: UUID,
+        *,
+        patient_id: UUID,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+    ) -> list[HealthMeasurement]:
+        """Return all measurements for analytics, ordered by measured_at ascending."""

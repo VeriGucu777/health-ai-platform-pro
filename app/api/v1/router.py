@@ -2,7 +2,15 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import appointments, auth, health, health_measurements, medical_records, patients
+from app.api.v1.endpoints import (
+    appointments,
+    auth,
+    health,
+    health_measurement_analytics,
+    health_measurements,
+    medical_records,
+    patients,
+)
 
 
 def create_api_v1_router(prefix: str = "/api/v1") -> APIRouter:
@@ -25,5 +33,10 @@ def create_api_v1_router(prefix: str = "/api/v1") -> APIRouter:
         health_measurements.router,
         prefix="/health-measurements",
         tags=["Health Measurements"],
+    )
+    api_v1_router.include_router(
+        health_measurement_analytics.router,
+        prefix="/health-measurements/analytics",
+        tags=["Health Measurement Analytics"],
     )
     return api_v1_router

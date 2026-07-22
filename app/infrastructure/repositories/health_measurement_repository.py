@@ -75,6 +75,20 @@ class SQLAlchemyHealthMeasurementRepository(
         result = await self._session.execute(stmt)
         return int(result.scalar_one())
 
+    async def list_by_owner_for_analytics(
+        self,
+        owner_id: UUID,
+        *,
+        patient_id: UUID,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+    ) -> list[HealthMeasurement]:
+        stmt = select(HealthMeasurementModel).where(HealthMeasurementModel.owner_id == owner_id)
+        stmt = self._apply_filters(stmt, patient_id, date_from, date_to, None)
+        stmt = stmt.order_by(HealthMeasurementModel.measured_at.asc())
+        result = await self._session.execute(stmt)
+        return [self._to_entity(row) for row in result.scalars().all()]
+
     def _apply_filters(
         self,
         stmt,

@@ -72,6 +72,25 @@ class InMemoryHealthMeasurementRepository(HealthMeasurementRepository):
             and (glucose_context is None or measurement.glucose_context == glucose_context)
         )
 
+    async def list_by_owner_for_analytics(
+        self,
+        owner_id: UUID,
+        *,
+        patient_id: UUID,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+    ) -> list[HealthMeasurement]:
+        owned = [
+            measurement
+            for measurement in self._health_measurements.values()
+            if measurement.owner_id == owner_id
+            and measurement.patient_id == patient_id
+            and (date_from is None or measurement.measured_at >= date_from)
+            and (date_to is None or measurement.measured_at <= date_to)
+        ]
+        owned.sort(key=lambda measurement: measurement.measured_at)
+        return owned
+
     async def create(self, entity: HealthMeasurement) -> HealthMeasurement:
         self._health_measurements[entity.id] = entity
         return entity
