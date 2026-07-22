@@ -10,13 +10,21 @@ from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.dtos.user import UserDTO
+from app.application.services.appointment_service import AppointmentService
 from app.application.services.auth_service import AuthService
+from app.application.services.health_measurement_service import HealthMeasurementService
+from app.application.services.medical_record_service import MedicalRecordService
 from app.application.services.patient_service import PatientService
 from app.core.config import Settings
 from app.core.exceptions import AppException
 from app.core.security import decode_token
 from app.domain.entities.user import UserRole
 from app.infrastructure.database.session import get_db_session
+from app.infrastructure.repositories.appointment_repository import SQLAlchemyAppointmentRepository
+from app.infrastructure.repositories.health_measurement_repository import (
+    SQLAlchemyHealthMeasurementRepository,
+)
+from app.infrastructure.repositories.medical_record_repository import SQLAlchemyMedicalRecordRepository
 from app.infrastructure.repositories.patient_repository import SQLAlchemyPatientRepository
 from app.infrastructure.repositories.user_repository import SQLAlchemyUserRepository
 
@@ -39,6 +47,36 @@ def get_patient_service(
 ) -> PatientService:
     """Provide a PatientService bound to the current request session."""
     return PatientService(SQLAlchemyPatientRepository(session))
+
+
+def get_appointment_service(
+    session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+) -> AppointmentService:
+    """Provide an AppointmentService bound to the current request session."""
+    return AppointmentService(
+        SQLAlchemyAppointmentRepository(session),
+        SQLAlchemyPatientRepository(session),
+    )
+
+
+def get_medical_record_service(
+    session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+) -> MedicalRecordService:
+    """Provide a MedicalRecordService bound to the current request session."""
+    return MedicalRecordService(
+        SQLAlchemyMedicalRecordRepository(session),
+        SQLAlchemyPatientRepository(session),
+    )
+
+
+def get_health_measurement_service(
+    session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+) -> HealthMeasurementService:
+    """Provide a HealthMeasurementService bound to the current request session."""
+    return HealthMeasurementService(
+        SQLAlchemyHealthMeasurementRepository(session),
+        SQLAlchemyPatientRepository(session),
+    )
 
 
 def get_auth_service(

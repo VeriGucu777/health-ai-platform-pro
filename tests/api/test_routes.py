@@ -15,6 +15,12 @@ EXPECTED_OPENAPI_PATHS = {
     "/api/v1/auth/admin/ping",
     "/api/v1/patients",
     "/api/v1/patients/{patient_id}",
+    "/api/v1/appointments",
+    "/api/v1/appointments/{appointment_id}",
+    "/api/v1/medical-records",
+    "/api/v1/medical-records/{medical_record_id}",
+    "/api/v1/health-measurements",
+    "/api/v1/health-measurements/{health_measurement_id}",
 }
 
 
