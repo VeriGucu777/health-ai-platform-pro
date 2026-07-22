@@ -19,10 +19,10 @@ python -m venv .venv
 .venv\Scripts\activate        # Windows
 pip install -r requirements-dev.txt
 cp .env.example .env          # edit values as needed
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --port 8001
 ```
 
-API docs: http://localhost:8000/docs
+API docs: http://localhost:8001/docs
 
 ## Project Structure
 
