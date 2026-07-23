@@ -20,7 +20,7 @@ async def test_readiness_check(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_root(client: AsyncClient) -> None:
-    response = await client.get("/")
-    assert response.status_code == 200
-    assert "service" in response.json()
+async def test_root_redirects_to_docs(client: AsyncClient) -> None:
+    response = await client.get("/", follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers["location"] == "/docs"
