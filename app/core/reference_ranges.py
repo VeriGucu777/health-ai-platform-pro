@@ -62,6 +62,34 @@ REPORT_PDF_DISCLAIMER = (
     "for medical decisions."
 )
 
+DIABETES_RISK_DISCLAIMER = (
+    "This diabetes risk assessment is an informational model output based on recorded data. "
+    "It is not a medical diagnosis, does not confirm or rule out diabetes, and does not "
+    "provide medication or treatment advice. The risk score and level are estimates that "
+    "must be interpreted by a qualified healthcare professional as part of a full clinical "
+    "evaluation."
+)
+
+DIABETES_RISK_MODERATE_SCORE_MIN = 34
+DIABETES_RISK_ELEVATED_SCORE_MIN = 67
+
+HEART_DISEASE_RISK_DISCLAIMER = (
+    "This heart disease risk assessment is an informational model output based on recorded data. "
+    "It is not a medical diagnosis, does not confirm or rule out heart disease, and does not "
+    "provide medication or treatment advice. The risk score and level are estimates that must "
+    "be interpreted by a qualified healthcare professional as part of a full clinical evaluation."
+)
+
+STROKE_RISK_DISCLAIMER = (
+    "This stroke risk assessment is an informational model output based on recorded data. "
+    "It is not a medical diagnosis, does not confirm or rule out stroke, and does not provide "
+    "medication or treatment advice. The risk score and level are estimates that must be "
+    "interpreted by a qualified healthcare professional as part of a full clinical evaluation."
+)
+
+RISK_MODERATE_SCORE_MIN = 34
+RISK_ELEVATED_SCORE_MIN = 67
+
 REPORT_STATISTICS_METRICS: tuple[str, ...] = (
     "blood_glucose",
     "systolic_pressure",

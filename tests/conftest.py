@@ -7,14 +7,21 @@ from starlette.requests import Request
 from app.api.deps import (
     get_appointment_service,
     get_auth_service,
+    get_diabetes_risk_assessment_service,
+    get_heart_disease_risk_assessment_service,
     get_health_measurement_analytics_service,
     get_health_measurement_service,
     get_medical_record_service,
     get_patient_health_report_service,
     get_patient_service,
+    get_stroke_risk_assessment_service,
 )
 from app.application.services.appointment_service import AppointmentService
 from app.application.services.auth_service import AuthService
+from app.application.services.diabetes_risk_assessment_service import DiabetesRiskAssessmentService
+from app.application.services.heart_disease_risk_assessment_service import (
+    HeartDiseaseRiskAssessmentService,
+)
 from app.application.services.health_measurement_analytics_service import (
     HealthMeasurementAnalyticsService,
 )
@@ -22,6 +29,7 @@ from app.application.services.health_measurement_service import HealthMeasuremen
 from app.application.services.medical_record_service import MedicalRecordService
 from app.application.services.patient_health_report_service import PatientHealthReportService
 from app.application.services.patient_service import PatientService
+from app.application.services.stroke_risk_assessment_service import StrokeRiskAssessmentService
 from app.core.config import Settings, get_settings
 from app.infrastructure.database.session import reset_database_engine
 from app.main import create_app
@@ -122,6 +130,29 @@ async def client(
             HealthMeasurementAnalyticsService(health_measurement_repository, patient_repository),
         )
 
+    def override_diabetes_risk_assessment_service(_request: Request) -> DiabetesRiskAssessmentService:
+        return DiabetesRiskAssessmentService(
+            patient_repository,
+            health_measurement_repository,
+            medical_record_repository,
+        )
+
+    def override_heart_disease_risk_assessment_service(
+        _request: Request,
+    ) -> HeartDiseaseRiskAssessmentService:
+        return HeartDiseaseRiskAssessmentService(
+            patient_repository,
+            health_measurement_repository,
+            medical_record_repository,
+        )
+
+    def override_stroke_risk_assessment_service(_request: Request) -> StrokeRiskAssessmentService:
+        return StrokeRiskAssessmentService(
+            patient_repository,
+            health_measurement_repository,
+            medical_record_repository,
+        )
+
     app.dependency_overrides[get_auth_service] = override_auth_service
     app.dependency_overrides[get_patient_service] = override_patient_service
     app.dependency_overrides[get_appointment_service] = override_appointment_service
@@ -132,6 +163,15 @@ async def client(
     )
     app.dependency_overrides[get_patient_health_report_service] = (
         override_patient_health_report_service
+    )
+    app.dependency_overrides[get_diabetes_risk_assessment_service] = (
+        override_diabetes_risk_assessment_service
+    )
+    app.dependency_overrides[get_heart_disease_risk_assessment_service] = (
+        override_heart_disease_risk_assessment_service
+    )
+    app.dependency_overrides[get_stroke_risk_assessment_service] = (
+        override_stroke_risk_assessment_service
     )
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

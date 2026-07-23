@@ -12,6 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.application.dtos.user import UserDTO
 from app.application.services.appointment_service import AppointmentService
 from app.application.services.auth_service import AuthService
+from app.application.services.diabetes_risk_assessment_service import DiabetesRiskAssessmentService
+from app.application.services.heart_disease_risk_assessment_service import (
+    HeartDiseaseRiskAssessmentService,
+)
 from app.application.services.health_measurement_analytics_service import (
     HealthMeasurementAnalyticsService,
 )
@@ -19,6 +23,7 @@ from app.application.services.health_measurement_service import HealthMeasuremen
 from app.application.services.medical_record_service import MedicalRecordService
 from app.application.services.patient_service import PatientService
 from app.application.services.patient_health_report_service import PatientHealthReportService
+from app.application.services.stroke_risk_assessment_service import StrokeRiskAssessmentService
 from app.core.config import Settings
 from app.core.exceptions import AppException
 from app.core.security import decode_token
@@ -80,6 +85,39 @@ def get_health_measurement_service(
     return HealthMeasurementService(
         SQLAlchemyHealthMeasurementRepository(session),
         SQLAlchemyPatientRepository(session),
+    )
+
+
+def get_stroke_risk_assessment_service(
+    session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+) -> StrokeRiskAssessmentService:
+    """Provide a StrokeRiskAssessmentService bound to the current request session."""
+    return StrokeRiskAssessmentService(
+        SQLAlchemyPatientRepository(session),
+        SQLAlchemyHealthMeasurementRepository(session),
+        SQLAlchemyMedicalRecordRepository(session),
+    )
+
+
+def get_heart_disease_risk_assessment_service(
+    session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+) -> HeartDiseaseRiskAssessmentService:
+    """Provide a HeartDiseaseRiskAssessmentService bound to the current request session."""
+    return HeartDiseaseRiskAssessmentService(
+        SQLAlchemyPatientRepository(session),
+        SQLAlchemyHealthMeasurementRepository(session),
+        SQLAlchemyMedicalRecordRepository(session),
+    )
+
+
+def get_diabetes_risk_assessment_service(
+    session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+) -> DiabetesRiskAssessmentService:
+    """Provide a DiabetesRiskAssessmentService bound to the current request session."""
+    return DiabetesRiskAssessmentService(
+        SQLAlchemyPatientRepository(session),
+        SQLAlchemyHealthMeasurementRepository(session),
+        SQLAlchemyMedicalRecordRepository(session),
     )
 
 

@@ -5,12 +5,15 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     appointments,
     auth,
+    diabetes_risk_assessment,
     health,
+    heart_disease_risk_assessment,
     health_measurement_analytics,
     health_measurements,
     medical_records,
     patient_health_reports,
     patients,
+    stroke_risk_assessment,
 )
 
 
@@ -24,6 +27,21 @@ def create_api_v1_router(prefix: str = "/api/v1") -> APIRouter:
         patient_health_reports.router,
         prefix="/patients",
         tags=["Patient Health Reports"],
+    )
+    api_v1_router.include_router(
+        diabetes_risk_assessment.router,
+        prefix="/patients",
+        tags=["Diabetes Risk Assessment"],
+    )
+    api_v1_router.include_router(
+        heart_disease_risk_assessment.router,
+        prefix="/patients",
+        tags=["Heart Disease Risk Assessment"],
+    )
+    api_v1_router.include_router(
+        stroke_risk_assessment.router,
+        prefix="/patients",
+        tags=["Stroke Risk Assessment"],
     )
     api_v1_router.include_router(
         appointments.router,
