@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     health_measurement_analytics,
     health_measurements,
     medical_records,
+    patient_health_reports,
     patients,
 )
 
@@ -19,6 +20,11 @@ def create_api_v1_router(prefix: str = "/api/v1") -> APIRouter:
     api_v1_router.include_router(health.router, tags=["Health"])
     api_v1_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
     api_v1_router.include_router(patients.router, prefix="/patients", tags=["Patients"])
+    api_v1_router.include_router(
+        patient_health_reports.router,
+        prefix="/patients",
+        tags=["Patient Health Reports"],
+    )
     api_v1_router.include_router(
         appointments.router,
         prefix="/appointments",

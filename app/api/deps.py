@@ -18,6 +18,7 @@ from app.application.services.health_measurement_analytics_service import (
 from app.application.services.health_measurement_service import HealthMeasurementService
 from app.application.services.medical_record_service import MedicalRecordService
 from app.application.services.patient_service import PatientService
+from app.application.services.patient_health_report_service import PatientHealthReportService
 from app.core.config import Settings
 from app.core.exceptions import AppException
 from app.core.security import decode_token
@@ -89,6 +90,22 @@ def get_health_measurement_analytics_service(
     return HealthMeasurementAnalyticsService(
         SQLAlchemyHealthMeasurementRepository(session),
         SQLAlchemyPatientRepository(session),
+    )
+
+
+def get_patient_health_report_service(
+    patient_service: Annotated[PatientService, Depends(get_patient_service)],
+    medical_record_service: Annotated[MedicalRecordService, Depends(get_medical_record_service)],
+    analytics_service: Annotated[
+        HealthMeasurementAnalyticsService,
+        Depends(get_health_measurement_analytics_service),
+    ],
+) -> PatientHealthReportService:
+    """Provide a PatientHealthReportService composed from existing read-only services."""
+    return PatientHealthReportService(
+        patient_service,
+        medical_record_service,
+        analytics_service,
     )
 
 

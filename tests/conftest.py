@@ -10,6 +10,7 @@ from app.api.deps import (
     get_health_measurement_analytics_service,
     get_health_measurement_service,
     get_medical_record_service,
+    get_patient_health_report_service,
     get_patient_service,
 )
 from app.application.services.appointment_service import AppointmentService
@@ -19,6 +20,7 @@ from app.application.services.health_measurement_analytics_service import (
 )
 from app.application.services.health_measurement_service import HealthMeasurementService
 from app.application.services.medical_record_service import MedicalRecordService
+from app.application.services.patient_health_report_service import PatientHealthReportService
 from app.application.services.patient_service import PatientService
 from app.core.config import Settings, get_settings
 from app.infrastructure.database.session import reset_database_engine
@@ -113,6 +115,13 @@ async def client(
     ) -> HealthMeasurementAnalyticsService:
         return HealthMeasurementAnalyticsService(health_measurement_repository, patient_repository)
 
+    def override_patient_health_report_service(_request: Request) -> PatientHealthReportService:
+        return PatientHealthReportService(
+            PatientService(patient_repository),
+            MedicalRecordService(medical_record_repository, patient_repository),
+            HealthMeasurementAnalyticsService(health_measurement_repository, patient_repository),
+        )
+
     app.dependency_overrides[get_auth_service] = override_auth_service
     app.dependency_overrides[get_patient_service] = override_patient_service
     app.dependency_overrides[get_appointment_service] = override_appointment_service
@@ -120,6 +129,9 @@ async def client(
     app.dependency_overrides[get_health_measurement_service] = override_health_measurement_service
     app.dependency_overrides[get_health_measurement_analytics_service] = (
         override_health_measurement_analytics_service
+    )
+    app.dependency_overrides[get_patient_health_report_service] = (
+        override_patient_health_report_service
     )
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

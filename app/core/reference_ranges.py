@@ -55,6 +55,23 @@ INSIGHTS_DISCLAIMER = (
     "If severe symptoms are present, follow local emergency guidance."
 )
 
+REPORT_PDF_DISCLAIMER = (
+    "This patient health report is an informational summary generated from recorded "
+    "data. It is not a diagnosis, treatment recommendation, emergency assessment, "
+    "or official clinical document. Always consult a qualified healthcare professional "
+    "for medical decisions."
+)
+
+REPORT_STATISTICS_METRICS: tuple[str, ...] = (
+    "blood_glucose",
+    "systolic_pressure",
+    "diastolic_pressure",
+    "heart_rate",
+    "weight_kg",
+)
+
+MAX_MEDICAL_RECORDS_IN_REPORT = 100
+
 METRIC_REFERENCE_RANGES: dict[str, MetricReferenceRange] = {
     "blood_glucose": MetricReferenceRange(
         lower=Decimal("70"),
