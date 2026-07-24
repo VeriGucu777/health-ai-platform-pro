@@ -11,6 +11,7 @@ from app.api.router import create_api_router
 from app.core.config import Settings, get_settings
 from app.core.logging import get_logger, setup_logging
 from app.infrastructure.database.session import dispose_engine, get_engine
+from app.middleware.auth_rate_limit import AuthRateLimiter
 from app.middleware.exception_handlers import register_exception_handlers
 from app.middleware.logging import RequestLoggingMiddleware
 
@@ -35,7 +36,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Build and configure the FastAPI application."""
+    from app.core.jwt_settings import validate_settings_security
+
     app_settings = settings or get_settings()
+    if settings is not None:
+        validate_settings_security(app_settings)
     setup_logging(app_settings)
 
     app = FastAPI(
@@ -48,6 +53,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.settings = app_settings
+    app.state.auth_rate_limiter = AuthRateLimiter()
 
     # CORS — configured for React web and React Native clients
     app.add_middleware(

@@ -26,7 +26,7 @@ from app.application.services.patient_health_report_service import PatientHealth
 from app.application.services.stroke_risk_assessment_service import StrokeRiskAssessmentService
 from app.core.config import Settings
 from app.core.exceptions import AppException
-from app.core.security import decode_token
+from app.core.security import decode_and_validate_token
 from app.domain.entities.user import UserRole
 from app.infrastructure.database.session import get_db_session
 from app.infrastructure.repositories.appointment_repository import SQLAlchemyAppointmentRepository
@@ -173,18 +173,11 @@ async def get_current_user_id(
         )
 
     try:
-        payload = decode_token(credentials.credentials, settings)
-        if payload.get("type") != "access":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token type",
-            )
-        user_id_str: str | None = payload.get("sub")
-        if user_id_str is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token payload",
-            )
+        user_id_str = decode_and_validate_token(
+            credentials.credentials,
+            expected_type="access",
+            settings=settings,
+        )
         return UUID(user_id_str)
     except (JWTError, ValueError) as exc:
         raise HTTPException(

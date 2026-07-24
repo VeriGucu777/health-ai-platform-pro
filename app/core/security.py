@@ -7,6 +7,7 @@ import bcrypt
 from jose import JWTError, jwt
 
 from app.core.config import Settings, get_settings
+from app.core.token_validation import validate_token_claims
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -62,10 +63,22 @@ def decode_token(token: str, settings: Settings | None = None) -> dict[str, Any]
     return jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
 
 
+def decode_and_validate_token(
+    token: str,
+    *,
+    expected_type: str,
+    settings: Settings | None = None,
+) -> str:
+    """Decode a JWT and validate type/subject claims. Returns the subject."""
+    payload = decode_token(token, settings)
+    return validate_token_claims(payload, expected_type=expected_type)
+
+
 __all__ = [
     "JWTError",
     "create_access_token",
     "create_refresh_token",
+    "decode_and_validate_token",
     "decode_token",
     "hash_password",
     "verify_password",

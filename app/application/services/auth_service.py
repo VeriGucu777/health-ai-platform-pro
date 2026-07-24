@@ -11,7 +11,7 @@ from app.core.exceptions import ConflictError, ForbiddenError, UnauthorizedError
 from app.core.security import (
     create_access_token,
     create_refresh_token,
-    decode_token,
+    decode_and_validate_token,
     hash_password,
     verify_password,
 )
@@ -104,26 +104,22 @@ class AuthService(BaseService):
         expected_type: str,
     ) -> User:
         try:
-            payload = decode_token(token, self._settings)
+            user_id_str = decode_and_validate_token(
+                token,
+                expected_type=expected_type,
+                settings=self._settings,
+            )
         except JWTError as exc:
             raise UnauthorizedError("Invalid or expired token") from exc
-
-        token_type = payload.get("type")
-        if token_type != expected_type:
-            raise UnauthorizedError(f"Invalid token type: expected {expected_type}")
-
-        user_id_str = payload.get("sub")
-        if user_id_str is None:
-            raise UnauthorizedError("Invalid token payload")
 
         try:
             user_id = UUID(user_id_str)
         except ValueError as exc:
-            raise UnauthorizedError("Invalid token subject") from exc
+            raise UnauthorizedError("Invalid or expired token") from exc
 
         user = await self._users.get_by_id(user_id)
         if user is None:
-            raise UnauthorizedError("User not found")
+            raise UnauthorizedError("Invalid or expired token")
 
         if not user.is_active:
             raise ForbiddenError("Account is deactivated")

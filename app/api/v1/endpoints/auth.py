@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 
 from app.api.deps import CurrentUser, get_auth_service, require_roles
+from app.middleware.auth_rate_limit import auth_rate_limit
 from app.api.schemas.auth import (
     LoginRequest,
     LogoutRequest,
@@ -31,6 +32,7 @@ def _user_response(user: UserDTO) -> UserResponse:
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
     summary="User registration",
+    dependencies=[Depends(auth_rate_limit("register"))],
 )
 async def register(
     body: RegisterRequest,
@@ -51,6 +53,7 @@ async def register(
     "/login",
     response_model=TokenResponse,
     summary="User login",
+    dependencies=[Depends(auth_rate_limit("login"))],
 )
 async def login(
     body: LoginRequest,
@@ -65,6 +68,7 @@ async def login(
     "/refresh",
     response_model=TokenResponse,
     summary="Refresh access token",
+    dependencies=[Depends(auth_rate_limit("refresh"))],
 )
 async def refresh_token(
     body: RefreshTokenRequest,

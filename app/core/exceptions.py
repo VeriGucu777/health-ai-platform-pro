@@ -52,3 +52,14 @@ class ConflictError(AppException):
 
     def __init__(self, message: str = "Conflict", **kwargs: Any) -> None:
         super().__init__(message, status_code=409, **kwargs)
+
+
+class RateLimitExceededError(AppException):
+    """Too many requests from the same client."""
+
+    def __init__(
+        self,
+        message: str = "Too many requests. Please try again later.",
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(message, status_code=429, **kwargs)

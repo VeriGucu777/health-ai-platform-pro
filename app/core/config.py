@@ -59,6 +59,21 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
+    # Authentication rate limiting
+    auth_rate_limit_enabled: bool = Field(default=True, alias="AUTH_RATE_LIMIT_ENABLED")
+    auth_login_rate_limit: int = Field(default=10, alias="AUTH_LOGIN_RATE_LIMIT")
+    auth_login_rate_window_seconds: int = Field(default=60, alias="AUTH_LOGIN_RATE_WINDOW_SECONDS")
+    auth_refresh_rate_limit: int = Field(default=20, alias="AUTH_REFRESH_RATE_LIMIT")
+    auth_refresh_rate_window_seconds: int = Field(
+        default=60,
+        alias="AUTH_REFRESH_RATE_WINDOW_SECONDS",
+    )
+    auth_register_rate_limit: int = Field(default=5, alias="AUTH_REGISTER_RATE_LIMIT")
+    auth_register_rate_window_seconds: int = Field(
+        default=60,
+        alias="AUTH_REGISTER_RATE_WINDOW_SECONDS",
+    )
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, value: str | list[str]) -> list[str]:
@@ -83,4 +98,8 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     """Cached settings instance — import via dependency injection in routes."""
-    return Settings()
+    settings = Settings()
+    from app.core.jwt_settings import validate_settings_security
+
+    validate_settings_security(settings)
+    return settings
