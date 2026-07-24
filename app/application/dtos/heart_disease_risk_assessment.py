@@ -5,26 +5,17 @@ from uuid import UUID
 
 from app.application.dtos.base import BaseSchema
 from app.application.dtos.health_measurement_insights import HealthRecommendationDTO
+from app.application.dtos.risk_assessment_shared import (
+    ContributingFactorDTO,
+    MissingInputDTO,
+)
 from app.core.reference_ranges import HEART_DISEASE_RISK_DISCLAIMER
 
-
-class MissingInputDTO(BaseSchema):
-    """One required or optional input that is absent or incomplete."""
-
-    input: str
-    reason: str
-    impact: str
-
-
-class ContributingFactorDTO(BaseSchema):
-    """One explainable factor derived from supplied inputs."""
-
-    factor: str
-    status: str
-    severity: str
-    weight: float
-    message: str
-    source: str
+__all__ = [
+    "ContributingFactorDTO",
+    "HeartDiseaseRiskAssessmentDTO",
+    "MissingInputDTO",
+]
 
 
 class HeartDiseaseRiskAssessmentDTO(BaseSchema):
