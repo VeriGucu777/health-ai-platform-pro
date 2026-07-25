@@ -11,6 +11,7 @@ from app.api.v1.endpoints import (
     health_measurement_analytics,
     health_measurements,
     medical_records,
+    metrics,
     patient_health_reports,
     patients,
     stroke_risk_assessment,
@@ -21,6 +22,7 @@ def create_api_v1_router(prefix: str = "/api/v1") -> APIRouter:
     """Build the v1 API router with a configurable prefix."""
     api_v1_router = APIRouter(prefix=prefix)
     api_v1_router.include_router(health.router, tags=["Health"])
+    api_v1_router.include_router(metrics.router, tags=["Observability"])
     api_v1_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
     api_v1_router.include_router(patients.router, prefix="/patients", tags=["Patients"])
     api_v1_router.include_router(

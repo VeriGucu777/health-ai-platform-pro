@@ -49,6 +49,9 @@ def test_settings() -> Settings:
         DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/health_ai_test",
         JWT_SECRET_KEY="test-secret-key-for-unit-tests-only",
         AUTH_RATE_LIMIT_ENABLED=False,
+        HEALTH_CHECK_DB_ENABLED=False,
+        METRICS_ENABLED=False,
+        SLOW_REQUEST_THRESHOLD_MS=0,
     )
 
 

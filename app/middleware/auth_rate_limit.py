@@ -10,6 +10,11 @@ from fastapi import Request
 
 from app.core.config import Settings
 from app.core.exceptions import RateLimitExceededError
+from app.core.logging import get_security_audit_logger
+from app.middleware.logging import truncate_client_ip_for_audit
+from app.observability.metrics import record_auth_rate_limit_block
+
+_audit_logger = get_security_audit_logger()
 
 
 class AuthRateLimiter:
@@ -59,12 +64,24 @@ def auth_rate_limit(scope: str) -> Callable[..., None]:
 
         limiter: AuthRateLimiter = request.app.state.auth_rate_limiter
         limits = _limits_for_scope(settings, scope)
-        limiter.check(
-            scope=scope,
-            client_key=get_client_ip(request),
-            max_requests=limits[0],
-            window_seconds=limits[1],
-        )
+        client_key = get_client_ip(request)
+        try:
+            limiter.check(
+                scope=scope,
+                client_key=client_key,
+                max_requests=limits[0],
+                window_seconds=limits[1],
+            )
+        except RateLimitExceededError:
+            request_id = getattr(request.state, "request_id", None)
+            _audit_logger.warning(
+                "Auth rate limit exceeded scope=%s client=%s request_id=%s",
+                scope,
+                truncate_client_ip_for_audit(client_key),
+                request_id,
+            )
+            record_auth_rate_limit_block(scope=scope)
+            raise
 
     return _enforce
 
