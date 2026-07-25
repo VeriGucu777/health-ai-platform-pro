@@ -1,0 +1,103 @@
+name: Backend CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  ENVIRONMENT: development
+  JWT_SECRET_KEY: test-secret-key-for-ci-only-minimum-length
+  AUTH_RATE_LIMIT_ENABLED: "false"
+  DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/health_ai_test
+
+jobs:
+  validate-and-unit-tests:
+    name: Validate & Unit/API Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Python compile check
+        run: python -m compileall app tests alembic -q
+
+      - name: Python import check
+        run: python -c "import app.main"
+
+      - name: Whitespace and conflict marker check (pull request)
+        if: github.event_name == 'pull_request'
+        run: git diff --check "origin/${{ github.base_ref }}"...HEAD
+
+      - name: Whitespace and conflict marker check (push)
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        run: git diff --check "${{ github.event.before }}" "${{ github.sha }}"
+
+      - name: Conflict marker scan (initial push fallback)
+        if: github.event_name == 'push' && github.event.before == '0000000000000000000000000000000000000000'
+        run: |
+          set -euo pipefail
+          if git grep -I -n -E '^(<<<<<<<|=======|>>>>>>>)' -- .; then
+            echo "Conflict markers found in repository."
+            exit 1
+          fi
+          echo "No conflict markers found."
+
+      - name: Unit and API tests
+        run: pytest tests/api tests/unit -v --tb=short
+
+  postgresql-integration-tests:
+    name: PostgreSQL Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Verify integration test suite is present
+        run: |
+          set -euo pipefail
+          if [ ! -f tests/integration/conftest.py ]; then
+            echo "PostgreSQL integration tests were not found (expected tests/integration/conftest.py)."
+            echo "Ensure WS2 integration tests are merged into this branch."
+            exit 1
+          fi
+
+      - name: PostgreSQL integration tests (Testcontainers)
+        run: pytest tests/integration -m integration -v --tb=short
