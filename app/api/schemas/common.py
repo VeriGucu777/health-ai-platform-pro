@@ -31,3 +31,4 @@ class ErrorResponse(BaseModel):
     success: bool = False
     message: str
     details: dict | None = None
+    request_id: str | None = None

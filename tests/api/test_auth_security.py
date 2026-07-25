@@ -44,6 +44,8 @@ def rate_limited_settings() -> Settings:
         AUTH_REFRESH_RATE_LIMIT=2,
         AUTH_REFRESH_RATE_WINDOW_SECONDS=60,
         AUTH_REGISTER_RATE_LIMIT=10,
+        HEALTH_CHECK_DB_ENABLED=False,
+        METRICS_ENABLED=False,
     )
 
 

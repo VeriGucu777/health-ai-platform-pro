@@ -58,6 +58,16 @@ class Settings(BaseSettings):
 
     # Logging
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    log_format: Literal["text", "json"] = Field(default="text", alias="LOG_FORMAT")
+
+    # Observability
+    metrics_enabled: bool = Field(default=False, alias="METRICS_ENABLED")
+    slow_request_threshold_ms: int = Field(default=1000, alias="SLOW_REQUEST_THRESHOLD_MS")
+    health_check_db_enabled: bool = Field(default=True, alias="HEALTH_CHECK_DB_ENABLED")
+    health_check_db_timeout_seconds: float = Field(
+        default=2.0,
+        alias="HEALTH_CHECK_DB_TIMEOUT_SECONDS",
+    )
 
     # Authentication rate limiting
     auth_rate_limit_enabled: bool = Field(default=True, alias="AUTH_RATE_LIMIT_ENABLED")
