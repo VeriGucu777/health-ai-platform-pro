@@ -7,6 +7,15 @@ from pydantic import Field, PostgresDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def normalize_database_url(url: str) -> str:
+    """Normalize DATABASE_URL to postgresql+asyncpg:// for the async runtime."""
+    if url.startswith("postgres://"):
+        return f"postgresql+asyncpg://{url[len('postgres://'):]}"
+    if url.startswith("postgresql://"):
+        return f"postgresql+asyncpg://{url[len('postgresql://'):]}"
+    return url
+
+
 class Settings(BaseSettings):
     """Central configuration — single source of truth for all env vars."""
 
@@ -73,6 +82,13 @@ class Settings(BaseSettings):
         default=60,
         alias="AUTH_REGISTER_RATE_WINDOW_SECONDS",
     )
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalize_database_url_field(cls, value: str) -> str:
+        if isinstance(value, str):
+            return normalize_database_url(value)
+        return value
 
     @field_validator("cors_origins", mode="before")
     @classmethod
