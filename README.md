@@ -45,6 +45,30 @@ Required production environment variables:
 
 Readiness may return HTTP 503 when PostgreSQL is unavailable.
 
+## Testing
+
+```powershell
+pytest tests/ -v
+```
+
+| Suite | Tests |
+|---|---|
+| Full suite | 277 |
+| API + unit (CI job 1) | 245 |
+| Integration (CI job 2) | 32 |
+
+API + unit tests use in-memory repositories and do not require PostgreSQL. Integration tests require Docker (Testcontainers).
+
+## Documentation
+
+| Document | Description |
+|---|---|
+| [docs/API_INVENTORY.md](docs/API_INVENTORY.md) | Complete route inventory (37 HTTP routes) |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Render deployment runbook |
+| [docs/TOKEN_REVOCATION.md](docs/TOKEN_REVOCATION.md) | Deferred token revocation design |
+| [../PROJECT_STATUS.md](../PROJECT_STATUS.md) | Feature matrix, schema, roadmap |
+| [../ARCHITECTURE.md](../ARCHITECTURE.md) | Architecture reference |
+
 ## Project Structure
 
 See the architecture explanation in the repository root documentation.
