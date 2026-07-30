@@ -7,6 +7,7 @@ from httpx import AsyncClient
 
 from tests.support.pdf_report_helpers import (
     assert_disclaimers_present,
+    assert_english_content_present,
     assert_turkish_content_present,
     extract_pdf_text,
     normalize_pdf_text,
@@ -87,6 +88,7 @@ async def test_generate_report_returns_valid_pdf(client: AsyncClient) -> None:
     assert f'patient-health-report-{patient_id}.pdf' in response.headers["content-disposition"]
 
     assert_turkish_content_present(response.content, _pdf_text(response.content))
+    assert_english_content_present(_pdf_text(response.content))
     assert_disclaimers_present(response.content)
 
 

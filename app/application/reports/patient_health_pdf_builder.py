@@ -5,21 +5,17 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 from io import BytesIO
-from pathlib import Path
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from app.application.dtos.patient_health_report import PatientHealthReportContextDTO
+from app.application.reports.pdf_fonts import PDF_FONT_NAME, ensure_pdf_unicode_font_registered
 from app.core.reference_ranges import REPORT_STATISTICS_METRICS
 
-FONT_PATH = Path(__file__).resolve().parents[2] / "assets" / "fonts" / "NotoSans-Regular.ttf"
-FONT_NAME = "NotoSans"
 MAX_TREND_ROWS = 10
 
 METRIC_LABELS_TR = {
@@ -47,7 +43,7 @@ RANGE_LABELS_TR = {
 
 def build_patient_health_pdf(context: PatientHealthReportContextDTO) -> bytes:
     """Render the patient health report PDF and return raw bytes."""
-    _ensure_font_registered()
+    font_name = ensure_pdf_unicode_font_registered()
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -59,7 +55,7 @@ def build_patient_health_pdf(context: PatientHealthReportContextDTO) -> bytes:
         title="Patient Health Report",
     )
 
-    styles = _build_styles()
+    styles = _build_styles(font_name)
     story: list = []
 
     story.append(Paragraph("Health AI Platform Pro", styles["title"]))
@@ -87,23 +83,18 @@ def build_patient_health_pdf(context: PatientHealthReportContextDTO) -> bytes:
     return buffer.getvalue()
 
 
-def _ensure_font_registered() -> None:
-    if FONT_NAME not in pdfmetrics.getRegisteredFontNames():
-        pdfmetrics.registerFont(TTFont(FONT_NAME, str(FONT_PATH)))
-
-
-def _build_styles() -> dict[str, ParagraphStyle]:
+def _build_styles(font_name: str) -> dict[str, ParagraphStyle]:
     return {
         "title": ParagraphStyle(
             "title",
-            fontName=FONT_NAME,
+            fontName=font_name,
             fontSize=16,
             leading=20,
             spaceAfter=6,
         ),
         "heading": ParagraphStyle(
             "heading",
-            fontName=FONT_NAME,
+            fontName=font_name,
             fontSize=13,
             leading=16,
             spaceBefore=10,
@@ -112,14 +103,14 @@ def _build_styles() -> dict[str, ParagraphStyle]:
         ),
         "body": ParagraphStyle(
             "body",
-            fontName=FONT_NAME,
+            fontName=font_name,
             fontSize=10,
             leading=14,
             spaceAfter=4,
         ),
         "small": ParagraphStyle(
             "small",
-            fontName=FONT_NAME,
+            fontName=font_name,
             fontSize=9,
             leading=12,
             spaceAfter=3,
@@ -127,7 +118,7 @@ def _build_styles() -> dict[str, ParagraphStyle]:
         ),
         "disclaimer": ParagraphStyle(
             "disclaimer",
-            fontName=FONT_NAME,
+            fontName=font_name,
             fontSize=9,
             leading=12,
             spaceAfter=6,
@@ -215,7 +206,7 @@ def _medical_records_section(
     table.setStyle(
         TableStyle(
             [
-                ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
+                ("FONTNAME", (0, 0), (-1, -1), PDF_FONT_NAME),
                 ("FONTSIZE", (0, 0), (-1, -1), 8),
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E5E7EB")),
                 ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
@@ -283,7 +274,7 @@ def _statistics_section(
     table.setStyle(
         TableStyle(
             [
-                ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
+                ("FONTNAME", (0, 0), (-1, -1), PDF_FONT_NAME),
                 ("FONTSIZE", (0, 0), (-1, -1), 8),
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E5E7EB")),
                 ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
@@ -330,7 +321,7 @@ def _trends_section(
     table.setStyle(
         TableStyle(
             [
-                ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
+                ("FONTNAME", (0, 0), (-1, -1), PDF_FONT_NAME),
                 ("FONTSIZE", (0, 0), (-1, -1), 8),
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E5E7EB")),
                 ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
