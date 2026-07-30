@@ -1,7 +1,10 @@
 """Unit tests for patient health PDF builder."""
 
 from datetime import UTC, date, datetime
+from pathlib import Path
 from uuid import uuid4
+
+import pytest
 
 from app.application.dtos.health_measurement_analytics import (
     HealthMeasurementSummaryDTO,
@@ -17,8 +20,15 @@ from app.application.dtos.medical_record import MedicalRecordDTO
 from app.application.dtos.patient import PatientDTO
 from app.application.dtos.patient_health_report import PatientHealthReportContextDTO
 from app.application.reports.patient_health_pdf_builder import build_patient_health_pdf
+from app.application.reports.pdf_fonts import PdfFontUnavailableError, validate_pdf_font_available
 from app.core.reference_ranges import REPORT_PDF_DISCLAIMER
-from tests.support.pdf_report_helpers import assert_disclaimers_present, extract_pdf_text
+from tests.support.pdf_report_helpers import (
+    assert_disclaimers_present,
+    assert_english_content_present,
+    assert_pdf_has_unicode_font_embedding,
+    assert_turkish_content_present,
+    extract_pdf_text,
+)
 
 
 def _patient(*, first_name: str = "Şahin", last_name: str = "Öğüt") -> PatientDTO:
@@ -117,8 +127,43 @@ def test_build_pdf_starts_with_pdf_signature() -> None:
 def test_build_pdf_contains_turkish_characters() -> None:
     pdf_bytes = build_patient_health_pdf(_context())
     text = extract_pdf_text(pdf_bytes)
-    assert "Şahin" in text or "Hasta Bilgileri" in text
-    assert b"/Font" in pdf_bytes
+    assert_turkish_content_present(pdf_bytes, text)
+    assert "Şahin" in text
+    assert "Öğüt" in text
+    assert "Türkçe karakter testi" in text
+
+
+def test_build_pdf_contains_english_content() -> None:
+    pdf_bytes = build_patient_health_pdf(_context())
+    text = extract_pdf_text(pdf_bytes)
+    assert_english_content_present(text)
+    assert "Add more health measurements over time" in text
+
+
+def test_build_pdf_contains_mixed_english_and_turkish_content() -> None:
+    pdf_bytes = build_patient_health_pdf(_context())
+    text = extract_pdf_text(pdf_bytes)
+    assert_turkish_content_present(pdf_bytes, text)
+    assert_english_content_present(text)
+    assert "Hasta Sağlık Raporu" in text
+    assert_pdf_has_unicode_font_embedding(pdf_bytes)
+
+
+def test_build_pdf_fails_when_font_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.application.reports import pdf_fonts
+
+    missing_path = Path("/tmp/health-ai-platform-pro-missing-noto.ttf")
+
+    def _missing_font_path() -> Path:
+        return missing_path
+
+    monkeypatch.setattr(pdf_fonts, "resolve_pdf_font_path", _missing_font_path)
+
+    with pytest.raises(PdfFontUnavailableError) as exc_info:
+        validate_pdf_font_available()
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.details["expected_filename"] == "NotoSans-Regular.ttf"
 
 
 def test_build_pdf_contains_mandatory_disclaimers() -> None:

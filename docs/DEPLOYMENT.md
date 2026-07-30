@@ -97,8 +97,13 @@ bash scripts/start_production.sh
 
 Review existing Render dashboard values before changing build, start, or health-check configuration. Match documented commands to the live service to avoid deployment disruption.
 
+### PDF reports
+
+Patient health PDF reports require the bundled Unicode font at `app/assets/fonts/NotoSans-Regular.ttf` (see [FONTS.md](FONTS.md)). Ensure production deployments use a full repository checkout that includes this file and `OFL.txt`.
+
 ## Related Documentation
 
 - [TOKEN_REVOCATION.md](TOKEN_REVOCATION.md) — token lifecycle and future revocation options
+- [FONTS.md](FONTS.md) — bundled PDF Unicode font requirements
 - [../README.md](../README.md) — backend quick start and deployment summary
 - [../.env.example](../.env.example) — environment variable reference

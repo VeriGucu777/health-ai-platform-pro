@@ -63,6 +63,7 @@ API + unit tests use in-memory repositories and do not require PostgreSQL. Integ
 
 | Document | Description |
 |---|---|
+| [docs/FONTS.md](docs/FONTS.md) | Bundled PDF Unicode font requirements |
 | [docs/API_INVENTORY.md](docs/API_INVENTORY.md) | Complete route inventory (37 HTTP routes) |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Render deployment runbook |
 | [docs/TOKEN_REVOCATION.md](docs/TOKEN_REVOCATION.md) | Deferred token revocation design |

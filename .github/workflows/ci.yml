@@ -66,6 +66,12 @@ jobs:
           fi
           echo "No conflict markers found."
 
+      - name: Verify bundled PDF font assets
+        run: |
+          set -euo pipefail
+          test -f app/assets/fonts/NotoSans-Regular.ttf
+          test -f app/assets/fonts/OFL.txt
+
       - name: Unit and API tests
         run: pytest tests/api tests/unit -v --tb=short
 
