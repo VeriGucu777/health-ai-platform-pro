@@ -2,9 +2,9 @@
 
 Authoritative inventory of FastAPI routes in Health AI Platform Pro. Generated from the registered routers in `backend/app/api/v1/router.py` and `backend/app/main.py`.
 
-**Last synchronized:** 2026-07-28  
-**Base prefix:** `/api/v1` (configurable via `API_V1_PREFIX`)  
-**Route totals:** 36 `/api/v1` handlers + 1 root handler = **37 HTTP routes**  
+**Last synchronized:** 2026-07-28
+**Base prefix:** `/api/v1` (configurable via `API_V1_PREFIX`)
+**Route totals:** 36 `/api/v1` handlers + 1 root handler = **37 HTTP routes**
 **OpenAPI paths (development):** 23 path templates (some expose multiple methods)
 
 > **Note:** `GET /api/v1/metrics` is registered but excluded from OpenAPI (`include_in_schema=False`) and returns 404 unless `METRICS_ENABLED=true`.
