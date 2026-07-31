@@ -73,3 +73,9 @@ API + unit tests use in-memory repositories and do not require PostgreSQL. Integ
 ## Project Structure
 
 See the architecture explanation in the repository root documentation.
+
+## Frontend
+
+The `frontend/` folder contains a Phase 1A Next.js scaffold (TypeScript, App Router, Tailwind CSS) with landing, login, and register placeholder pages. See [frontend/README.md](frontend/README.md) for installation, environment variables, and local development.
+
+The API is configured for cross-origin requests from local development servers (`localhost:3000`, `localhost:5173`). Full authentication integration and Turkish localization are planned for later phases.
