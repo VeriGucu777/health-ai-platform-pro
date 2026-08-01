@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { getCommonContent } from "@/lib/i18n/content";
+import { useLocale } from "@/lib/i18n/use-locale";
 
 type NavigationProps = {
   orientation?: "horizontal" | "vertical";
@@ -14,7 +14,7 @@ export function Navigation({
   onNavigate,
 }: NavigationProps) {
   const pathname = usePathname();
-  const content = getCommonContent();
+  const { content } = useLocale();
 
   const items = [
     { href: "/", label: content.nav.home },
@@ -31,7 +31,7 @@ export function Navigation({
     const isActive = pathname === href;
 
     return [
-      "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+      "inline-flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
       isActive
         ? "bg-brand-50 text-brand-800"
         : "text-text-secondary hover:bg-brand-50 hover:text-brand-800",
@@ -39,7 +39,7 @@ export function Navigation({
   };
 
   return (
-    <nav aria-label="Primary">
+    <nav aria-label="Primary" className="min-w-0">
       <ul className={listClasses} role="list">
         {items.map((item) => (
           <li key={item.href}>

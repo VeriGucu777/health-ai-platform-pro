@@ -39,10 +39,15 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   background-color: var(--color-surface);
   color: var(--color-text-primary);
   font-family: var(--font-sans);
+  overflow-x: hidden;
 }
 
 *:focus-visible {

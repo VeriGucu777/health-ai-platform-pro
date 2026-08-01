@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
+import { SkipLink } from "@/components/layout/SkipLink";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { getCommonContent } from "@/lib/i18n/content";
 import "./globals.css";
 
@@ -11,14 +13,14 @@ const inter = Inter({
   display: "swap",
 });
 
-const content = getCommonContent();
+const defaultContent = getCommonContent();
 
 export const metadata: Metadata = {
   title: {
-    default: content.brandName,
-    template: `%s | ${content.brandName}`,
+    default: defaultContent.brandName,
+    template: `%s | ${defaultContent.brandName}`,
   },
-  description: content.brandTagline,
+  description: defaultContent.brandTagline,
 };
 
 export default function RootLayout({
@@ -27,16 +29,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} min-h-screen antialiased`}>
-        <a href="#main-content" className="skip-link">
-          {content.nav.skipToContent}
-        </a>
-        <div className="flex min-h-screen flex-col">
-          <Header />
-          <div className="flex-1">{children}</div>
-          <Footer />
-        </div>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.variable} min-h-screen overflow-x-hidden antialiased`}>
+        <LocaleProvider>
+          <SkipLink />
+          <div className="flex min-h-screen min-w-0 flex-col">
+            <Header />
+            <div className="min-w-0 flex-1">{children}</div>
+            <Footer />
+          </div>
+        </LocaleProvider>
       </body>
     </html>
   );

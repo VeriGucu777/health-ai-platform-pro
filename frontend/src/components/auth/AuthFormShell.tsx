@@ -1,23 +1,37 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { useLocale } from "@/lib/i18n/use-locale";
 
 type AuthFormShellProps = {
-  title: string;
-  description: string;
+  mode: "login" | "register";
   children: ReactNode;
 };
 
-export function AuthFormShell({ title, description, children }: AuthFormShellProps) {
+export function AuthFormShell({ mode, children }: AuthFormShellProps) {
+  const { content } = useLocale();
+  const title =
+    mode === "login" ? content.auth.loginTitle : content.auth.registerTitle;
+  const description =
+    mode === "login"
+      ? content.auth.loginDescription
+      : content.auth.registerDescription;
+
   return (
-    <main id="main-content" className="py-10 sm:py-16">
+    <main id="main-content" className="min-w-0 overflow-x-hidden py-8 sm:py-12 lg:py-16">
       <PageContainer narrow>
-        <div className="mx-auto rounded-2xl border border-border bg-white p-6 shadow-sm sm:p-8">
+        <div className="mx-auto w-full min-w-0 rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-6 lg:p-8">
           <header className="space-y-2 text-center sm:text-left">
-            <h1 className="text-2xl font-bold text-text-primary">{title}</h1>
-            <p className="text-sm text-text-secondary">{description}</p>
+            <h1 className="break-words text-2xl font-bold text-text-primary sm:text-3xl">
+              {title}
+            </h1>
+            <p className="break-words text-sm text-text-secondary sm:text-base">
+              {description}
+            </p>
           </header>
 
-          <div className="mt-8 space-y-6">{children}</div>
+          <div className="mt-6 space-y-6 sm:mt-8">{children}</div>
         </div>
       </PageContainer>
     </main>
