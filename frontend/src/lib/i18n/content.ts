@@ -1,7 +1,14 @@
-import { commonContent } from "@/content/en/common";
+import {
+  DEFAULT_LOCALE,
+  getLocaleDefinition,
+  getRegisteredLocales,
+} from "@/lib/i18n/registry";
+import type { SupportedLocale } from "@/lib/i18n/locale";
+import type { CommonContent } from "@/lib/i18n/types";
 
-/** Resolves localized copy. Phase 1A returns English only; extend for Turkish later. */
-export function getCommonContent(locale?: string) {
-  void locale;
-  return commonContent;
+/** Resolves localized messages for a locale, falling back to English. */
+export function getCommonContent(locale: SupportedLocale = DEFAULT_LOCALE): CommonContent {
+  return getLocaleDefinition(locale).messages;
 }
+
+export { DEFAULT_LOCALE, getRegisteredLocales };

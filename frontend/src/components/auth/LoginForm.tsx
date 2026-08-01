@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { FormInput } from "@/components/ui/FormInput";
-import { getCommonContent } from "@/lib/i18n/content";
+import { useLocale } from "@/lib/i18n/use-locale";
 
 export function LoginForm() {
-  const content = getCommonContent();
+  const { content } = useLocale();
 
   return (
     <>
@@ -38,7 +38,7 @@ export function LoginForm() {
 
         <p
           id="login-phase-notice"
-          className="rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-900"
+          className="break-words rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-900"
         >
           {content.auth.phaseNotice}
         </p>
@@ -48,7 +48,7 @@ export function LoginForm() {
         </Button>
       </form>
 
-      <p className="text-center text-sm text-text-secondary">
+      <p className="break-words text-center text-sm text-text-secondary">
         {content.auth.noAccount}{" "}
         <Link href="/register" className="font-medium text-brand-700 hover:text-brand-800">
           {content.nav.register}

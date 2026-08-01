@@ -1,4 +1,6 @@
-export const commonContent = {
+import type { CommonContent } from "@/lib/i18n/types";
+
+export const commonContent: CommonContent = {
   brandName: "Health AI Platform Pro",
   brandTagline: "Clinical decision-support for modern care teams",
   nav: {
@@ -6,6 +8,11 @@ export const commonContent = {
     login: "Sign in",
     register: "Create account",
     skipToContent: "Skip to main content",
+    openMenu: "Open menu",
+    closeMenu: "Close menu",
+  },
+  language: {
+    switcherLabel: "Language",
   },
   footer: {
     tagline: "Secure healthcare decision-support software.",
@@ -19,6 +26,7 @@ export const commonContent = {
     },
   },
   landing: {
+    badge: "Healthcare SaaS foundation",
     heroTitle: "Smarter clinical workflows, built for care teams",
     heroDescription:
       "Coordinate patient records, health insights, and risk assessments in one secure workspace designed for healthcare professionals.",
@@ -67,8 +75,8 @@ export const commonContent = {
     noAccount: "Need an account?",
     hasAccount: "Already have an account?",
     phaseNotice:
-      "Phase 1A preview: this form is presentation-only and does not submit credentials.",
+      "Preview: this form is presentation-only and does not submit credentials.",
   },
-} as const;
+};
 
-export type CommonContent = typeof commonContent;
+export type { CommonContent };
