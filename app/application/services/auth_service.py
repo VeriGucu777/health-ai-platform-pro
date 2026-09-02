@@ -11,10 +11,11 @@ from app.core.exceptions import ConflictError, ForbiddenError, UnauthorizedError
 from app.core.security import (
     create_access_token,
     create_refresh_token,
-    decode_and_validate_token,
+    decode_token,
     hash_password,
     verify_password,
 )
+from app.core.token_validation import validate_token_claims, validate_token_version
 from app.domain.entities.user import User, UserRole
 from app.domain.interfaces.user_repository import UserRepository
 from app.infrastructure.repositories.user_repository import normalize_email
@@ -73,8 +74,17 @@ class AuthService(BaseService):
         return self._build_token_pair(user)
 
     async def logout(self, refresh_token: str) -> None:
-        """Validate refresh token — client must discard tokens after logout."""
-        await self._validate_token_user(refresh_token, expected_type="refresh")
+        """Invalidate outstanding tokens by incrementing the user's token_version."""
+        user = await self._validate_token_user(refresh_token, expected_type="refresh")
+        await self._users.increment_token_version(user.id)
+
+    async def validate_access_token(self, access_token: str) -> UUID:
+        """Decode an access token and verify it has not been revoked."""
+        user_id = await self._validate_token_subject(
+            access_token,
+            expected_type="access",
+        )
+        return user_id
 
     async def get_current_user(self, user_id: UUID) -> UserDTO:
         user = await self._users.get_by_id(user_id)
@@ -93,9 +103,41 @@ class AuthService(BaseService):
                 user.id,
                 settings=self._settings,
                 extra_claims=extra_claims,
+                token_version=user.token_version,
             ),
-            refresh_token=create_refresh_token(user.id, settings=self._settings),
+            refresh_token=create_refresh_token(
+                user.id,
+                settings=self._settings,
+                token_version=user.token_version,
+            ),
         )
+
+    async def _validate_token_subject(
+        self,
+        token: str,
+        *,
+        expected_type: str,
+    ) -> UUID:
+        try:
+            payload = decode_token(token, self._settings)
+            user_id_str = validate_token_claims(payload, expected_type=expected_type)
+            user_id = UUID(user_id_str)
+        except (JWTError, ValueError) as exc:
+            raise UnauthorizedError("Invalid or expired token") from exc
+
+        user = await self._users.get_by_id(user_id)
+        if user is None:
+            raise UnauthorizedError("Invalid or expired token")
+
+        try:
+            validate_token_version(payload, user.token_version)
+        except JWTError as exc:
+            raise UnauthorizedError("Invalid or expired token") from exc
+
+        if not user.is_active:
+            raise ForbiddenError("Account is deactivated")
+
+        return user_id
 
     async def _validate_token_user(
         self,
@@ -103,25 +145,8 @@ class AuthService(BaseService):
         *,
         expected_type: str,
     ) -> User:
-        try:
-            user_id_str = decode_and_validate_token(
-                token,
-                expected_type=expected_type,
-                settings=self._settings,
-            )
-        except JWTError as exc:
-            raise UnauthorizedError("Invalid or expired token") from exc
-
-        try:
-            user_id = UUID(user_id_str)
-        except ValueError as exc:
-            raise UnauthorizedError("Invalid or expired token") from exc
-
+        user_id = await self._validate_token_subject(token, expected_type=expected_type)
         user = await self._users.get_by_id(user_id)
         if user is None:
             raise UnauthorizedError("Invalid or expired token")
-
-        if not user.is_active:
-            raise ForbiddenError("Account is deactivated")
-
         return user

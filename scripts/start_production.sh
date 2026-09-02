@@ -6,7 +6,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 HOST="${HOST:-0.0.0.0}"
-PORT="${PORT:-8000}"
+PORT="${PORT:-8001}"
 
 echo "Starting ${APP_NAME:-Health AI Platform Pro} on ${HOST}:${PORT}..."
 exec uvicorn app.main:app --host "${HOST}" --port "${PORT}"

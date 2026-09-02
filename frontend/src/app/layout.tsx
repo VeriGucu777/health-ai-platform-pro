@@ -4,6 +4,7 @@ import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { SkipLink } from "@/components/layout/SkipLink";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
+import { AuthProvider } from "@/lib/auth/AuthProvider";
 import { getCommonContent } from "@/lib/i18n/content";
 import "./globals.css";
 
@@ -32,12 +33,14 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} min-h-screen overflow-x-hidden antialiased`}>
         <LocaleProvider>
-          <SkipLink />
-          <div className="flex min-h-screen min-w-0 flex-col">
-            <Header />
-            <div className="min-w-0 flex-1">{children}</div>
-            <Footer />
-          </div>
+          <AuthProvider>
+            <SkipLink />
+            <div className="flex min-h-screen min-w-0 flex-col">
+              <Header />
+              <div className="min-w-0 flex-1">{children}</div>
+              <Footer />
+            </div>
+          </AuthProvider>
         </LocaleProvider>
       </body>
     </html>

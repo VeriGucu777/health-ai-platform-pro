@@ -53,6 +53,14 @@ export type CommonContent = {
     noAccount: string;
     hasAccount: string;
     phaseNotice: string;
+    firstNameLabel: string;
+    firstNamePlaceholder: string;
+    lastNameLabel: string;
+    lastNamePlaceholder: string;
+    passwordMismatch: string;
+    genericError: string;
+    logout: string;
+    signedInAs: string;
   };
 };
 

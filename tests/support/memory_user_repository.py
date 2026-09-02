@@ -51,3 +51,12 @@ class InMemoryUserRepository(UserRepository):
     async def list_all(self, *, offset: int = 0, limit: int = 100) -> list[User]:
         users = list(self._users.values())
         return users[offset : offset + limit]
+
+    async def increment_token_version(self, user_id: UUID) -> User:
+        user = self._users.get(user_id)
+        if user is None:
+            msg = "User not found"
+            raise ValueError(msg)
+        user.token_version += 1
+        user.touch()
+        return user

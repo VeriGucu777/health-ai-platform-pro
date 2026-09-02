@@ -59,11 +59,9 @@ export const commonContent: CommonContent = {
   },
   auth: {
     loginTitle: "Sign in",
-    loginDescription:
-      "Access your workspace. Authentication will connect to the FastAPI backend in a later phase.",
+    loginDescription: "Access your workspace with your Health AI Platform Pro account.",
     registerTitle: "Create account",
-    registerDescription:
-      "Register a professional account. Account creation will connect to the FastAPI backend in a later phase.",
+    registerDescription: "Register a professional account to access the platform.",
     emailLabel: "Email address",
     emailPlaceholder: "you@clinic.example",
     passwordLabel: "Password",
@@ -74,8 +72,15 @@ export const commonContent: CommonContent = {
     registerSubmit: "Create account",
     noAccount: "Need an account?",
     hasAccount: "Already have an account?",
-    phaseNotice:
-      "Preview: this form is presentation-only and does not submit credentials.",
+    phaseNotice: "",
+    firstNameLabel: "First name",
+    firstNamePlaceholder: "Jane",
+    lastNameLabel: "Last name",
+    lastNamePlaceholder: "Doe",
+    passwordMismatch: "Passwords do not match.",
+    genericError: "Something went wrong. Please try again.",
+    logout: "Sign out",
+    signedInAs: "Signed in as",
   },
 };
 

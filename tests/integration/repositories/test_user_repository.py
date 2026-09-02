@@ -62,6 +62,19 @@ async def test_delete_user(user_repository: SQLAlchemyUserRepository, db_session
     assert await user_repository.get_by_id(created.id) is None
 
 
+async def test_increment_token_version(user_repository: SQLAlchemyUserRepository, db_session):
+    created = await user_repository.create(make_user(email="token-version@example.test"))
+    await db_session.commit()
+
+    updated = await user_repository.increment_token_version(created.id)
+    await db_session.commit()
+
+    assert updated.token_version == 1
+    loaded = await user_repository.get_by_id(created.id)
+    assert loaded is not None
+    assert loaded.token_version == 1
+
+
 async def test_duplicate_email_raises_integrity_error(
     user_repository: SQLAlchemyUserRepository,
     db_session,

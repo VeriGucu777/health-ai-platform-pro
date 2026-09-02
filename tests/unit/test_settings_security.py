@@ -44,9 +44,14 @@ def test_non_development_rejects_short_jwt_secret(environment: str) -> None:
 
 @pytest.mark.parametrize("environment", ["staging", "production"])
 def test_non_development_accepts_strong_jwt_secret(environment: str) -> None:
-    settings = Settings(
-        ENVIRONMENT=environment,
-        JWT_SECRET_KEY="a-unique-production-secret-with-sufficient-length",
-    )
+    settings_kwargs: dict[str, object] = {
+        "ENVIRONMENT": environment,
+        "JWT_SECRET_KEY": "a-unique-production-secret-with-sufficient-length",
+    }
+    if environment == "production":
+        settings_kwargs["DEBUG"] = False
+        settings_kwargs["CORS_ORIGINS"] = ["https://app.example.com"]
+
+    settings = Settings(**settings_kwargs)
     validate_settings_security(settings)
     assert settings.environment == environment

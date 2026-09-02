@@ -26,7 +26,6 @@ from app.application.services.patient_health_report_service import PatientHealth
 from app.application.services.stroke_risk_assessment_service import StrokeRiskAssessmentService
 from app.core.config import Settings
 from app.core.exceptions import AppException
-from app.core.security import decode_and_validate_token
 from app.domain.entities.user import UserRole
 from app.infrastructure.database.session import get_db_session
 from app.infrastructure.repositories.appointment_repository import SQLAlchemyAppointmentRepository
@@ -162,7 +161,7 @@ AppSettings = Annotated[Settings, Depends(get_app_settings)]
 
 async def get_current_user_id(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)],
-    settings: AppSettings,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> UUID:
     """Extract and validate the authenticated user ID from a JWT access token."""
     if credentials is None:
@@ -173,12 +172,9 @@ async def get_current_user_id(
         )
 
     try:
-        user_id_str = decode_and_validate_token(
-            credentials.credentials,
-            expected_type="access",
-            settings=settings,
-        )
-        return UUID(user_id_str)
+        return await auth_service.validate_access_token(credentials.credentials)
+    except AppException as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     except (JWTError, ValueError) as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -1,47 +1,69 @@
-"""In-memory rate limiting for sensitive authentication endpoints."""
+"""Rate limiting for sensitive authentication endpoints."""
 
 from __future__ import annotations
 
-import time
-from collections import defaultdict
 from collections.abc import Callable
 
 from fastapi import Request
 
 from app.core.config import Settings
 from app.core.exceptions import RateLimitExceededError
-from app.core.logging import get_security_audit_logger
+from app.core.logging import get_logger, get_security_audit_logger
+from app.middleware.auth_rate_limit_backend import (
+    AuthRateLimiterBackend,
+    MemoryAuthRateLimiterBackend,
+    create_auth_rate_limiter_backend,
+)
 from app.middleware.logging import truncate_client_ip_for_audit
 from app.observability.metrics import record_auth_rate_limit_block
 
 _audit_logger = get_security_audit_logger()
+_logger = get_logger(__name__)
 
 
 class AuthRateLimiter:
-    """Process-local sliding-window limiter keyed by endpoint scope and client IP."""
+    """Facade over memory or Redis rate limiter backends."""
 
-    def __init__(self) -> None:
-        self._requests: dict[tuple[str, str], list[float]] = defaultdict(list)
+    def __init__(self, backend: AuthRateLimiterBackend | None = None) -> None:
+        self._backend = backend or MemoryAuthRateLimiterBackend()
+
+    @classmethod
+    def from_settings(cls, settings: Settings) -> "AuthRateLimiter":
+        allow_fallback = settings.environment == "development"
+        backend = create_auth_rate_limiter_backend(
+            backend=settings.auth_rate_limit_backend,
+            redis_url=settings.redis_url,
+            allow_memory_fallback=allow_fallback,
+        )
+        if (
+            settings.auth_rate_limit_backend == "redis"
+            and settings.redis_url
+            and isinstance(backend, MemoryAuthRateLimiterBackend)
+            and allow_fallback
+        ):
+            _logger.warning(
+                "Redis rate limiter unavailable; falling back to in-memory limiter for development",
+            )
+        return cls(backend)
 
     def reset(self) -> None:
         """Clear all counters — useful for deterministic tests."""
-        self._requests.clear()
+        self._backend.reset()
 
-    def check(self, *, scope: str, client_key: str, max_requests: int, window_seconds: int) -> None:
-        """Raise RateLimitExceededError when the client exceeds the configured limit."""
-        if max_requests <= 0:
-            return
-
-        now = time.monotonic()
-        key = (scope, client_key)
-        window_start = now - window_seconds
-        recent = [timestamp for timestamp in self._requests[key] if timestamp > window_start]
-
-        if len(recent) >= max_requests:
-            raise RateLimitExceededError()
-
-        recent.append(now)
-        self._requests[key] = recent
+    def check(
+        self,
+        *,
+        scope: str,
+        client_key: str,
+        max_requests: int,
+        window_seconds: int,
+    ) -> None:
+        self._backend.check(
+            scope=scope,
+            client_key=client_key,
+            max_requests=max_requests,
+            window_seconds=window_seconds,
+        )
 
 
 def get_client_ip(request: Request) -> str:

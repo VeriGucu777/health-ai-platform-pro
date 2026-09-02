@@ -40,7 +40,7 @@ def jwt_secret_validation_error(environment: str) -> str:
 
 
 def validate_settings_security(settings: "Settings") -> None:
-    """Reject insecure JWT configuration outside development."""
+    """Reject insecure JWT and production configuration outside development."""
     from app.core.config import Settings
 
     if not isinstance(settings, Settings):
@@ -50,6 +50,17 @@ def validate_settings_security(settings: "Settings") -> None:
         settings.jwt_secret_key,
     ):
         raise ValueError(jwt_secret_validation_error(settings.environment))
+
+    if settings.is_production:
+        if settings.debug:
+            raise ValueError("DEBUG must be false in production")
+        for origin in settings.cors_origins:
+            lowered = origin.lower()
+            if "localhost" in lowered or "127.0.0.1" in lowered:
+                raise ValueError(
+                    "CORS_ORIGINS must not include localhost or 127.0.0.1 in production. "
+                    "Set explicit frontend origins via the CORS_ORIGINS environment variable.",
+                )
 
 
 if TYPE_CHECKING:

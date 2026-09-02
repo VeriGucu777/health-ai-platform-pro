@@ -59,11 +59,9 @@ export const commonContent: CommonContent = {
   },
   auth: {
     loginTitle: "Giriş yap",
-    loginDescription:
-      "Çalışma alanınıza erişin. Kimlik doğrulama sonraki aşamada FastAPI backend'e bağlanacaktır.",
+    loginDescription: "Health AI Platform Pro hesabınızla çalışma alanınıza erişin.",
     registerTitle: "Hesap oluştur",
-    registerDescription:
-      "Profesyonel bir hesap oluşturun. Hesap oluşturma sonraki aşamada FastAPI backend'e bağlanacaktır.",
+    registerDescription: "Platforma erişmek için profesyonel bir hesap oluşturun.",
     emailLabel: "E-posta adresi",
     emailPlaceholder: "siz@klinik.ornek",
     passwordLabel: "Şifre",
@@ -74,7 +72,14 @@ export const commonContent: CommonContent = {
     registerSubmit: "Hesap oluştur",
     noAccount: "Hesabınız yok mu?",
     hasAccount: "Zaten hesabınız var mı?",
-    phaseNotice:
-      "Önizleme: Bu form yalnızca sunum amaçlıdır ve kimlik bilgilerini göndermez.",
+    phaseNotice: "",
+    firstNameLabel: "Ad",
+    firstNamePlaceholder: "Ayşe",
+    lastNameLabel: "Soyad",
+    lastNamePlaceholder: "Yılmaz",
+    passwordMismatch: "Şifreler eşleşmiyor.",
+    genericError: "Bir hata oluştu. Lütfen tekrar deneyin.",
+    logout: "Çıkış yap",
+    signedInAs: "Oturum açan",
   },
 };
