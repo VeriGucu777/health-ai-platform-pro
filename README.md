@@ -42,6 +42,7 @@ Required production environment variables:
 - `DATABASE_URL` (Render `postgres://` URLs are normalized automatically)
 - `JWT_SECRET_KEY` (unique, at least 32 characters)
 - `CORS_ORIGINS` (comma-separated frontend origins)
+- `AUTH_RATE_LIMIT_BACKEND=redis` and `REDIS_URL` for production rate limiting across instances
 
 Readiness may return HTTP 503 when PostgreSQL is unavailable.
 
@@ -133,4 +134,4 @@ See the architecture explanation in the repository root documentation.
 
 The `frontend/` folder contains a Phase 1A Next.js scaffold (TypeScript, App Router, Tailwind CSS) with landing, login, and register placeholder pages. See [frontend/README.md](frontend/README.md) for installation, environment variables, and local development.
 
-The API is configured for cross-origin requests from local development servers (`localhost:3000`, `localhost:5173`). Full authentication integration and Turkish localization are planned for later phases.
+The API is configured for cross-origin requests from local development servers (`localhost:3000`, `127.0.0.1:3000`, `localhost:5173`). The Next.js frontend connects to `/api/v1/auth/*` endpoints for login, registration, logout, and token refresh.

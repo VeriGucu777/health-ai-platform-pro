@@ -21,7 +21,7 @@ def validate_token_claims(payload: dict[str, Any], *, expected_type: str) -> str
 
 
 def extract_token_version(payload: dict[str, Any]) -> int:
-    """Return the token version claim used for server-side revocation."""
+    """Return the token version claim used for server-side revocation (legacy ``tv`` claim)."""
     if "tv" not in payload:
         raise JWTError("Invalid token payload")
 
@@ -33,3 +33,23 @@ def extract_token_version(payload: dict[str, Any]) -> int:
         raise JWTError("Invalid token payload")
 
     return token_version
+
+
+def _token_version_from_payload(payload: dict[str, Any]) -> int:
+    if "token_version" in payload:
+        claim = payload["token_version"]
+    elif "tv" in payload:
+        claim = payload["tv"]
+    else:
+        raise JWTError("Invalid token payload")
+    if isinstance(claim, bool) or not isinstance(claim, int):
+        raise JWTError("Invalid token payload")
+    if claim < 0:
+        raise JWTError("Invalid token payload")
+    return claim
+
+
+def validate_token_version(payload: dict[str, Any], user_token_version: int) -> None:
+    """Ensure the JWT token version claim matches the user's current version."""
+    if int(_token_version_from_payload(payload)) != user_token_version:
+        raise JWTError("Token revoked")

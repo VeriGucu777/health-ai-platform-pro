@@ -27,7 +27,4 @@ export type HealthResponse = {
   environment?: string;
 };
 
-/** Example read-only endpoint for future connectivity checks. Not used in Phase 1A UI. */
-export async function fetchHealthStatus(): Promise<HealthResponse> {
-  return apiClient.get<HealthResponse>("/health");
-}
+export { fetchHealthStatus } from "@/lib/auth/api";

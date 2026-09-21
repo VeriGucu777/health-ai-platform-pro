@@ -1,4 +1,4 @@
-import type { CommonContent } from "@/lib/i18n/types";
+﻿import type { CommonContent } from "@/lib/i18n/types";
 
 export const commonContent: CommonContent = {
   brandName: "Health AI Platform Pro",
@@ -15,7 +15,7 @@ export const commonContent: CommonContent = {
     closeMenu: "Close menu",
   },
   common: {
-    loading: "Loading…",
+    loading: "LoadingÔÇĞ",
     error: "Something went wrong.",
     retry: "Try again",
     back: "Back",
@@ -88,10 +88,15 @@ export const commonContent: CommonContent = {
     phaseNotice:
       "Decision-support only. Do not enter real patient identifiers in demo environments.",
     firstNameLabel: "First name",
+    firstNamePlaceholder: "Jane",
     lastNameLabel: "Last name",
+    lastNamePlaceholder: "Doe",
     loginError: "Sign in failed. Check your email and password.",
     registerError: "Registration failed. Try a different email or stronger password.",
     passwordMismatch: "Passwords do not match.",
+    genericError: "Something went wrong. Please try again.",
+    logout: "Sign out",
+    signedInAs: "Signed in as",
   },
   patients: {
     title: "Patients",

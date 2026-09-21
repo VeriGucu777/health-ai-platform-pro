@@ -2,24 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { Navigation } from "@/components/layout/Navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { useAuth } from "@/lib/auth/AuthProvider";
+import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/lib/i18n/use-locale";
-import { useRouter } from "next/navigation";
 
 export function Header() {
   const { content } = useLocale();
-  const { logout } = useAuth();
-  const router = useRouter();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
-    setMobileOpen(false);
-  };
 
   useEffect(() => {
     if (!mobileOpen) {
@@ -38,6 +31,46 @@ export function Header() {
       document.removeEventListener("keydown", handleEscape);
     };
   }, [mobileOpen]);
+
+  const authActions = isLoading ? null : isAuthenticated && user ? (
+    <div className="flex min-w-0 items-center gap-2">
+      <span className="hidden max-w-[12rem] truncate text-sm text-text-secondary md:inline">
+        {content.auth.signedInAs} {user.first_name}
+      </span>
+      <Button variant="ghost" size="sm" onClick={() => void logout()}>
+        {content.auth.logout}
+      </Button>
+    </div>
+  ) : (
+    <div className="flex shrink-0 items-center gap-2">
+      <Button href="/login" variant="ghost" size="sm">
+        {content.nav.login}
+      </Button>
+      <Button href="/register" size="sm">
+        {content.nav.register}
+      </Button>
+    </div>
+  );
+
+  const mobileAuthActions = isLoading ? null : isAuthenticated && user ? (
+    <div className="space-y-2">
+      <p className="break-words text-sm text-text-secondary">
+        {content.auth.signedInAs} {user.first_name} {user.last_name}
+      </p>
+      <Button variant="secondary" fullWidth onClick={() => void logout()}>
+        {content.auth.logout}
+      </Button>
+    </div>
+  ) : (
+    <div className="flex flex-col gap-2">
+      <Button href="/login" variant="secondary" fullWidth>
+        {content.nav.login}
+      </Button>
+      <Button href="/register" fullWidth>
+        {content.nav.register}
+      </Button>
+    </div>
+  );
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur">
@@ -64,9 +97,10 @@ export function Header() {
           </Link>
         </div>
 
-        <div className="hidden min-w-0 flex-wrap items-center justify-end gap-3 lg:flex lg:gap-5">
-          <Navigation onLogout={handleLogout} />
+        <div className="hidden min-w-0 items-center gap-4 lg:flex lg:gap-6">
+          <Navigation />
           <LanguageSwitcher />
+          {authActions}
         </div>
 
         <div className="flex shrink-0 items-center gap-2 lg:hidden">
@@ -85,16 +119,10 @@ export function Header() {
       </PageContainer>
 
       {mobileOpen ? (
-        <div
-          id="mobile-navigation"
-          className="border-t border-border bg-white lg:hidden"
-        >
-          <PageContainer className="py-4">
-            <Navigation
-              orientation="vertical"
-              onNavigate={() => setMobileOpen(false)}
-              onLogout={handleLogout}
-            />
+        <div id="mobile-navigation" className="border-t border-border bg-white lg:hidden">
+          <PageContainer className="space-y-4 py-4">
+            <Navigation orientation="vertical" onNavigate={() => setMobileOpen(false)} />
+            {mobileAuthActions}
           </PageContainer>
         </div>
       ) : null}

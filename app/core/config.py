@@ -1,10 +1,10 @@
 """Application settings loaded from environment variables."""
 
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, PostgresDsn, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 def normalize_database_url(url: str) -> str:
@@ -38,7 +38,7 @@ class Settings(BaseSettings):
 
     # Server
     host: str = Field(default="0.0.0.0", alias="HOST")
-    port: int = Field(default=8000, alias="PORT")
+    port: int = Field(default=8001, alias="PORT")
     uvicorn_workers: int = Field(default=1, alias="UVICORN_WORKERS")
 
     # Database
@@ -61,11 +61,11 @@ class Settings(BaseSettings):
     )
 
     # CORS
-    cors_origins: list[str] = Field(
+    cors_origins: Annotated[list[str], NoDecode] = Field(
         default=[
             "http://localhost:3000",
-            "http://localhost:5173",
             "http://127.0.0.1:3000",
+            "http://localhost:5173",
             "http://127.0.0.1:5173",
         ],
         alias="CORS_ORIGINS",
@@ -98,6 +98,13 @@ class Settings(BaseSettings):
         default=60,
         alias="AUTH_REGISTER_RATE_WINDOW_SECONDS",
     )
+
+    # Rate limiting backend
+    auth_rate_limit_backend: Literal["memory", "redis"] = Field(
+        default="memory",
+        alias="AUTH_RATE_LIMIT_BACKEND",
+    )
+    redis_url: str | None = Field(default=None, alias="REDIS_URL")
 
     # Clinical retrieval embeddings (local/self-hosted by default in production)
     embedding_provider: str = Field(default="", alias="EMBEDDING_PROVIDER")

@@ -88,10 +88,15 @@ export const commonContent: CommonContent = {
     phaseNotice:
       "Yalnızca karar destek. Demo ortamlarda gerçek hasta tanımlayıcıları girmeyin.",
     firstNameLabel: "Ad",
+    firstNamePlaceholder: "Ayşe",
     lastNameLabel: "Soyad",
+    lastNamePlaceholder: "Yılmaz",
     loginError: "Giriş başarısız. E-posta ve şifrenizi kontrol edin.",
     registerError: "Kayıt başarısız. Farklı e-posta veya daha güçlü şifre deneyin.",
     passwordMismatch: "Şifreler eşleşmiyor.",
+    genericError: "Bir sorun oluştu. Lütfen tekrar deneyin.",
+    logout: "Çıkış yap",
+    signedInAs: "Oturum:",
   },
   patients: {
     title: "Hastalar",

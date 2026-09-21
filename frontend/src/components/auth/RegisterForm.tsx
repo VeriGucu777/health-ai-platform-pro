@@ -1,50 +1,47 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { FormInput } from "@/components/ui/FormInput";
+import { useAuth } from "@/lib/auth";
 import { ApiClientError } from "@/lib/api/client";
-import { useAuth } from "@/lib/auth/AuthProvider";
 import { useLocale } from "@/lib/i18n/use-locale";
 
 export function RegisterForm() {
   const { content } = useLocale();
   const { register } = useAuth();
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setSubmitting(true);
+    setIsSubmitting(true);
 
     const formData = new FormData(event.currentTarget);
-    const email = String(formData.get("email") ?? "");
+    const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
     const confirmPassword = String(formData.get("confirmPassword") ?? "");
-    const first_name = String(formData.get("firstName") ?? "");
-    const last_name = String(formData.get("lastName") ?? "");
+    const first_name = String(formData.get("first_name") ?? "").trim();
+    const last_name = String(formData.get("last_name") ?? "").trim();
 
     if (password !== confirmPassword) {
       setError(content.auth.passwordMismatch);
-      setSubmitting(false);
+      setIsSubmitting(false);
       return;
     }
 
     try {
       await register({ email, password, first_name, last_name, role: "doctor" });
-      router.push("/patients");
-    } catch (err) {
-      if (err instanceof ApiClientError) {
-        setError(err.message);
+    } catch (submitError) {
+      if (submitError instanceof ApiClientError) {
+        setError(submitError.message);
       } else {
-        setError(content.auth.registerError);
+        setError(content.auth.registerError ?? content.auth.genericError);
       }
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   }
 
@@ -54,18 +51,20 @@ export function RegisterForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <FormInput
             id="register-first-name"
-            name="firstName"
+            name="first_name"
             type="text"
             autoComplete="given-name"
             label={content.auth.firstNameLabel}
+            placeholder={content.auth.firstNamePlaceholder}
             required
           />
           <FormInput
             id="register-last-name"
-            name="lastName"
+            name="last_name"
             type="text"
             autoComplete="family-name"
             label={content.auth.lastNameLabel}
+            placeholder={content.auth.lastNamePlaceholder}
             required
           />
         </div>
@@ -86,6 +85,7 @@ export function RegisterForm() {
           label={content.auth.passwordLabel}
           placeholder={content.auth.passwordPlaceholder}
           required
+          minLength={8}
         />
         <FormInput
           id="register-confirm-password"
@@ -95,16 +95,17 @@ export function RegisterForm() {
           label={content.auth.confirmPasswordLabel}
           placeholder={content.auth.confirmPasswordPlaceholder}
           required
+          minLength={8}
         />
 
         {error ? (
-          <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
+          <p className="break-words rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
             {error}
           </p>
         ) : null}
 
-        <Button type="submit" fullWidth disabled={submitting}>
-          {submitting ? content.common.loading : content.auth.registerSubmit}
+        <Button type="submit" fullWidth disabled={isSubmitting}>
+          {isSubmitting ? content.common.loading : content.auth.registerSubmit}
         </Button>
       </form>
 

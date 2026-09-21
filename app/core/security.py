@@ -31,13 +31,20 @@ def create_access_token(
     settings: Settings | None = None,
     expires_delta: timedelta | None = None,
     extra_claims: dict[str, Any] | None = None,
+    *,
+    token_version: int = 0,
 ) -> str:
     """Create a signed JWT access token."""
     settings = settings or get_settings()
     expire = datetime.now(UTC) + (
         expires_delta or timedelta(minutes=settings.jwt_access_token_expire_minutes)
     )
-    payload: dict[str, Any] = {"sub": str(subject), "exp": expire, "type": "access"}
+    payload: dict[str, Any] = {
+        "sub": str(subject),
+        "exp": expire,
+        "type": "access",
+        "token_version": token_version,
+    }
     if extra_claims:
         payload.update(extra_claims)
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
@@ -49,21 +56,18 @@ def create_refresh_token(
     expires_delta: timedelta | None = None,
     *,
     token_version: int = 0,
-    extra_claims: dict[str, Any] | None = None,
 ) -> str:
     """Create a signed JWT refresh token."""
     settings = settings or get_settings()
     expire = datetime.now(UTC) + (
         expires_delta or timedelta(days=settings.jwt_refresh_token_expire_days)
     )
-    payload: dict[str, Any] = {
+    payload = {
         "sub": str(subject),
         "exp": expire,
         "type": "refresh",
-        "tv": token_version,
+        "token_version": token_version,
     }
-    if extra_claims:
-        payload.update(extra_claims)
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 

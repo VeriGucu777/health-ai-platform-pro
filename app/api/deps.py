@@ -460,10 +460,10 @@ async def get_current_user_id(
         )
 
     try:
-        return await auth_service.resolve_access_token_user_id(credentials.credentials)
+        return await auth_service.validate_access_token(credentials.credentials)
     except AppException as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-    except JWTError as exc:
+    except (JWTError, ValueError) as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",

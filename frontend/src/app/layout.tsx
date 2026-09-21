@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { SkipLink } from "@/components/layout/SkipLink";
-import { AuthProvider } from "@/lib/auth/AuthProvider";
+import { AuthProvider } from "@/lib/auth";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { getCommonContent } from "@/lib/i18n/content";
 import "./globals.css";

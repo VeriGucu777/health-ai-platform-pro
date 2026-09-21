@@ -15,6 +15,7 @@ def production_settings() -> Settings:
         DEBUG=False,
         DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/health_ai_test",
         JWT_SECRET_KEY="a-unique-production-secret-with-sufficient-length",
+        CORS_ORIGINS=["https://app.example.com"],
         AUTH_RATE_LIMIT_ENABLED=False,
     )
 

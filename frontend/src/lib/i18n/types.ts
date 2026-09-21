@@ -1,4 +1,4 @@
-/** Shared message catalog shape. All locale files must implement this interface. */
+﻿/** Shared message catalog shape. All locale files must implement this interface. */
 export type CommonContent = {
   brandName: string;
   brandTagline: string;
@@ -67,10 +67,15 @@ export type CommonContent = {
     hasAccount: string;
     phaseNotice: string;
     firstNameLabel: string;
+    firstNamePlaceholder: string;
     lastNameLabel: string;
+    lastNamePlaceholder: string;
     loginError: string;
     registerError: string;
     passwordMismatch: string;
+    genericError: string;
+    logout: string;
+    signedInAs: string;
   };
   patients: {
     title: string;

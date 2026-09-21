@@ -6,7 +6,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 HOST="${HOST:-0.0.0.0}"
-PORT="${PORT:-8000}"
+PORT="${PORT:-8001}"
 # Pilot: AuthRateLimiter and clinical narrative limits are process-local — use one worker.
 WORKERS="${UVICORN_WORKERS:-1}"
 

@@ -1,6 +1,8 @@
 """SQLAlchemy user repository."""
 
-from sqlalchemy import func, select
+from uuid import UUID
+
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities.user import User, UserRole
@@ -30,6 +32,20 @@ class SQLAlchemyUserRepository(SQLAlchemyRepository[UserModel, User], UserReposi
     async def email_exists(self, email: str) -> bool:
         user = await self.get_by_email(email)
         return user is not None
+
+    async def increment_token_version(self, user_id: UUID) -> User:
+        stmt = (
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values(token_version=UserModel.token_version + 1)
+            .returning(UserModel)
+        )
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        if model is None:
+            msg = "User not found"
+            raise ValueError(msg)
+        return self._to_entity(model)
 
     def _to_entity(self, model: UserModel) -> User:
         return User(

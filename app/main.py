@@ -70,7 +70,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.settings = app_settings
-    app.state.auth_rate_limiter = AuthRateLimiter()
+    app.state.auth_rate_limiter = AuthRateLimiter.from_settings(app_settings)
     app.state.system_health_service = SystemHealthService(
         app_settings,
         started_at=datetime.now(UTC),

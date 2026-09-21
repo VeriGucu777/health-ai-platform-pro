@@ -16,3 +16,4 @@ reportlab>=4.2.0
 prometheus-client>=0.21.0
 pgvector>=0.3.6
 fastembed==0.6.1
+redis>=5.0.0

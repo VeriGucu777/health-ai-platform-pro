@@ -51,6 +51,8 @@ Set these in the Render dashboard (never commit real values):
 | `DATABASE_URL` | Linked Render PostgreSQL URL |
 | `JWT_SECRET_KEY` | Unique secret, minimum 32 characters |
 | `CORS_ORIGINS` | Comma-separated allowed frontend origins |
+| `AUTH_RATE_LIMIT_BACKEND` | `memory` (default) or `redis` for shared rate limiting |
+| `REDIS_URL` | Required when `AUTH_RATE_LIMIT_BACKEND=redis` in production |
 
 ### DATABASE_URL normalization
 

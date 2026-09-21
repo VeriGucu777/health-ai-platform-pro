@@ -18,7 +18,7 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from app.core.token_validation import extract_token_version, validate_token_claims
+from app.core.token_validation import validate_token_claims, validate_token_version
 from app.domain.audit.taxonomy import AuditAction, AuditOutcome
 from app.domain.entities.user import User, UserRole
 from app.domain.interfaces.user_repository import UserRepository
@@ -122,7 +122,7 @@ class AuthService(BaseService):
     ) -> None:
         """Invalidate all outstanding tokens for the user after validating refresh."""
         user = await self._validate_token_user(refresh_token, expected_type="refresh")
-        await self._bump_token_version(user)
+        await self._users.increment_token_version(user.id)
         await record_auth_audit_event(
             self._audit,
             action=AuditAction.LOGOUT,
@@ -163,10 +163,16 @@ class AuthService(BaseService):
             actor=user,
         )
 
+    async def validate_access_token(self, access_token: str) -> UUID:
+        """Decode an access token and verify it has not been revoked."""
+        return await self._validate_token_subject(
+            access_token,
+            expected_type="access",
+        )
+
     async def resolve_access_token_user_id(self, access_token: str) -> UUID:
         """Validate an access token including token_version and return the user id."""
-        user = await self._validate_token_user(access_token, expected_type="access")
-        return user.id
+        return await self.validate_access_token(access_token)
 
     async def get_current_user(self, user_id: UUID) -> UserDTO:
         user = await self._users.get_by_id(user_id)
@@ -179,24 +185,47 @@ class AuthService(BaseService):
         return UserDTO.from_entity(user)
 
     def _build_token_pair(self, user: User) -> TokenPairDTO:
-        tv = user.token_version
-        extra_claims = {"role": user.role.value, "tv": tv}
+        extra_claims = {"role": user.role.value}
         return TokenPairDTO(
             access_token=create_access_token(
                 user.id,
                 settings=self._settings,
                 extra_claims=extra_claims,
+                token_version=user.token_version,
             ),
             refresh_token=create_refresh_token(
                 user.id,
                 settings=self._settings,
-                token_version=tv,
+                token_version=user.token_version,
             ),
         )
 
-    async def _bump_token_version(self, user: User) -> None:
-        user.token_version += 1
-        await self._users.update(user)
+    async def _validate_token_subject(
+        self,
+        token: str,
+        *,
+        expected_type: str,
+    ) -> UUID:
+        try:
+            payload = decode_token(token, self._settings)
+            user_id_str = validate_token_claims(payload, expected_type=expected_type)
+            user_id = UUID(user_id_str)
+        except (JWTError, ValueError) as exc:
+            raise UnauthorizedError("Invalid or expired token") from exc
+
+        user = await self._users.get_by_id(user_id)
+        if user is None:
+            raise UnauthorizedError("Invalid or expired token")
+
+        try:
+            validate_token_version(payload, user.token_version)
+        except JWTError as exc:
+            raise UnauthorizedError("Invalid or expired token") from exc
+
+        if not user.is_active:
+            raise ForbiddenError("Account is deactivated")
+
+        return user_id
 
     async def _validate_token_user(
         self,
@@ -204,26 +233,8 @@ class AuthService(BaseService):
         *,
         expected_type: str,
     ) -> User:
-        try:
-            payload = decode_token(token, self._settings)
-            user_id_str = validate_token_claims(payload, expected_type=expected_type)
-            token_version = extract_token_version(payload)
-        except JWTError as exc:
-            raise UnauthorizedError("Invalid or expired token") from exc
-
-        try:
-            user_id = UUID(user_id_str)
-        except ValueError as exc:
-            raise UnauthorizedError("Invalid or expired token") from exc
-
+        user_id = await self._validate_token_subject(token, expected_type=expected_type)
         user = await self._users.get_by_id(user_id)
         if user is None:
             raise UnauthorizedError("Invalid or expired token")
-
-        if not user.is_active:
-            raise ForbiddenError("Account is deactivated")
-
-        if token_version != user.token_version:
-            raise UnauthorizedError("Invalid or expired token")
-
         return user
