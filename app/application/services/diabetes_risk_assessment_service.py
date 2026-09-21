@@ -7,11 +7,15 @@ from app.application.analytics.diabetes_risk_assessment import build_feature_vec
 from app.application.dtos.diabetes_risk_assessment import DiabetesRiskAssessmentDTO
 from app.application.models.rule_based_diabetes_risk_model_v1 import RuleBasedDiabetesRiskModelV1
 from app.application.services.base import BaseService
-from app.application.services.risk_assessment_runner import run_risk_assessment
+from app.application.services.risk_assessment_runner import run_risk_assessment_for_user
+from app.domain.entities.user import UserRole
 from app.domain.interfaces.diabetes_risk_model import DiabetesRiskModelPort
 from app.domain.interfaces.health_measurement_repository import HealthMeasurementRepository
 from app.domain.interfaces.medical_record_repository import MedicalRecordRepository
+from app.domain.interfaces.patient_access_policy import PatientAccessPolicy
 from app.domain.interfaces.patient_repository import PatientRepository
+from app.domain.interfaces.risk_assessment_history_repository import RiskAssessmentHistoryRepository
+from app.domain.risk.enums import RiskAssessmentType
 
 
 class DiabetesRiskAssessmentService(BaseService):
@@ -22,30 +26,39 @@ class DiabetesRiskAssessmentService(BaseService):
         patient_repository: PatientRepository,
         health_measurement_repository: HealthMeasurementRepository,
         medical_record_repository: MedicalRecordRepository,
+        access_policy: PatientAccessPolicy | None = None,
         risk_model: DiabetesRiskModelPort | None = None,
+        history_repository: RiskAssessmentHistoryRepository | None = None,
     ) -> None:
         self._patients = patient_repository
         self._health_measurements = health_measurement_repository
         self._medical_records = medical_record_repository
+        self._access_policy = access_policy
         self._risk_model = risk_model or RuleBasedDiabetesRiskModelV1()
+        self._history = history_repository
 
     async def assess_diabetes_risk(
         self,
-        owner_id: UUID,
+        actor_id: UUID,
+        actor_role: UserRole,
         *,
         patient_id: UUID,
         date_from: datetime | None = None,
         date_to: datetime | None = None,
-    ) -> DiabetesRiskAssessmentDTO:
-        return await run_risk_assessment(
+    ) -> tuple[DiabetesRiskAssessmentDTO, UUID | None]:
+        return await run_risk_assessment_for_user(
             patients=self._patients,
             health_measurements=self._health_measurements,
             medical_records=self._medical_records,
-            owner_id=owner_id,
+            access_policy=self._access_policy,
+            actor_id=actor_id,
+            actor_role=actor_role,
             patient_id=patient_id,
             date_from=date_from,
             date_to=date_to,
             build_feature_vector=build_feature_vector,
             risk_model=self._risk_model,
             assessment_dto_class=DiabetesRiskAssessmentDTO,
+            history_repository=self._history,
+            assessment_type=RiskAssessmentType.DIABETES,
         )

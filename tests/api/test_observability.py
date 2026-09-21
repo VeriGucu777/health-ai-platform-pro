@@ -107,7 +107,7 @@ async def test_app_exception_includes_request_id(client: AsyncClient) -> None:
             "password": "securepass123",
             "first_name": "Obs",
             "last_name": "Test",
-            "role": "patient",
+            "role": "doctor",
         },
     )
     assert register_response.status_code == 201

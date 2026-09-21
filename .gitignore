@@ -52,3 +52,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Local / generated files
+frontend/.env.production
+pytest-full-output.txt

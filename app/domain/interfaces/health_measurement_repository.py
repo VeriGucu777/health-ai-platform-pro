@@ -56,3 +56,40 @@ class HealthMeasurementRepository(Repository[HealthMeasurement]):
         date_to: datetime | None = None,
     ) -> list[HealthMeasurement]:
         """Return all measurements for analytics, ordered by measured_at ascending."""
+
+    @abstractmethod
+    async def list_by_patient_for_analytics(
+        self,
+        patient_id: UUID,
+        *,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+    ) -> list[HealthMeasurement]:
+        """Return measurements for one patient (policy already enforced)."""
+
+    @abstractmethod
+    async def list_by_patient_ids(
+        self,
+        patient_ids: list[UUID],
+        *,
+        offset: int = 0,
+        limit: int = 100,
+        patient_id: UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        glucose_context: str | None = None,
+        sort_order: str = "desc",
+    ) -> list[HealthMeasurement]:
+        """List measurements for accessible patients."""
+
+    @abstractmethod
+    async def count_by_patient_ids(
+        self,
+        patient_ids: list[UUID],
+        *,
+        patient_id: UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        glucose_context: str | None = None,
+    ) -> int:
+        """Count measurements for accessible patients."""

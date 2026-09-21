@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { FormInput } from "@/components/ui/FormInput";
@@ -11,6 +12,8 @@ import { useLocale } from "@/lib/i18n/use-locale";
 export function LoginForm() {
   const { content } = useLocale();
   const { login } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -25,11 +28,15 @@ export function LoginForm() {
 
     try {
       await login({ email, password });
+      const next = searchParams.get("next");
+      if (next && next.startsWith("/")) {
+        router.push(next);
+      }
     } catch (submitError) {
       if (submitError instanceof ApiClientError) {
         setError(submitError.message);
       } else {
-        setError(content.auth.genericError);
+        setError(content.auth.loginError ?? content.auth.genericError);
       }
     } finally {
       setIsSubmitting(false);
@@ -38,7 +45,7 @@ export function LoginForm() {
 
   return (
     <>
-      <form action="#" method="post" className="space-y-5" onSubmit={handleSubmit}>
+      <form className="space-y-5" onSubmit={handleSubmit}>
         <FormInput
           id="login-email"
           name="email"
@@ -62,10 +69,14 @@ export function LoginForm() {
           <p className="break-words rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
             {error}
           </p>
+        ) : content.auth.phaseNotice ? (
+          <p className="break-words rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-900">
+            {content.auth.phaseNotice}
+          </p>
         ) : null}
 
         <Button type="submit" fullWidth disabled={isSubmitting}>
-          {content.auth.loginSubmit}
+          {isSubmitting ? content.common.loading : content.auth.loginSubmit}
         </Button>
       </form>
 

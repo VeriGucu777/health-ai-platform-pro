@@ -33,12 +33,12 @@ export function RegisterForm() {
     }
 
     try {
-      await register({ email, password, first_name, last_name });
+      await register({ email, password, first_name, last_name, role: "doctor" });
     } catch (submitError) {
       if (submitError instanceof ApiClientError) {
         setError(submitError.message);
       } else {
-        setError(content.auth.genericError);
+        setError(content.auth.registerError ?? content.auth.genericError);
       }
     } finally {
       setIsSubmitting(false);
@@ -47,25 +47,27 @@ export function RegisterForm() {
 
   return (
     <>
-      <form action="#" method="post" className="space-y-5" onSubmit={handleSubmit}>
-        <FormInput
-          id="register-first-name"
-          name="first_name"
-          type="text"
-          autoComplete="given-name"
-          label={content.auth.firstNameLabel}
-          placeholder={content.auth.firstNamePlaceholder}
-          required
-        />
-        <FormInput
-          id="register-last-name"
-          name="last_name"
-          type="text"
-          autoComplete="family-name"
-          label={content.auth.lastNameLabel}
-          placeholder={content.auth.lastNamePlaceholder}
-          required
-        />
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormInput
+            id="register-first-name"
+            name="first_name"
+            type="text"
+            autoComplete="given-name"
+            label={content.auth.firstNameLabel}
+            placeholder={content.auth.firstNamePlaceholder}
+            required
+          />
+          <FormInput
+            id="register-last-name"
+            name="last_name"
+            type="text"
+            autoComplete="family-name"
+            label={content.auth.lastNameLabel}
+            placeholder={content.auth.lastNamePlaceholder}
+            required
+          />
+        </div>
         <FormInput
           id="register-email"
           name="email"
@@ -103,11 +105,11 @@ export function RegisterForm() {
         ) : null}
 
         <Button type="submit" fullWidth disabled={isSubmitting}>
-          {content.auth.registerSubmit}
+          {isSubmitting ? content.common.loading : content.auth.registerSubmit}
         </Button>
       </form>
 
-      <p className="break-words text-center text-sm text-text-secondary">
+      <p className="mt-2 break-words text-center text-sm text-text-secondary">
         {content.auth.hasAccount}{" "}
         <Link href="/login" className="font-medium text-brand-700 hover:text-brand-800">
           {content.nav.login}

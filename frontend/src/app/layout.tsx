@@ -3,8 +3,8 @@ import { Inter } from "next/font/google";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { SkipLink } from "@/components/layout/SkipLink";
+import { AuthProvider } from "@/lib/auth";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
-import { AuthProvider } from "@/lib/auth/AuthProvider";
 import { getCommonContent } from "@/lib/i18n/content";
 import "./globals.css";
 
@@ -31,7 +31,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} min-h-screen overflow-x-hidden antialiased`}>
+      <body
+        className={`${inter.variable} notranslate min-h-screen overflow-x-hidden antialiased`}
+        suppressHydrationWarning
+      >
         <LocaleProvider>
           <AuthProvider>
             <SkipLink />

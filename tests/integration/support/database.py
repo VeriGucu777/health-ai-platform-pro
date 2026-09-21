@@ -19,19 +19,32 @@ BLOCKED_DATABASE_NAMES = frozenset({"health_ai_platform"})
 EXPECTED_TABLES = frozenset(
     {
         "users",
+        "organizations",
+        "organization_memberships",
         "patients",
+        "patient_assignments",
+        "patient_consents",
         "appointments",
         "medical_records",
         "health_measurements",
+        "audit_logs",
+        "risk_assessment_history",
+        "clinical_retrieval_vectors",
         "alembic_version",
     }
 )
 
 TRUNCATE_TABLES = (
+    "clinical_retrieval_vectors",
+    "risk_assessment_history",
     "health_measurements",
     "medical_records",
     "appointments",
+    "patient_assignments",
+    "patient_consents",
     "patients",
+    "organization_memberships",
+    "organizations",
     "users",
 )
 

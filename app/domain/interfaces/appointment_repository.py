@@ -37,3 +37,23 @@ class AppointmentRepository(Repository[Appointment]):
         patient_id: UUID | None = None,
     ) -> int:
         """Count appointments belonging to the given owner."""
+
+    @abstractmethod
+    async def list_by_patient_ids(
+        self,
+        patient_ids: list[UUID],
+        *,
+        offset: int = 0,
+        limit: int = 100,
+        patient_id: UUID | None = None,
+    ) -> list[Appointment]:
+        """List appointments for patients the actor may access."""
+
+    @abstractmethod
+    async def count_by_patient_ids(
+        self,
+        patient_ids: list[UUID],
+        *,
+        patient_id: UUID | None = None,
+    ) -> int:
+        """Count appointments for accessible patients."""

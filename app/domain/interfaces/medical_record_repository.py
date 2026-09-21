@@ -39,3 +39,25 @@ class MedicalRecordRepository(Repository[MedicalRecord]):
         record_type: str | None = None,
     ) -> int:
         """Count medical records belonging to the given owner."""
+
+    @abstractmethod
+    async def list_by_patient_ids(
+        self,
+        patient_ids: list[UUID],
+        *,
+        offset: int = 0,
+        limit: int = 100,
+        patient_id: UUID | None = None,
+        record_type: str | None = None,
+    ) -> list[MedicalRecord]:
+        """List records for accessible patients."""
+
+    @abstractmethod
+    async def count_by_patient_ids(
+        self,
+        patient_ids: list[UUID],
+        *,
+        patient_id: UUID | None = None,
+        record_type: str | None = None,
+    ) -> int:
+        """Count records for accessible patients."""

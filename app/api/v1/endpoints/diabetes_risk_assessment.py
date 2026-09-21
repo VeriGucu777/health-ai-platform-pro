@@ -4,9 +4,10 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
-from app.api.deps import CurrentUser, get_diabetes_risk_assessment_service
+from app.api.deps import ClinicalUser, get_audit_service, get_diabetes_risk_assessment_service
+from app.api.risk_assessment_audit import run_risk_assessment_with_audit
 from app.api.schemas.diabetes_risk_assessment import (
     ContributingFactorResponse,
     DiabetesRiskAssessmentResponse,
@@ -14,6 +15,7 @@ from app.api.schemas.diabetes_risk_assessment import (
 )
 from app.api.schemas.health_measurement_insights import HealthRecommendationResponse
 from app.application.dtos.diabetes_risk_assessment import DiabetesRiskAssessmentDTO
+from app.application.services.audit_service import AuditService
 from app.application.services.diabetes_risk_assessment_service import DiabetesRiskAssessmentService
 
 router = APIRouter()
@@ -52,19 +54,29 @@ def _assessment_response(data: DiabetesRiskAssessmentDTO) -> DiabetesRiskAssessm
 )
 async def assess_diabetes_risk(
     patient_id: UUID,
-    current_user: CurrentUser,
+    request: Request,
+    current_user: ClinicalUser,
     assessment_service: Annotated[
         DiabetesRiskAssessmentService,
         Depends(get_diabetes_risk_assessment_service),
     ],
+    audit_service: Annotated[AuditService, Depends(get_audit_service)],
     date_from: datetime | None = None,
     date_to: datetime | None = None,
 ) -> DiabetesRiskAssessmentResponse:
     """Return an on-demand, non-diagnostic diabetes risk assessment from recorded patient data."""
-    assessment = await assessment_service.assess_diabetes_risk(
-        current_user.id,
+    assessment = await run_risk_assessment_with_audit(
+        request=request,
+        current_user=current_user,
         patient_id=patient_id,
-        date_from=date_from,
-        date_to=date_to,
+        risk_kind="diabetes",
+        audit_service=audit_service,
+        assess=lambda: assessment_service.assess_diabetes_risk(
+            current_user.id,
+            current_user.role,
+            patient_id=patient_id,
+            date_from=date_from,
+            date_to=date_to,
+        ),
     )
     return _assessment_response(assessment)

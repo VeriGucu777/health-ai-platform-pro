@@ -2,10 +2,13 @@
 
 import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { useAuth } from "@/lib/auth/AuthProvider";
 import { useLocale } from "@/lib/i18n/use-locale";
 
 export function HomePageContent() {
   const { content } = useLocale();
+  const { isAuthenticated, isHydrated } = useAuth();
+  const showPatientsCta = isHydrated && isAuthenticated;
 
   return (
     <main id="main-content" className="min-w-0 overflow-x-hidden">
@@ -27,13 +30,15 @@ export function HomePageContent() {
                   {content.landing.primaryCta}
                 </Button>
                 <Button
-                  href="/login"
+                  href={showPatientsCta ? "/patients" : "/login"}
                   variant="secondary"
                   size="lg"
                   fullWidth
                   className="sm:w-auto sm:min-w-[10rem]"
                 >
-                  {content.landing.secondaryCta}
+                  {showPatientsCta
+                    ? content.landing.secondaryCtaAuthenticated
+                    : content.landing.secondaryCta}
                 </Button>
               </div>
             </div>

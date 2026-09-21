@@ -80,10 +80,12 @@ async def test_update_and_delete_patient(
     assert loaded is not None
     assert loaded.notes == "updated notes"
 
-    deleted = await patient_repository.delete(created.id)
-    await db_session.commit()
-    assert deleted is True
-    assert await patient_repository.get_by_id_and_owner(created.id, owner.id) is None
+    from app.domain.patient.errors import PatientHardDeleteForbiddenError
+
+    with pytest.raises(PatientHardDeleteForbiddenError):
+        await patient_repository.delete(created.id)
+    still_there = await patient_repository.get_by_id_and_owner(created.id, owner.id)
+    assert still_there is not None
 
 
 async def test_foreign_key_requires_existing_owner(

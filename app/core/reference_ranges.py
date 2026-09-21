@@ -62,6 +62,21 @@ REPORT_PDF_DISCLAIMER = (
     "for medical decisions."
 )
 
+CLINICAL_TIMELINE_DISCLAIMER = (
+    "This clinical timeline is an informational, read-only summary of recorded data. "
+    "It is not a medical diagnosis, treatment recommendation, or substitute for "
+    "professional medical judgment. Derived items are rule-based interpretations of "
+    "recorded measurements and appointments. Risk snapshots reflect a single on-demand "
+    "assessment at generation time, not a stored clinical history."
+)
+
+CLINICAL_SUMMARY_DISCLAIMER = (
+    "This clinical summary is deterministic decision-support information derived from "
+    "authorized, recorded data. It is not a medical diagnosis, treatment recommendation, "
+    "or substitute for professional medical judgment. Risk entries describe recorded "
+    "rule-based assessments and must not be interpreted as diagnoses."
+)
+
 DIABETES_RISK_DISCLAIMER = (
     "This diabetes risk assessment is an informational model output based on recorded data. "
     "It is not a medical diagnosis, does not confirm or rule out diabetes, and does not "

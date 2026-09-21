@@ -1,5 +1,7 @@
 """Patient CRUD endpoint integration tests."""
 
+from uuid import UUID
+
 import pytest
 from httpx import AsyncClient
 
@@ -28,7 +30,7 @@ async def _register_and_login(
             "password": password,
             "first_name": first_name,
             "last_name": last_name,
-            "role": "patient",
+            "role": "doctor",
         },
     )
     assert register_response.status_code == 201
@@ -102,7 +104,7 @@ async def test_update_patient(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_delete_patient(client: AsyncClient) -> None:
+async def test_delete_patient(client: AsyncClient, patient_repository) -> None:
     headers = await _register_and_login(client, email="deleter@example.com")
 
     created = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
@@ -113,6 +115,10 @@ async def test_delete_patient(client: AsyncClient) -> None:
 
     get_response = await client.get(f"/api/v1/patients/{patient_id}", headers=headers)
     assert get_response.status_code == 404
+
+    stored = await patient_repository.get_by_id(UUID(patient_id))
+    assert stored is not None
+    assert stored.is_active is False
 
 
 @pytest.mark.asyncio

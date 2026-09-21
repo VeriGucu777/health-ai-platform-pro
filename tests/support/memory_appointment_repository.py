@@ -55,6 +55,48 @@ class InMemoryAppointmentRepository(AppointmentRepository):
             and (patient_id is None or appointment.patient_id == patient_id)
         )
 
+    async def list_by_patient_ids(
+        self,
+        patient_ids: list[UUID],
+        *,
+        offset: int = 0,
+        limit: int = 100,
+        patient_id: UUID | None = None,
+    ) -> list[Appointment]:
+        if not patient_ids:
+            return []
+        allowed = set(patient_ids)
+        if patient_id is not None:
+            if patient_id not in allowed:
+                return []
+            allowed = {patient_id}
+        items = [
+            appointment
+            for appointment in self._appointments.values()
+            if appointment.patient_id in allowed
+        ]
+        items.sort(key=lambda appointment: appointment.created_at, reverse=True)
+        return items[offset : offset + limit]
+
+    async def count_by_patient_ids(
+        self,
+        patient_ids: list[UUID],
+        *,
+        patient_id: UUID | None = None,
+    ) -> int:
+        if not patient_ids:
+            return 0
+        allowed = set(patient_ids)
+        if patient_id is not None:
+            if patient_id not in allowed:
+                return 0
+            allowed = {patient_id}
+        return sum(
+            1
+            for appointment in self._appointments.values()
+            if appointment.patient_id in allowed
+        )
+
     async def create(self, entity: Appointment) -> Appointment:
         self._appointments[entity.id] = entity
         return entity

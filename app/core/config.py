@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     # Server
     host: str = Field(default="0.0.0.0", alias="HOST")
     port: int = Field(default=8001, alias="PORT")
+    uvicorn_workers: int = Field(default=1, alias="UVICORN_WORKERS")
 
     # Database
     database_url: PostgresDsn = Field(
@@ -65,6 +66,7 @@ class Settings(BaseSettings):
             "http://localhost:3000",
             "http://127.0.0.1:3000",
             "http://localhost:5173",
+            "http://127.0.0.1:5173",
         ],
         alias="CORS_ORIGINS",
     )
@@ -103,6 +105,59 @@ class Settings(BaseSettings):
         alias="AUTH_RATE_LIMIT_BACKEND",
     )
     redis_url: str | None = Field(default=None, alias="REDIS_URL")
+
+    # Clinical retrieval embeddings (local/self-hosted by default in production)
+    embedding_provider: str = Field(default="", alias="EMBEDDING_PROVIDER")
+    local_embedding_model: str = Field(
+        default="health-ai-platform/clinical-retrieval-multilingual-v1",
+        alias="LOCAL_EMBEDDING_MODEL",
+    )
+    embedding_version: str = Field(default="3", alias="EMBEDDING_VERSION")
+    clinical_retrieval_vector_dimension: int = Field(
+        default=384,
+        alias="CLINICAL_RETRIEVAL_VECTOR_DIMENSION",
+    )
+    fake_embedding_dimensions: int = Field(
+        default=64,
+        alias="FAKE_EMBEDDING_DIMENSIONS",
+    )
+
+    # Clinical narrative LLM (v1 — external opt-in; no local LLM in v1)
+    clinical_narrative_provider: str = Field(default="", alias="CLINICAL_NARRATIVE_PROVIDER")
+    clinical_narrative_default_language: str = Field(
+        default="tr",
+        alias="CLINICAL_NARRATIVE_DEFAULT_LANGUAGE",
+    )
+    clinical_narrative_max_output_tokens: int = Field(
+        default=1024,
+        alias="CLINICAL_NARRATIVE_MAX_OUTPUT_TOKENS",
+    )
+    clinical_narrative_timeout_seconds: float = Field(
+        default=30.0,
+        alias="CLINICAL_NARRATIVE_TIMEOUT_SECONDS",
+    )
+    clinical_narrative_max_retries: int = Field(default=1, alias="CLINICAL_NARRATIVE_MAX_RETRIES")
+    clinical_narrative_external_base_url: str = Field(
+        default="",
+        alias="CLINICAL_NARRATIVE_EXTERNAL_BASE_URL",
+    )
+    clinical_narrative_external_api_key: str = Field(
+        default="",
+        alias="CLINICAL_NARRATIVE_EXTERNAL_API_KEY",
+    )
+    clinical_narrative_external_model: str = Field(
+        default="",
+        alias="CLINICAL_NARRATIVE_EXTERNAL_MODEL",
+    )
+    clinical_narrative_rate_limit_enabled: bool = Field(
+        default=True,
+        alias="CLINICAL_NARRATIVE_RATE_LIMIT_ENABLED",
+    )
+    clinical_narrative_rate_limit: int = Field(default=10, alias="CLINICAL_NARRATIVE_RATE_LIMIT")
+    clinical_narrative_rate_window_seconds: int = Field(
+        default=60,
+        alias="CLINICAL_NARRATIVE_RATE_WINDOW_SECONDS",
+    )
 
     @field_validator("database_url", mode="before")
     @classmethod

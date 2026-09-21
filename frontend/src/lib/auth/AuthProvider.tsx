@@ -28,8 +28,10 @@ import { ApiClientError } from "@/lib/api/client";
 
 type AuthContextValue = {
   user: AuthUser | null;
+  accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isHydrated: boolean;
   login: (payload: LoginPayload) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
@@ -134,8 +136,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       user: session?.user ?? null,
+      accessToken: session?.accessToken ?? null,
       isAuthenticated: Boolean(session?.accessToken && session?.user),
       isLoading,
+      isHydrated: !isLoading,
       login,
       register,
       logout,

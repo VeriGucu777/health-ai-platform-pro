@@ -17,7 +17,7 @@ class PatientCreate(BaseModel):
     notes: str | None = None
     is_active: bool = True
 
-    model_config = ConfigDict(str_strip_whitespace=True)
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
 
 class PatientUpdate(BaseModel):
@@ -29,9 +29,8 @@ class PatientUpdate(BaseModel):
     gender: str | None = Field(default=None, min_length=1, max_length=50)
     phone: str | None = Field(default=None, max_length=32)
     notes: str | None = None
-    is_active: bool | None = None
 
-    model_config = ConfigDict(str_strip_whitespace=True)
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
 
 class PatientResponse(BaseModel):

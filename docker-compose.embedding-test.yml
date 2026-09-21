@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: health_ai_embedding_e2e
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d health_ai_embedding_e2e"]
+      interval: 3s
+      timeout: 5s
+      retries: 15
+
+  embedding-tests:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.embedding-test
+    # Measured peak ~850–950 MB (stage 2 ONNX); 1536 MB avoids OOM under parallel pytest + HF cache.
+    mem_limit: 1536m
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      EMBEDDING_RUNTIME_REQUIRED: "1"
+      EMBEDDING_PROVIDER: local
+      LOCAL_EMBEDDING_MODEL: health-ai-platform/clinical-retrieval-multilingual-v1
+      EMBEDDING_VERSION: "3"
+      CLINICAL_RETRIEVAL_VECTOR_DIMENSION: "384"
+      JWT_SECRET_KEY: test-secret-key-for-unit-tests-only
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/health_ai_embedding_e2e
+    working_dir: /app
+    volumes:
+      - ./app:/app/app
+      - ./tests:/app/tests
+      - /var/run/docker.sock:/var/run/docker.sock

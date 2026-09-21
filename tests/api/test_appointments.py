@@ -35,7 +35,7 @@ async def _register_and_login(
             "password": password,
             "first_name": first_name,
             "last_name": last_name,
-            "role": "patient",
+            "role": "doctor",
         },
     )
     assert register_response.status_code == 201

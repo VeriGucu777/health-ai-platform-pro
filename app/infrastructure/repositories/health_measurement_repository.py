@@ -89,6 +89,72 @@ class SQLAlchemyHealthMeasurementRepository(
         result = await self._session.execute(stmt)
         return [self._to_entity(row) for row in result.scalars().all()]
 
+    async def list_by_patient_for_analytics(
+        self,
+        patient_id: UUID,
+        *,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+    ) -> list[HealthMeasurement]:
+        stmt = select(HealthMeasurementModel).where(
+            HealthMeasurementModel.patient_id == patient_id,
+        )
+        stmt = self._apply_filters(stmt, patient_id, date_from, date_to, None)
+        stmt = stmt.order_by(HealthMeasurementModel.measured_at.asc())
+        result = await self._session.execute(stmt)
+        return [self._to_entity(row) for row in result.scalars().all()]
+
+    async def list_by_patient_ids(
+        self,
+        patient_ids: list[UUID],
+        *,
+        offset: int = 0,
+        limit: int = 100,
+        patient_id: UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        glucose_context: str | None = None,
+        sort_order: str = "desc",
+    ) -> list[HealthMeasurement]:
+        if not patient_ids:
+            return []
+        ids = [patient_id] if patient_id is not None else patient_ids
+        if patient_id is not None and patient_id not in patient_ids:
+            return []
+        stmt = select(HealthMeasurementModel).where(
+            HealthMeasurementModel.patient_id.in_(ids),
+        )
+        stmt = self._apply_filters(stmt, None, date_from, date_to, glucose_context)
+        order_column = HealthMeasurementModel.measured_at
+        stmt = stmt.order_by(
+            order_column.desc() if sort_order == "desc" else order_column.asc(),
+        ).offset(offset).limit(limit)
+        result = await self._session.execute(stmt)
+        return [self._to_entity(row) for row in result.scalars().all()]
+
+    async def count_by_patient_ids(
+        self,
+        patient_ids: list[UUID],
+        *,
+        patient_id: UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        glucose_context: str | None = None,
+    ) -> int:
+        if not patient_ids:
+            return 0
+        ids = [patient_id] if patient_id is not None else patient_ids
+        if patient_id is not None and patient_id not in patient_ids:
+            return 0
+        stmt = (
+            select(func.count())
+            .select_from(HealthMeasurementModel)
+            .where(HealthMeasurementModel.patient_id.in_(ids))
+        )
+        stmt = self._apply_filters(stmt, None, date_from, date_to, glucose_context)
+        result = await self._session.execute(stmt)
+        return int(result.scalar_one())
+
     def _apply_filters(
         self,
         stmt,

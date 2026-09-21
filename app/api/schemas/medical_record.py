@@ -21,7 +21,7 @@ class MedicalRecordCreate(BaseModel):
     hospital_name: str | None = Field(default=None, max_length=200)
     notes: str | None = None
 
-    model_config = ConfigDict(str_strip_whitespace=True)
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
 
 class MedicalRecordUpdate(BaseModel):
@@ -38,7 +38,7 @@ class MedicalRecordUpdate(BaseModel):
     hospital_name: str | None = Field(default=None, max_length=200)
     notes: str | None = None
 
-    model_config = ConfigDict(str_strip_whitespace=True)
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
 
 class MedicalRecordResponse(BaseModel):

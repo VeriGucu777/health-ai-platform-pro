@@ -26,6 +26,8 @@ dependencies = [
     "email-validator>=2.2.0",
     "reportlab>=4.2.0",
     "prometheus-client>=0.21.0",
+    "pgvector>=0.3.6",
+    "fastembed==0.6.1",
 ]
 
 [project.optional-dependencies]
@@ -55,6 +57,8 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 markers = [
     "integration: PostgreSQL integration tests requiring Docker (testcontainers)",
+    "embedding_runtime: Local ONNX/FastEmbed runtime tests (Linux/Docker)",
+    "external_narrative_live: Live external LLM smoke (requires vendor credentials)",
 ]
 
 [tool.mypy]

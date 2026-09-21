@@ -26,7 +26,10 @@ export function FormInput({
 
   return (
     <div className="space-y-2">
-      <label htmlFor={inputId} className="block text-sm font-medium text-text-primary">
+      <label
+        htmlFor={inputId}
+        className="notranslate block text-sm font-medium text-text-primary"
+      >
         {label}
       </label>
       <input

@@ -44,7 +44,7 @@ async def _register_and_login(
             "password": password,
             "first_name": first_name,
             "last_name": last_name,
-            "role": "patient",
+            "role": "doctor",
         },
     )
     assert register_response.status_code == 201
@@ -433,8 +433,15 @@ async def test_patch_ignores_patient_id(client: AsyncClient) -> None:
         json={"patient_id": patient_b, "heart_rate": 70},
         headers=headers,
     )
-    assert response.status_code == 200
-    data = response.json()
+    assert response.status_code == 422
+
+    ok = await client.patch(
+        f"/api/v1/health-measurements/{measurement_id}",
+        json={"heart_rate": 70},
+        headers=headers,
+    )
+    assert ok.status_code == 200
+    data = ok.json()
     assert data["heart_rate"] == 70
     assert data["patient_id"] == original_patient_id
 

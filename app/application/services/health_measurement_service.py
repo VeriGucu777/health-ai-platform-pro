@@ -5,31 +5,37 @@ from decimal import Decimal
 from uuid import UUID
 
 from app.application.dtos.health_measurement import HealthMeasurementDTO, HealthMeasurementListDTO
-from app.application.services.base import BaseService
+from app.application.services.clinical_patient_child_service import ClinicalPatientChildService
 from app.application.validators.health_measurement import (
     has_trackable_value,
     validate_blood_pressure_pair,
 )
 from app.core.exceptions import NotFoundError, ValidationError
 from app.domain.entities.health_measurement import HealthMeasurement
+from app.domain.entities.user import UserRole
 from app.domain.interfaces.health_measurement_repository import HealthMeasurementRepository
+from app.domain.interfaces.organization_membership_repository import OrganizationMembershipRepository
+from app.domain.interfaces.patient_access_policy import PatientAccessAction, PatientAccessPolicy
 from app.domain.interfaces.patient_repository import PatientRepository
 
 
-class HealthMeasurementService(BaseService):
-    """Use cases for health measurement CRUD scoped to the authenticated owner."""
+class HealthMeasurementService(ClinicalPatientChildService):
+    """Health measurement CRUD scoped by patient access policy."""
 
     def __init__(
         self,
         health_measurement_repository: HealthMeasurementRepository,
         patient_repository: PatientRepository,
+        access_policy: PatientAccessPolicy | None = None,
+        membership_repository: OrganizationMembershipRepository | None = None,
     ) -> None:
+        super().__init__(patient_repository, access_policy, membership_repository)
         self._health_measurements = health_measurement_repository
-        self._patients = patient_repository
 
     async def create_health_measurement(
         self,
-        owner_id: UUID,
+        actor_id: UUID,
+        actor_role: UserRole,
         *,
         patient_id: UUID,
         measured_at: datetime,
@@ -43,8 +49,13 @@ class HealthMeasurementService(BaseService):
         meal_context: str | None = None,
         exercise_minutes: int | None = None,
         notes: str | None = None,
-    ) -> HealthMeasurementDTO:
-        await self._validate_patient_ownership(owner_id, patient_id)
+    ) -> tuple[HealthMeasurementDTO, UUID | None]:
+        ctx = await self._require_patient_access(
+            actor_id,
+            actor_role,
+            patient_id,
+            PatientAccessAction.WRITE,
+        )
         self._validate_measurement_values(
             blood_glucose=blood_glucose,
             systolic_pressure=systolic_pressure,
@@ -54,9 +65,8 @@ class HealthMeasurementService(BaseService):
             insulin_units=insulin_units,
             exercise_minutes=exercise_minutes,
         )
-
         health_measurement = HealthMeasurement(
-            owner_id=owner_id,
+            owner_id=actor_id,
             patient_id=patient_id,
             measured_at=measured_at,
             blood_glucose=blood_glucose,
@@ -71,11 +81,12 @@ class HealthMeasurementService(BaseService):
             notes=notes.strip() if notes else None,
         )
         created = await self._health_measurements.create(health_measurement)
-        return HealthMeasurementDTO.from_entity(created)
+        return HealthMeasurementDTO.from_entity(created), ctx.organization_id
 
     async def list_health_measurements(
         self,
-        owner_id: UUID,
+        actor_id: UUID,
+        actor_role: UserRole,
         *,
         page: int = 1,
         page_size: int = 20,
@@ -89,18 +100,27 @@ class HealthMeasurementService(BaseService):
             page = 1
         if page_size < 1:
             page_size = 20
-
-        if patient_id is not None:
-            await self._validate_patient_ownership(owner_id, patient_id)
-
         self._validate_date_range(date_from, date_to)
-
         if sort_order not in {"asc", "desc"}:
             raise ValidationError("sort_order must be 'asc' or 'desc'")
 
+        if patient_id is not None:
+            await self._require_patient_access(
+                actor_id,
+                actor_role,
+                patient_id,
+                PatientAccessAction.READ,
+            )
+            patient_ids = [patient_id]
+        else:
+            patient_ids = await self._accessible_patient_ids(actor_id, actor_role)
+
         offset = (page - 1) * page_size
-        measurements = await self._health_measurements.list_by_owner(
-            owner_id,
+        if not patient_ids:
+            return HealthMeasurementListDTO.build([], total=0, page=page, page_size=page_size)
+
+        measurements = await self._health_measurements.list_by_patient_ids(
+            patient_ids,
             offset=offset,
             limit=page_size,
             patient_id=patient_id,
@@ -109,8 +129,8 @@ class HealthMeasurementService(BaseService):
             glucose_context=glucose_context,
             sort_order=sort_order,
         )
-        total = await self._health_measurements.count_by_owner(
-            owner_id,
+        total = await self._health_measurements.count_by_patient_ids(
+            patient_ids,
             patient_id=patient_id,
             date_from=date_from,
             date_to=date_to,
@@ -121,19 +141,40 @@ class HealthMeasurementService(BaseService):
 
     async def get_health_measurement(
         self,
-        owner_id: UUID,
+        actor_id: UUID,
+        actor_role: UserRole,
         health_measurement_id: UUID,
-    ) -> HealthMeasurementDTO:
-        health_measurement = await self._get_owned_health_measurement(owner_id, health_measurement_id)
-        return HealthMeasurementDTO.from_entity(health_measurement)
+    ) -> tuple[HealthMeasurementDTO, UUID | None]:
+        measurement, ctx = await self._get_child_with_patient_access(
+            self._health_measurements,
+            health_measurement_id,
+            actor_id=actor_id,
+            actor_role=actor_role,
+            action=PatientAccessAction.READ,
+            not_found_message="Health measurement not found",
+            patient_id_getter=lambda row: row.patient_id,
+        )
+        return HealthMeasurementDTO.from_entity(measurement), ctx.organization_id
 
     async def update_health_measurement(
         self,
-        owner_id: UUID,
+        actor_id: UUID,
+        actor_role: UserRole,
         health_measurement_id: UUID,
         patch: dict[str, object],
-    ) -> HealthMeasurementDTO:
-        health_measurement = await self._get_owned_health_measurement(owner_id, health_measurement_id)
+    ) -> tuple[HealthMeasurementDTO, UUID | None]:
+        if "patient_id" in patch:
+            raise ValidationError("patient_id cannot be changed")
+
+        health_measurement, ctx = await self._get_child_with_patient_access(
+            self._health_measurements,
+            health_measurement_id,
+            actor_id=actor_id,
+            actor_role=actor_role,
+            action=PatientAccessAction.WRITE,
+            not_found_message="Health measurement not found",
+            patient_id_getter=lambda row: row.patient_id,
+        )
 
         if "measured_at" in patch:
             health_measurement.measured_at = patch["measured_at"]  # type: ignore[assignment]
@@ -177,31 +218,28 @@ class HealthMeasurementService(BaseService):
 
         health_measurement.touch()
         updated = await self._health_measurements.update(health_measurement)
-        return HealthMeasurementDTO.from_entity(updated)
+        return HealthMeasurementDTO.from_entity(updated), ctx.organization_id
 
-    async def delete_health_measurement(self, owner_id: UUID, health_measurement_id: UUID) -> None:
-        health_measurement = await self._get_owned_health_measurement(owner_id, health_measurement_id)
+    async def delete_health_measurement(
+        self,
+        actor_id: UUID,
+        actor_role: UserRole,
+        health_measurement_id: UUID,
+    ) -> tuple[UUID | None, UUID]:
+        health_measurement, ctx = await self._get_child_with_patient_access(
+            self._health_measurements,
+            health_measurement_id,
+            actor_id=actor_id,
+            actor_role=actor_role,
+            action=PatientAccessAction.DELETE,
+            not_found_message="Health measurement not found",
+            patient_id_getter=lambda row: row.patient_id,
+        )
+        patient_id = health_measurement.patient_id
         deleted = await self._health_measurements.delete(health_measurement.id)
         if not deleted:
             raise NotFoundError("Health measurement not found")
-
-    async def _get_owned_health_measurement(
-        self,
-        owner_id: UUID,
-        health_measurement_id: UUID,
-    ) -> HealthMeasurement:
-        health_measurement = await self._health_measurements.get_by_id_and_owner(
-            health_measurement_id,
-            owner_id,
-        )
-        if health_measurement is None:
-            raise NotFoundError("Health measurement not found")
-        return health_measurement
-
-    async def _validate_patient_ownership(self, owner_id: UUID, patient_id: UUID) -> None:
-        patient = await self._patients.get_by_id_and_owner(patient_id, owner_id)
-        if patient is None:
-            raise NotFoundError("Patient not found")
+        return ctx.organization_id, patient_id
 
     def _validate_date_range(
         self,
