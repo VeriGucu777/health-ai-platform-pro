@@ -27,6 +27,11 @@ def _embedding_runtime_required() -> bool:
     return os.environ.get("EMBEDDING_RUNTIME_REQUIRED", "").strip() == "1"
 
 
+def _compose_managed_database() -> bool:
+    """Docker Compose embedding-test stack (postgres service hostname), not GitHub Actions CI."""
+    return _embedding_runtime_required()
+
+
 def _onnx_runtime_importable() -> bool:
     try:
         import onnxruntime  # noqa: F401
@@ -72,20 +77,21 @@ def require_embedding_runtime_session():
         pytest.skip("ONNX/fastembed runtime unavailable on this host; run docker-compose.embedding-test.yml")
 
 
-@pytest.fixture(scope="session")
-def postgres_container():
-    """Compose-managed PostgreSQL — avoid Testcontainers Ryuk in Docker-in-Docker."""
-    yield None
+if _compose_managed_database():
 
+    @pytest.fixture(scope="session")
+    def postgres_container():
+        """Compose-managed PostgreSQL — avoid Testcontainers Ryuk in Docker-in-Docker."""
+        yield None
 
-@pytest.fixture(scope="session")
-def integration_database_urls() -> IntegrationDatabaseUrls:
-    raw = os.environ.get(
-        "DATABASE_URL",
-        "postgresql+asyncpg://postgres:postgres@postgres:5432/health_ai_embedding_e2e",
-    )
-    _wait_for_database(raw)
-    return build_integration_urls(raw)
+    @pytest.fixture(scope="session")
+    def integration_database_urls() -> IntegrationDatabaseUrls:
+        raw = os.environ.get(
+            "DATABASE_URL",
+            "postgresql+asyncpg://postgres:postgres@postgres:5432/health_ai_embedding_e2e",
+        )
+        _wait_for_database(raw)
+        return build_integration_urls(raw)
 
 
 @pytest.fixture(scope="session")
