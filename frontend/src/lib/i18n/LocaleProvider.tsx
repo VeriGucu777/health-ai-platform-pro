@@ -18,6 +18,8 @@ type LocaleContextValue = {
   content: CommonContent;
   setLocale: (locale: SupportedLocale) => void;
   isReady: boolean;
+  formatDate: (value: string) => string;
+  formatDateTime: (value: string) => string;
 };
 
 export const LocaleContext = createContext<LocaleContextValue | null>(null);
@@ -41,18 +43,50 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
   }, []);
 
   useEffect(() => {
+    if (!isReady) {
+      return;
+    }
+
     const definition = getLocaleDefinition(locale);
     document.documentElement.lang = locale;
     document.documentElement.dir = definition.direction;
-  }, [locale]);
+  }, [isReady, locale]);
 
   const setLocale = useCallback((nextLocale: SupportedLocale) => {
     setLocaleState(nextLocale);
     writeStoredLocale(nextLocale);
   }, []);
 
+  /** Keep SSR and first client paint on DEFAULT_LOCALE to avoid hydration mismatches. */
+  const contentLocale = isReady ? locale : DEFAULT_LOCALE;
+
   const content = useMemo(
-    () => getLocaleDefinition(locale).messages,
+    () => getLocaleDefinition(contentLocale).messages,
+    [contentLocale],
+  );
+
+  const formatDate = useCallback(
+    (value: string) => {
+      try {
+        return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(value));
+      } catch {
+        return value;
+      }
+    },
+    [locale],
+  );
+
+  const formatDateTime = useCallback(
+    (value: string) => {
+      try {
+        return new Intl.DateTimeFormat(locale, {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }).format(new Date(value));
+      } catch {
+        return value;
+      }
+    },
     [locale],
   );
 
@@ -62,8 +96,10 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
       content,
       setLocale,
       isReady,
+      formatDate,
+      formatDateTime,
     }),
-    [content, isReady, locale, setLocale],
+    [content, formatDate, formatDateTime, isReady, locale, setLocale],
   );
 
   return (

@@ -4,9 +4,10 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
-from app.api.deps import CurrentUser, get_stroke_risk_assessment_service
+from app.api.deps import ClinicalUser, get_audit_service, get_stroke_risk_assessment_service
+from app.api.risk_assessment_audit import run_risk_assessment_with_audit
 from app.api.schemas.diabetes_risk_assessment import (
     ContributingFactorResponse,
     MissingInputResponse,
@@ -14,6 +15,7 @@ from app.api.schemas.diabetes_risk_assessment import (
 from app.api.schemas.health_measurement_insights import HealthRecommendationResponse
 from app.api.schemas.stroke_risk_assessment import StrokeRiskAssessmentResponse
 from app.application.dtos.stroke_risk_assessment import StrokeRiskAssessmentDTO
+from app.application.services.audit_service import AuditService
 from app.application.services.stroke_risk_assessment_service import StrokeRiskAssessmentService
 
 router = APIRouter()
@@ -52,19 +54,29 @@ def _assessment_response(data: StrokeRiskAssessmentDTO) -> StrokeRiskAssessmentR
 )
 async def assess_stroke_risk(
     patient_id: UUID,
-    current_user: CurrentUser,
+    request: Request,
+    current_user: ClinicalUser,
     assessment_service: Annotated[
         StrokeRiskAssessmentService,
         Depends(get_stroke_risk_assessment_service),
     ],
+    audit_service: Annotated[AuditService, Depends(get_audit_service)],
     date_from: datetime | None = None,
     date_to: datetime | None = None,
 ) -> StrokeRiskAssessmentResponse:
     """Return an on-demand, non-diagnostic stroke risk assessment from recorded patient data."""
-    assessment = await assessment_service.assess_stroke_risk(
-        current_user.id,
+    assessment = await run_risk_assessment_with_audit(
+        request=request,
+        current_user=current_user,
         patient_id=patient_id,
-        date_from=date_from,
-        date_to=date_to,
+        risk_kind="stroke",
+        audit_service=audit_service,
+        assess=lambda: assessment_service.assess_stroke_risk(
+            current_user.id,
+            current_user.role,
+            patient_id=patient_id,
+            date_from=date_from,
+            date_to=date_to,
+        ),
     )
     return _assessment_response(assessment)

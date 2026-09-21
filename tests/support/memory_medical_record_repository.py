@@ -59,6 +59,52 @@ class InMemoryMedicalRecordRepository(MedicalRecordRepository):
             and (record_type is None or medical_record.record_type == record_type)
         )
 
+    async def list_by_patient_ids(
+        self,
+        patient_ids: list[UUID],
+        *,
+        offset: int = 0,
+        limit: int = 100,
+        patient_id: UUID | None = None,
+        record_type: str | None = None,
+    ) -> list[MedicalRecord]:
+        if not patient_ids:
+            return []
+        allowed = set(patient_ids)
+        if patient_id is not None:
+            if patient_id not in allowed:
+                return []
+            allowed = {patient_id}
+        items = [
+            medical_record
+            for medical_record in self._medical_records.values()
+            if medical_record.patient_id in allowed
+            and (record_type is None or medical_record.record_type == record_type)
+        ]
+        items.sort(key=lambda medical_record: medical_record.created_at, reverse=True)
+        return items[offset : offset + limit]
+
+    async def count_by_patient_ids(
+        self,
+        patient_ids: list[UUID],
+        *,
+        patient_id: UUID | None = None,
+        record_type: str | None = None,
+    ) -> int:
+        if not patient_ids:
+            return 0
+        allowed = set(patient_ids)
+        if patient_id is not None:
+            if patient_id not in allowed:
+                return 0
+            allowed = {patient_id}
+        return sum(
+            1
+            for medical_record in self._medical_records.values()
+            if medical_record.patient_id in allowed
+            and (record_type is None or medical_record.record_type == record_type)
+        )
+
     async def create(self, entity: MedicalRecord) -> MedicalRecord:
         self._medical_records[entity.id] = entity
         return entity

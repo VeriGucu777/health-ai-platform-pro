@@ -14,6 +14,9 @@ from app.infrastructure.repositories.health_measurement_repository import (
 )
 from app.infrastructure.repositories.medical_record_repository import SQLAlchemyMedicalRecordRepository
 from app.infrastructure.repositories.patient_repository import SQLAlchemyPatientRepository
+from app.infrastructure.repositories.risk_assessment_history_repository import (
+    SQLAlchemyRiskAssessmentHistoryRepository,
+)
 from app.infrastructure.repositories.user_repository import SQLAlchemyUserRepository
 from tests.integration.support.database import (
     IntegrationDatabaseUrls,
@@ -51,7 +54,7 @@ def postgres_container():
     _require_docker_and_testcontainers()
     from testcontainers.postgres import PostgresContainer
 
-    container = PostgresContainer("postgres:16-alpine")
+    container = PostgresContainer("pgvector/pgvector:pg16")
     container.start()
     try:
         yield container
@@ -129,3 +132,10 @@ def health_measurement_repository(
     db_session: AsyncSession,
 ) -> SQLAlchemyHealthMeasurementRepository:
     return SQLAlchemyHealthMeasurementRepository(db_session)
+
+
+@pytest.fixture
+def risk_assessment_history_repository(
+    db_session: AsyncSession,
+) -> SQLAlchemyRiskAssessmentHistoryRepository:
+    return SQLAlchemyRiskAssessmentHistoryRepository(db_session)

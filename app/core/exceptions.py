@@ -54,6 +54,13 @@ class ConflictError(AppException):
         super().__init__(message, status_code=409, **kwargs)
 
 
+class ConfigurationError(AppException):
+    """Invalid or incomplete deployment configuration."""
+
+    def __init__(self, message: str = "Configuration error", **kwargs: Any) -> None:
+        super().__init__(message, status_code=500, **kwargs)
+
+
 class RateLimitExceededError(AppException):
     """Too many requests from the same client."""
 

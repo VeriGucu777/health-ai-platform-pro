@@ -1,6 +1,6 @@
 """User ORM model."""
 
-from sqlalchemy import Boolean, Enum, String
+from sqlalchemy import Boolean, Enum, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.domain.entities.user import UserRole
@@ -23,3 +23,4 @@ class UserModel(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    token_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")

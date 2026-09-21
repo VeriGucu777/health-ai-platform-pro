@@ -41,6 +41,7 @@ class SQLAlchemyUserRepository(SQLAlchemyRepository[UserModel, User], UserReposi
             role=UserRole(model.role),
             is_active=model.is_active,
             is_verified=model.is_verified,
+            token_version=model.token_version,
             created_at=model.created_at,
             updated_at=model.updated_at,
         )
@@ -55,6 +56,7 @@ class SQLAlchemyUserRepository(SQLAlchemyRepository[UserModel, User], UserReposi
             role=entity.role,
             is_active=entity.is_active,
             is_verified=entity.is_verified,
+            token_version=entity.token_version,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
         )

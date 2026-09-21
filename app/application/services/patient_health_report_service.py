@@ -13,6 +13,7 @@ from app.application.services.health_measurement_analytics_service import (
 from app.application.services.medical_record_service import MedicalRecordService
 from app.application.services.patient_service import PatientService
 from app.core.reference_ranges import MAX_MEDICAL_RECORDS_IN_REPORT
+from app.domain.entities.user import UserRole
 
 
 def _normalize_datetime(value: datetime) -> datetime:
@@ -36,36 +37,44 @@ class PatientHealthReportService(BaseService):
 
     async def generate_pdf(
         self,
-        owner_id: UUID,
+        actor_id: UUID,
+        actor_role: UserRole,
         *,
         patient_id: UUID,
         date_from: datetime | None = None,
         date_to: datetime | None = None,
-    ) -> tuple[bytes, str]:
-        patient = await self._patients.get_patient(owner_id, patient_id)
-
+    ) -> tuple[bytes, str, UUID | None]:
+        patient, organization_id = await self._patients.get_patient_for_user_with_context(
+            actor_id,
+            actor_role,
+            patient_id,
+        )
         summary = await self._analytics.get_summary(
-            owner_id,
+            actor_id,
+            actor_role,
             patient_id=patient_id,
             date_from=date_from,
             date_to=date_to,
         )
         trends = await self._analytics.get_trends(
-            owner_id,
+            actor_id,
+            actor_role,
             patient_id=patient_id,
             period="weekly",
             date_from=date_from,
             date_to=date_to,
         )
         insights = await self._analytics.get_insights(
-            owner_id,
+            actor_id,
+            actor_role,
             patient_id=patient_id,
             date_from=date_from,
             date_to=date_to,
         )
 
         medical_records, total_in_range, truncated = await self._load_medical_records(
-            owner_id,
+            actor_id,
+            actor_role,
             patient_id=patient_id,
             date_from=summary.date_from,
             date_to=summary.date_to,
@@ -84,11 +93,12 @@ class PatientHealthReportService(BaseService):
             clinical_insights=insights,
         )
         filename = f"patient-health-report-{patient_id}.pdf"
-        return build_patient_health_pdf(context), filename
+        return build_patient_health_pdf(context), filename, organization_id
 
     async def _load_medical_records(
         self,
-        owner_id: UUID,
+        actor_id: UUID,
+        actor_role: UserRole,
         *,
         patient_id: UUID,
         date_from: datetime,
@@ -103,7 +113,8 @@ class PatientHealthReportService(BaseService):
 
         while True:
             batch = await self._medical_records.list_medical_records(
-                owner_id,
+                actor_id,
+                actor_role,
                 patient_id=patient_id,
                 page=page,
                 page_size=page_size,

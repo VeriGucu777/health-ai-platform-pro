@@ -47,13 +47,23 @@ def create_refresh_token(
     subject: str | Any,
     settings: Settings | None = None,
     expires_delta: timedelta | None = None,
+    *,
+    token_version: int = 0,
+    extra_claims: dict[str, Any] | None = None,
 ) -> str:
     """Create a signed JWT refresh token."""
     settings = settings or get_settings()
     expire = datetime.now(UTC) + (
         expires_delta or timedelta(days=settings.jwt_refresh_token_expire_days)
     )
-    payload = {"sub": str(subject), "exp": expire, "type": "refresh"}
+    payload: dict[str, Any] = {
+        "sub": str(subject),
+        "exp": expire,
+        "type": "refresh",
+        "tv": token_version,
+    }
+    if extra_claims:
+        payload.update(extra_claims)
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 

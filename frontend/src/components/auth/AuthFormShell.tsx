@@ -19,7 +19,10 @@ export function AuthFormShell({ mode, children }: AuthFormShellProps) {
       : content.auth.registerDescription;
 
   return (
-    <main id="main-content" className="min-w-0 overflow-x-hidden py-8 sm:py-12 lg:py-16">
+    <main
+      id="main-content"
+      className="min-w-0 flex-1 overflow-x-hidden py-8 pb-10 sm:py-10 sm:pb-12 lg:py-12 lg:pb-14"
+    >
       <PageContainer narrow>
         <div className="mx-auto w-full min-w-0 rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-6 lg:p-8">
           <header className="space-y-2 text-center sm:text-left">

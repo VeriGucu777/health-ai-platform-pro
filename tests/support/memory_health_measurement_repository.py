@@ -91,6 +91,81 @@ class InMemoryHealthMeasurementRepository(HealthMeasurementRepository):
         owned.sort(key=lambda measurement: measurement.measured_at)
         return owned
 
+    async def list_by_patient_for_analytics(
+        self,
+        patient_id: UUID,
+        *,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+    ) -> list[HealthMeasurement]:
+        rows = [
+            measurement
+            for measurement in self._health_measurements.values()
+            if measurement.patient_id == patient_id
+            and (date_from is None or measurement.measured_at >= date_from)
+            and (date_to is None or measurement.measured_at <= date_to)
+        ]
+        rows.sort(key=lambda measurement: measurement.measured_at)
+        return rows
+
+    async def list_by_patient_ids(
+        self,
+        patient_ids: list[UUID],
+        *,
+        offset: int = 0,
+        limit: int = 100,
+        patient_id: UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        glucose_context: str | None = None,
+        sort_order: str = "desc",
+    ) -> list[HealthMeasurement]:
+        if not patient_ids:
+            return []
+        allowed = set(patient_ids)
+        if patient_id is not None:
+            if patient_id not in allowed:
+                return []
+            allowed = {patient_id}
+        items = [
+            measurement
+            for measurement in self._health_measurements.values()
+            if measurement.patient_id in allowed
+            and (date_from is None or measurement.measured_at >= date_from)
+            and (date_to is None or measurement.measured_at <= date_to)
+            and (glucose_context is None or measurement.glucose_context == glucose_context)
+        ]
+        items.sort(
+            key=lambda measurement: measurement.measured_at,
+            reverse=sort_order == "desc",
+        )
+        return items[offset : offset + limit]
+
+    async def count_by_patient_ids(
+        self,
+        patient_ids: list[UUID],
+        *,
+        patient_id: UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        glucose_context: str | None = None,
+    ) -> int:
+        if not patient_ids:
+            return 0
+        allowed = set(patient_ids)
+        if patient_id is not None:
+            if patient_id not in allowed:
+                return 0
+            allowed = {patient_id}
+        return sum(
+            1
+            for measurement in self._health_measurements.values()
+            if measurement.patient_id in allowed
+            and (date_from is None or measurement.measured_at >= date_from)
+            and (date_to is None or measurement.measured_at <= date_to)
+            and (glucose_context is None or measurement.glucose_context == glucose_context)
+        )
+
     async def create(self, entity: HealthMeasurement) -> HealthMeasurement:
         self._health_measurements[entity.id] = entity
         return entity

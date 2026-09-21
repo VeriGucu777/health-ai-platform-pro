@@ -30,7 +30,7 @@ async def _register_and_login(
             "password": "securepass123",
             "first_name": first_name,
             "last_name": last_name,
-            "role": "patient",
+            "role": "doctor",
         },
     )
     login_response = await client.post(

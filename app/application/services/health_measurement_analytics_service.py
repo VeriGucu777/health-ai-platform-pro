@@ -22,27 +22,33 @@ from app.application.dtos.health_measurement_insights import (
     HealthRecommendationDTO,
     MetricInsightDTO,
 )
-from app.application.services.base import BaseService
-from app.core.exceptions import NotFoundError, ValidationError
+from app.application.services.clinical_patient_child_service import ClinicalPatientChildService
+from app.core.exceptions import ValidationError
 from app.core.reference_ranges import MAX_ANALYTICS_DATE_RANGE_DAYS, TRACKABLE_METRICS
+from app.domain.entities.user import UserRole
 from app.domain.interfaces.health_measurement_repository import HealthMeasurementRepository
+from app.domain.interfaces.organization_membership_repository import OrganizationMembershipRepository
+from app.domain.interfaces.patient_access_policy import PatientAccessAction, PatientAccessPolicy
 from app.domain.interfaces.patient_repository import PatientRepository
 
 
-class HealthMeasurementAnalyticsService(BaseService):
-    """Read-only analytics for health measurements scoped to one owned patient."""
+class HealthMeasurementAnalyticsService(ClinicalPatientChildService):
+    """Read-only analytics scoped by patient access policy."""
 
     def __init__(
         self,
         health_measurement_repository: HealthMeasurementRepository,
         patient_repository: PatientRepository,
+        access_policy: PatientAccessPolicy | None = None,
+        membership_repository: OrganizationMembershipRepository | None = None,
     ) -> None:
+        super().__init__(patient_repository, access_policy, membership_repository)
         self._health_measurements = health_measurement_repository
-        self._patients = patient_repository
 
     async def get_summary(
         self,
-        owner_id: UUID,
+        actor_id: UUID,
+        actor_role: UserRole,
         *,
         patient_id: UUID,
         metric: str | None = None,
@@ -50,7 +56,8 @@ class HealthMeasurementAnalyticsService(BaseService):
         date_to: datetime | None = None,
     ) -> HealthMeasurementSummaryDTO:
         measurements, resolved_from, resolved_to = await self._load_measurements(
-            owner_id,
+            actor_id,
+            actor_role,
             patient_id=patient_id,
             metric=metric,
             date_from=date_from,
@@ -68,7 +75,8 @@ class HealthMeasurementAnalyticsService(BaseService):
 
     async def get_trends(
         self,
-        owner_id: UUID,
+        actor_id: UUID,
+        actor_role: UserRole,
         *,
         patient_id: UUID,
         period: AnalyticsPeriod,
@@ -77,7 +85,8 @@ class HealthMeasurementAnalyticsService(BaseService):
         date_to: datetime | None = None,
     ) -> HealthMeasurementTrendsDTO:
         measurements, resolved_from, resolved_to = await self._load_measurements(
-            owner_id,
+            actor_id,
+            actor_role,
             patient_id=patient_id,
             metric=metric,
             date_from=date_from,
@@ -109,14 +118,16 @@ class HealthMeasurementAnalyticsService(BaseService):
 
     async def get_insights(
         self,
-        owner_id: UUID,
+        actor_id: UUID,
+        actor_role: UserRole,
         *,
         patient_id: UUID,
         date_from: datetime | None = None,
         date_to: datetime | None = None,
     ) -> HealthMeasurementInsightsDTO:
         measurements, resolved_from, resolved_to = await self._load_measurements(
-            owner_id,
+            actor_id,
+            actor_role,
             patient_id=patient_id,
             metric=None,
             date_from=date_from,
@@ -137,14 +148,20 @@ class HealthMeasurementAnalyticsService(BaseService):
 
     async def _load_measurements(
         self,
-        owner_id: UUID,
+        actor_id: UUID,
+        actor_role: UserRole,
         *,
         patient_id: UUID,
         metric: str | None,
         date_from: datetime | None,
         date_to: datetime | None,
     ) -> tuple[list, datetime, datetime]:
-        await self._validate_patient_ownership(owner_id, patient_id)
+        await self._require_patient_access(
+            actor_id,
+            actor_role,
+            patient_id,
+            PatientAccessAction.READ,
+        )
         self._validate_metric(metric)
 
         resolved_to = date_to or datetime.now(UTC)
@@ -152,9 +169,8 @@ class HealthMeasurementAnalyticsService(BaseService):
 
         self._validate_date_range(resolved_from, resolved_to)
 
-        measurements = await self._health_measurements.list_by_owner_for_analytics(
-            owner_id,
-            patient_id=patient_id,
+        measurements = await self._health_measurements.list_by_patient_for_analytics(
+            patient_id,
             date_from=resolved_from,
             date_to=resolved_to,
         )
@@ -169,11 +185,6 @@ class HealthMeasurementAnalyticsService(BaseService):
             MetricStatisticsDTO(**compute_metric_statistics(measurements, metric))
             for metric in metrics_to_include(metric_filter)
         ]
-
-    async def _validate_patient_ownership(self, owner_id: UUID, patient_id: UUID) -> None:
-        patient = await self._patients.get_by_id_and_owner(patient_id, owner_id)
-        if patient is None:
-            raise NotFoundError("Patient not found")
 
     def _validate_metric(self, metric: str | None) -> None:
         if metric is not None and metric not in TRACKABLE_METRICS:

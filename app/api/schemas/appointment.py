@@ -15,7 +15,7 @@ class AppointmentCreate(BaseModel):
     status: str = Field(default="scheduled", min_length=1, max_length=30)
     notes: str | None = None
 
-    model_config = ConfigDict(str_strip_whitespace=True)
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
 
 class AppointmentUpdate(BaseModel):
@@ -27,7 +27,7 @@ class AppointmentUpdate(BaseModel):
     status: str | None = Field(default=None, min_length=1, max_length=30)
     notes: str | None = None
 
-    model_config = ConfigDict(str_strip_whitespace=True)
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
 
 class AppointmentResponse(BaseModel):

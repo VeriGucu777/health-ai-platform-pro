@@ -26,6 +26,7 @@ class User(BaseEntity):
     role: UserRole
     is_active: bool = True
     is_verified: bool = False
+    token_version: int = 0
 
     @property
     def full_name(self) -> str:

@@ -3,11 +3,13 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 
+from app.api.auth_audit_context import build_auth_audit_context
 from app.api.deps import CurrentUser, get_auth_service, require_roles
 from app.middleware.auth_rate_limit import auth_rate_limit
 from app.api.schemas.auth import (
+    ChangePasswordRequest,
     LoginRequest,
     LogoutRequest,
     MessageResponse,
@@ -57,10 +59,15 @@ async def register(
 )
 async def login(
     body: LoginRequest,
+    request: Request,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> TokenResponse:
     """Authenticate user and return JWT tokens."""
-    tokens = await auth_service.login(email=body.email, password=body.password)
+    tokens = await auth_service.login(
+        email=body.email,
+        password=body.password,
+        audit_context=build_auth_audit_context(request),
+    )
     return TokenResponse.model_validate(tokens.model_dump())
 
 
@@ -86,11 +93,36 @@ async def refresh_token(
 )
 async def logout(
     body: LogoutRequest,
+    request: Request,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> MessageResponse:
     """Validate refresh token and confirm logout (client must discard tokens)."""
-    await auth_service.logout(body.refresh_token)
+    await auth_service.logout(
+        body.refresh_token,
+        audit_context=build_auth_audit_context(request),
+    )
     return MessageResponse(message="Logged out successfully")
+
+
+@router.post(
+    "/change-password",
+    response_model=MessageResponse,
+    summary="Change password and revoke existing sessions",
+)
+async def change_password(
+    body: ChangePasswordRequest,
+    request: Request,
+    current_user: CurrentUser,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+) -> MessageResponse:
+    """Change the authenticated user's password and invalidate outstanding tokens."""
+    await auth_service.change_password(
+        current_user.id,
+        current_password=body.current_password,
+        new_password=body.new_password,
+        audit_context=build_auth_audit_context(request),
+    )
+    return MessageResponse(message="Password changed successfully")
 
 
 @router.get(

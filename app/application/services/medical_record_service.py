@@ -4,27 +4,33 @@ from datetime import datetime
 from uuid import UUID
 
 from app.application.dtos.medical_record import MedicalRecordDTO, MedicalRecordListDTO
-from app.application.services.base import BaseService
+from app.application.services.clinical_patient_child_service import ClinicalPatientChildService
 from app.core.exceptions import NotFoundError
 from app.domain.entities.medical_record import MedicalRecord
+from app.domain.entities.user import UserRole
 from app.domain.interfaces.medical_record_repository import MedicalRecordRepository
+from app.domain.interfaces.organization_membership_repository import OrganizationMembershipRepository
+from app.domain.interfaces.patient_access_policy import PatientAccessAction, PatientAccessPolicy
 from app.domain.interfaces.patient_repository import PatientRepository
 
 
-class MedicalRecordService(BaseService):
-    """Use cases for medical record CRUD scoped to the authenticated owner."""
+class MedicalRecordService(ClinicalPatientChildService):
+    """Medical record CRUD scoped by patient access policy."""
 
     def __init__(
         self,
         medical_record_repository: MedicalRecordRepository,
         patient_repository: PatientRepository,
+        access_policy: PatientAccessPolicy | None = None,
+        membership_repository: OrganizationMembershipRepository | None = None,
     ) -> None:
+        super().__init__(patient_repository, access_policy, membership_repository)
         self._medical_records = medical_record_repository
-        self._patients = patient_repository
 
     async def create_medical_record(
         self,
-        owner_id: UUID,
+        actor_id: UUID,
+        actor_role: UserRole,
         *,
         patient_id: UUID,
         record_date: datetime,
@@ -37,11 +43,15 @@ class MedicalRecordService(BaseService):
         doctor_name: str | None = None,
         hospital_name: str | None = None,
         notes: str | None = None,
-    ) -> MedicalRecordDTO:
-        await self._validate_patient_ownership(owner_id, patient_id)
-
+    ) -> tuple[MedicalRecordDTO, UUID | None]:
+        ctx = await self._require_patient_access(
+            actor_id,
+            actor_role,
+            patient_id,
+            PatientAccessAction.WRITE,
+        )
         medical_record = MedicalRecord(
-            owner_id=owner_id,
+            owner_id=actor_id,
             patient_id=patient_id,
             record_date=record_date,
             record_type=record_type.strip(),
@@ -55,11 +65,12 @@ class MedicalRecordService(BaseService):
             notes=notes.strip() if notes else None,
         )
         created = await self._medical_records.create(medical_record)
-        return MedicalRecordDTO.from_entity(created)
+        return MedicalRecordDTO.from_entity(created), ctx.organization_id
 
     async def list_medical_records(
         self,
-        owner_id: UUID,
+        actor_id: UUID,
+        actor_role: UserRole,
         *,
         page: int = 1,
         page_size: int = 20,
@@ -72,31 +83,56 @@ class MedicalRecordService(BaseService):
             page_size = 20
 
         if patient_id is not None:
-            await self._validate_patient_ownership(owner_id, patient_id)
+            await self._require_patient_access(
+                actor_id,
+                actor_role,
+                patient_id,
+                PatientAccessAction.READ,
+            )
+            patient_ids = [patient_id]
+        else:
+            patient_ids = await self._accessible_patient_ids(actor_id, actor_role)
 
         offset = (page - 1) * page_size
-        medical_records = await self._medical_records.list_by_owner(
-            owner_id,
+        if not patient_ids:
+            return MedicalRecordListDTO.build([], total=0, page=page, page_size=page_size)
+
+        records = await self._medical_records.list_by_patient_ids(
+            patient_ids,
             offset=offset,
             limit=page_size,
             patient_id=patient_id,
             record_type=record_type,
         )
-        total = await self._medical_records.count_by_owner(
-            owner_id,
+        total = await self._medical_records.count_by_patient_ids(
+            patient_ids,
             patient_id=patient_id,
             record_type=record_type,
         )
-        items = [MedicalRecordDTO.from_entity(record) for record in medical_records]
+        items = [MedicalRecordDTO.from_entity(record) for record in records]
         return MedicalRecordListDTO.build(items, total=total, page=page, page_size=page_size)
 
-    async def get_medical_record(self, owner_id: UUID, medical_record_id: UUID) -> MedicalRecordDTO:
-        medical_record = await self._get_owned_medical_record(owner_id, medical_record_id)
-        return MedicalRecordDTO.from_entity(medical_record)
+    async def get_medical_record(
+        self,
+        actor_id: UUID,
+        actor_role: UserRole,
+        medical_record_id: UUID,
+    ) -> tuple[MedicalRecordDTO, UUID | None]:
+        record, ctx = await self._get_child_with_patient_access(
+            self._medical_records,
+            medical_record_id,
+            actor_id=actor_id,
+            actor_role=actor_role,
+            action=PatientAccessAction.READ,
+            not_found_message="Medical record not found",
+            patient_id_getter=lambda row: row.patient_id,
+        )
+        return MedicalRecordDTO.from_entity(record), ctx.organization_id
 
     async def update_medical_record(
         self,
-        owner_id: UUID,
+        actor_id: UUID,
+        actor_role: UserRole,
         medical_record_id: UUID,
         *,
         record_date: datetime | None = None,
@@ -109,8 +145,16 @@ class MedicalRecordService(BaseService):
         doctor_name: str | None = None,
         hospital_name: str | None = None,
         notes: str | None = None,
-    ) -> MedicalRecordDTO:
-        medical_record = await self._get_owned_medical_record(owner_id, medical_record_id)
+    ) -> tuple[MedicalRecordDTO, UUID | None]:
+        medical_record, ctx = await self._get_child_with_patient_access(
+            self._medical_records,
+            medical_record_id,
+            actor_id=actor_id,
+            actor_role=actor_role,
+            action=PatientAccessAction.WRITE,
+            not_found_message="Medical record not found",
+            patient_id_getter=lambda row: row.patient_id,
+        )
 
         if record_date is not None:
             medical_record.record_date = record_date
@@ -135,28 +179,25 @@ class MedicalRecordService(BaseService):
 
         medical_record.touch()
         updated = await self._medical_records.update(medical_record)
-        return MedicalRecordDTO.from_entity(updated)
+        return MedicalRecordDTO.from_entity(updated), ctx.organization_id
 
-    async def delete_medical_record(self, owner_id: UUID, medical_record_id: UUID) -> None:
-        medical_record = await self._get_owned_medical_record(owner_id, medical_record_id)
+    async def delete_medical_record(
+        self,
+        actor_id: UUID,
+        actor_role: UserRole,
+        medical_record_id: UUID,
+    ) -> tuple[UUID | None, UUID]:
+        medical_record, ctx = await self._get_child_with_patient_access(
+            self._medical_records,
+            medical_record_id,
+            actor_id=actor_id,
+            actor_role=actor_role,
+            action=PatientAccessAction.DELETE,
+            not_found_message="Medical record not found",
+            patient_id_getter=lambda row: row.patient_id,
+        )
+        patient_id = medical_record.patient_id
         deleted = await self._medical_records.delete(medical_record.id)
         if not deleted:
             raise NotFoundError("Medical record not found")
-
-    async def _get_owned_medical_record(
-        self,
-        owner_id: UUID,
-        medical_record_id: UUID,
-    ) -> MedicalRecord:
-        medical_record = await self._medical_records.get_by_id_and_owner(
-            medical_record_id,
-            owner_id,
-        )
-        if medical_record is None:
-            raise NotFoundError("Medical record not found")
-        return medical_record
-
-    async def _validate_patient_ownership(self, owner_id: UUID, patient_id: UUID) -> None:
-        patient = await self._patients.get_by_id_and_owner(patient_id, owner_id)
-        if patient is None:
-            raise NotFoundError("Patient not found")
+        return ctx.organization_id, patient_id

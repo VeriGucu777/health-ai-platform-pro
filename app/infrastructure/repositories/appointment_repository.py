@@ -66,6 +66,48 @@ class SQLAlchemyAppointmentRepository(
         result = await self._session.execute(stmt)
         return int(result.scalar_one())
 
+    async def list_by_patient_ids(
+        self,
+        patient_ids: list[UUID],
+        *,
+        offset: int = 0,
+        limit: int = 100,
+        patient_id: UUID | None = None,
+    ) -> list[Appointment]:
+        if not patient_ids:
+            return []
+        ids = [patient_id] if patient_id is not None else patient_ids
+        if patient_id is not None and patient_id not in patient_ids:
+            return []
+        stmt = (
+            select(AppointmentModel)
+            .where(AppointmentModel.patient_id.in_(ids))
+            .order_by(AppointmentModel.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        return [self._to_entity(row) for row in result.scalars().all()]
+
+    async def count_by_patient_ids(
+        self,
+        patient_ids: list[UUID],
+        *,
+        patient_id: UUID | None = None,
+    ) -> int:
+        if not patient_ids:
+            return 0
+        ids = [patient_id] if patient_id is not None else patient_ids
+        if patient_id is not None and patient_id not in patient_ids:
+            return 0
+        stmt = (
+            select(func.count())
+            .select_from(AppointmentModel)
+            .where(AppointmentModel.patient_id.in_(ids))
+        )
+        result = await self._session.execute(stmt)
+        return int(result.scalar_one())
+
     def _to_entity(self, model: AppointmentModel) -> Appointment:
         return Appointment(
             id=model.id,

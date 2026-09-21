@@ -2,15 +2,24 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/Button";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { Navigation } from "@/components/layout/Navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { useAuth } from "@/lib/auth/AuthProvider";
 import { useLocale } from "@/lib/i18n/use-locale";
+import { useRouter } from "next/navigation";
 
 export function Header() {
   const { content } = useLocale();
+  const { logout } = useAuth();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    router.push("/login");
+    setMobileOpen(false);
+  };
 
   useEffect(() => {
     if (!mobileOpen) {
@@ -55,17 +64,9 @@ export function Header() {
           </Link>
         </div>
 
-        <div className="hidden min-w-0 items-center gap-4 lg:flex lg:gap-6">
-          <Navigation />
+        <div className="hidden min-w-0 flex-wrap items-center justify-end gap-3 lg:flex lg:gap-5">
+          <Navigation onLogout={handleLogout} />
           <LanguageSwitcher />
-          <div className="flex shrink-0 items-center gap-2">
-            <Button href="/login" variant="ghost" size="sm">
-              {content.nav.login}
-            </Button>
-            <Button href="/register" size="sm">
-              {content.nav.register}
-            </Button>
-          </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-2 lg:hidden">
@@ -88,16 +89,12 @@ export function Header() {
           id="mobile-navigation"
           className="border-t border-border bg-white lg:hidden"
         >
-          <PageContainer className="space-y-4 py-4">
-            <Navigation orientation="vertical" onNavigate={() => setMobileOpen(false)} />
-            <div className="flex flex-col gap-2">
-              <Button href="/login" variant="secondary" fullWidth>
-                {content.nav.login}
-              </Button>
-              <Button href="/register" fullWidth>
-                {content.nav.register}
-              </Button>
-            </div>
+          <PageContainer className="py-4">
+            <Navigation
+              orientation="vertical"
+              onNavigate={() => setMobileOpen(false)}
+              onLogout={handleLogout}
+            />
           </PageContainer>
         </div>
       ) : null}

@@ -6,7 +6,7 @@ export function SkipLink() {
   const { content } = useLocale();
 
   return (
-    <a href="#main-content" className="skip-link">
+    <a href="#main-content" className="skip-link" suppressHydrationWarning>
       {content.nav.skipToContent}
     </a>
   );

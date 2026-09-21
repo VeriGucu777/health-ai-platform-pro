@@ -16,6 +16,7 @@ EXPECTED_OPENAPI_PATHS = {
     "/api/v1/patients",
     "/api/v1/patients/{patient_id}",
     "/api/v1/patients/{patient_id}/reports/health-summary.pdf",
+    "/api/v1/patients/{patient_id}/clinical-timeline",
     "/api/v1/patients/{patient_id}/risk-assessments/diabetes",
     "/api/v1/patients/{patient_id}/risk-assessments/heart-disease",
     "/api/v1/patients/{patient_id}/risk-assessments/stroke",

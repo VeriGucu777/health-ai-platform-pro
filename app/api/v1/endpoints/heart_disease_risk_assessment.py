@@ -4,9 +4,10 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
-from app.api.deps import CurrentUser, get_heart_disease_risk_assessment_service
+from app.api.deps import ClinicalUser, get_audit_service, get_heart_disease_risk_assessment_service
+from app.api.risk_assessment_audit import run_risk_assessment_with_audit
 from app.api.schemas.diabetes_risk_assessment import (
     ContributingFactorResponse,
     MissingInputResponse,
@@ -14,6 +15,7 @@ from app.api.schemas.diabetes_risk_assessment import (
 from app.api.schemas.health_measurement_insights import HealthRecommendationResponse
 from app.api.schemas.heart_disease_risk_assessment import HeartDiseaseRiskAssessmentResponse
 from app.application.dtos.heart_disease_risk_assessment import HeartDiseaseRiskAssessmentDTO
+from app.application.services.audit_service import AuditService
 from app.application.services.heart_disease_risk_assessment_service import (
     HeartDiseaseRiskAssessmentService,
 )
@@ -54,19 +56,29 @@ def _assessment_response(data: HeartDiseaseRiskAssessmentDTO) -> HeartDiseaseRis
 )
 async def assess_heart_disease_risk(
     patient_id: UUID,
-    current_user: CurrentUser,
+    request: Request,
+    current_user: ClinicalUser,
     assessment_service: Annotated[
         HeartDiseaseRiskAssessmentService,
         Depends(get_heart_disease_risk_assessment_service),
     ],
+    audit_service: Annotated[AuditService, Depends(get_audit_service)],
     date_from: datetime | None = None,
     date_to: datetime | None = None,
 ) -> HeartDiseaseRiskAssessmentResponse:
     """Return an on-demand, non-diagnostic heart disease risk assessment from recorded patient data."""
-    assessment = await assessment_service.assess_heart_disease_risk(
-        current_user.id,
+    assessment = await run_risk_assessment_with_audit(
+        request=request,
+        current_user=current_user,
         patient_id=patient_id,
-        date_from=date_from,
-        date_to=date_to,
+        risk_kind="heart_disease",
+        audit_service=audit_service,
+        assess=lambda: assessment_service.assess_heart_disease_risk(
+            current_user.id,
+            current_user.role,
+            patient_id=patient_id,
+            date_from=date_from,
+            date_to=date_to,
+        ),
     )
     return _assessment_response(assessment)

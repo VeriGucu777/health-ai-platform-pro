@@ -29,7 +29,7 @@ class HealthMeasurementCreate(BaseModel):
     exercise_minutes: int | None = Field(default=None, ge=0)
     notes: str | None = None
 
-    model_config = ConfigDict(str_strip_whitespace=True)
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
     @model_validator(mode="after")
     def validate_measurement_rules(self) -> Self:
@@ -69,7 +69,7 @@ class HealthMeasurementUpdate(BaseModel):
     exercise_minutes: int | None = Field(default=None, ge=0)
     notes: str | None = None
 
-    model_config = ConfigDict(str_strip_whitespace=True)
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
 
 class HealthMeasurementResponse(BaseModel):

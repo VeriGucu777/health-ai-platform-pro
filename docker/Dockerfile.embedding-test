@@ -1,0 +1,26 @@
+FROM python:3.12-bookworm
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgomp1 time \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY requirements.txt requirements-dev.txt pyproject.toml alembic.ini ./
+COPY alembic ./alembic
+COPY app ./app
+COPY tests ./tests
+COPY scripts ./scripts
+
+RUN pip install --no-cache-dir -r requirements-dev.txt
+
+ENV PYTHONUNBUFFERED=1
+ENV EMBEDDING_RUNTIME_REQUIRED=1
+ENV EMBEDDING_PROVIDER=local
+ENV LOCAL_EMBEDDING_MODEL=health-ai-platform/clinical-retrieval-multilingual-v1
+ENV EMBEDDING_VERSION=3
+ENV CLINICAL_RETRIEVAL_VECTOR_DIMENSION=384
+
+RUN chmod +x scripts/run_rag_v1_closure_tests.sh
+
+CMD ["scripts/run_rag_v1_closure_tests.sh"]

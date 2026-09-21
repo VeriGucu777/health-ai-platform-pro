@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from collections import defaultdict
 from collections.abc import Callable
@@ -18,10 +19,11 @@ _audit_logger = get_security_audit_logger()
 
 
 class AuthRateLimiter:
-    """Process-local sliding-window limiter keyed by endpoint scope and client IP."""
+    """Process-local sliding-window limiter (not shared across Uvicorn workers or hosts)."""
 
     def __init__(self) -> None:
         self._requests: dict[tuple[str, str], list[float]] = defaultdict(list)
+        self._lock = threading.Lock()
 
     def reset(self) -> None:
         """Clear all counters — useful for deterministic tests."""
@@ -32,16 +34,17 @@ class AuthRateLimiter:
         if max_requests <= 0:
             return
 
-        now = time.monotonic()
-        key = (scope, client_key)
-        window_start = now - window_seconds
-        recent = [timestamp for timestamp in self._requests[key] if timestamp > window_start]
+        with self._lock:
+            now = time.monotonic()
+            key = (scope, client_key)
+            window_start = now - window_seconds
+            recent = [timestamp for timestamp in self._requests[key] if timestamp > window_start]
 
-        if len(recent) >= max_requests:
-            raise RateLimitExceededError()
+            if len(recent) >= max_requests:
+                raise RateLimitExceededError()
 
-        recent.append(now)
-        self._requests[key] = recent
+            recent.append(now)
+            self._requests[key] = recent
 
 
 def get_client_ip(request: Request) -> str:

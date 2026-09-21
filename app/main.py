@@ -25,7 +25,20 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application startup and shutdown hooks."""
     settings: Settings = app.state.settings
+    from app.core.pilot_runtime import validate_pilot_runtime_settings
+
+    validate_pilot_runtime_settings(settings)
     get_engine(settings)
+    kind = (settings.embedding_provider or "").strip().lower()
+    if kind == "local" or settings.is_production or settings.environment == "staging":
+        from app.infrastructure.embeddings.embedding_factory import get_embedding_provider
+
+        app.state.embedding_provider = get_embedding_provider(settings)
+        logger.info(
+            "Clinical retrieval embedding provider ready (%s, dim=%s)",
+            app.state.embedding_provider.model_name,
+            app.state.embedding_provider.dimensions,
+        )
     logger.info(
         "Starting %s v%s [%s]",
         settings.app_name,

@@ -30,6 +30,17 @@ The Git repository root for deployment is `backend/`. Render build and start com
 
 Application import path: `app.main:app`
 
+### Uvicorn workers and rate limits (pilot)
+
+Auth and clinical narrative rate limits use **`AuthRateLimiter`** — a **process-local** in-memory store (`app/middleware/auth_rate_limit.py`). Limits are **not** global across multiple Uvicorn workers.
+
+| Setting | Recommended pilot value |
+|---|---|
+| `UVICORN_WORKERS` | `1` |
+| Start script | `scripts/start_production.sh` passes `--workers ${UVICORN_WORKERS:-1}` |
+
+When `ENVIRONMENT` is `production` or `staging` and auth or clinical narrative rate limits are enabled, startup **fails** if `UVICORN_WORKERS` is not `1`. Multi-worker deployments require a shared rate-limit store (not in v1 pilot scope).
+
 ## Required Environment Variables
 
 Set these in the Render dashboard (never commit real values):

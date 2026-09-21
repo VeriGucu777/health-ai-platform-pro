@@ -20,7 +20,7 @@ async def register_and_login(client: AsyncClient, *, email: str) -> dict[str, st
             "password": "securepass123",
             "first_name": "Test",
             "last_name": "User",
-            "role": "patient",
+            "role": "doctor",
         },
     )
     login_response = await client.post(

@@ -12,6 +12,7 @@ class Patient(BaseEntity):
     """Healthcare patient record owned by an authenticated user."""
 
     owner_id: UUID
+    organization_id: UUID | None = None
     first_name: str
     last_name: str
     date_of_birth: date

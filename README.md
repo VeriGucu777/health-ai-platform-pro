@@ -59,6 +59,61 @@ pytest tests/ -v
 
 API + unit tests use in-memory repositories and do not require PostgreSQL. Integration tests require Docker (Testcontainers).
 
+### Clinical retrieval embeddings (RAG v1)
+
+| Runtime | Support |
+|---|---|
+| **Linux / Docker production** | `EMBEDDING_PROVIDER=local` with ONNX + FastEmbed (`fastembed==0.6.1`) |
+| **Windows dev host** | Use `EMBEDDING_PROVIDER=fake` for API/unit tests only — local ONNX embeddings are **not** supported on Windows |
+
+**RAG v1 official closure** (Linux/Docker, production ONNX + pgvector):
+
+```powershell
+cd backend
+docker compose -f docker-compose.embedding-test.yml build embedding-tests
+docker compose -f docker-compose.embedding-test.yml run --rm embedding-tests
+# or: bash scripts/run_rag_v1_closure_tests.sh inside the image
+```
+
+This runs **two pytest processes** on purpose:
+
+| Stage | Command | Why separate |
+|---|---|---|
+| 1 | `pytest -m "not integration"` | API/unit without PostgreSQL Testcontainers or ONNX embedding suite (~502 tests) |
+| 2 | `pytest tests/integration/embedding` | Loads FastEmbed/ONNX once per process (~16 tests, TR/EN/cross-language + live E2E) |
+
+Stage 1 excludes all `tests/integration/**` (including embedding). Combining both in **one** pytest process is supported after the embedding provider cache fix, but the closure script keeps stages separate for clearer failure isolation and RSS measurement (`/usr/bin/time` + `/proc`).
+
+**Docker memory:** set `mem_limit: 1536m` on `embedding-tests` (measured stage-2 peak ~850–950 MB with a single cached model). Default Docker Desktop limits below ~1 GiB can OOM-kill pytest during model load.
+
+Production API loads the embedding model **once per process** via `get_embedding_provider()` (startup lifespan + request DI cache). It does **not** reload ONNX per HTTP request.
+
+### Clinical narrative LLM (v1)
+
+Flow: **PatientAccessPolicy READ → RAG retrieval → LLM narrative** (LLM never touches DB).
+
+| Setting | Purpose |
+|---|---|
+| `CLINICAL_NARRATIVE_PROVIDER=fake` | Dev/tests only (deterministic generator) |
+| `CLINICAL_NARRATIVE_PROVIDER=external` | Production/staging (explicit opt-in; OpenAI-compatible HTTP API) |
+| `CLINICAL_NARRATIVE_EXTERNAL_*` | Base URL, model id, API key (env only — never commit) |
+
+Local/self-hosted LLM is **not** wired in v1; production requires `external` or a future provider kind. Endpoint: `POST /api/v1/patients/{patient_id}/clinical-narrative`.
+
+**Rate limits (pilot):** `AuthRateLimiter` and clinical narrative limits use an **in-process** sliding window (`app/middleware/auth_rate_limit.py`). They are **not** shared across Uvicorn workers or hosts. For production/staging with rate limits enabled, set **`UVICORN_WORKERS=1`** (enforced at startup via `validate_pilot_runtime_settings`). `scripts/start_production.sh` defaults to one worker.
+
+**Live external smoke (optional):** with real vendor credentials (never commit), run:
+
+```bash
+export CLINICAL_NARRATIVE_LIVE_SMOKE=1
+export CLINICAL_NARRATIVE_EXTERNAL_BASE_URL=...
+export CLINICAL_NARRATIVE_EXTERNAL_API_KEY=...
+export CLINICAL_NARRATIVE_EXTERNAL_MODEL=...
+pytest tests/integration/narrative/test_external_narrative_live_smoke.py -v
+```
+
+If credentials are missing, do **not** treat the slice as closed — the suite skips/fails explicitly (no silent fake fallback).
+
 ## Documentation
 
 | Document | Description |
