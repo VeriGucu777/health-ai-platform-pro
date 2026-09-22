@@ -34,7 +34,6 @@ class LocalEmbeddingProvider(EmbeddingProvider):
         self._model: object | None = None
         self._dimensions: int | None = None
         self._infer_lock = threading.Lock()
-        self._ensure_model()
 
     @property
     def model_name(self) -> str:
@@ -51,7 +50,7 @@ class LocalEmbeddingProvider(EmbeddingProvider):
     @property
     def dimensions(self) -> int:
         if self._dimensions is None:
-            raise RuntimeError("LocalEmbeddingProvider dimensions not initialized")
+            self._ensure_model()
         return self._dimensions
 
     def _ensure_model(self) -> object:

@@ -106,6 +106,9 @@ class Settings(BaseSettings):
     )
     redis_url: str | None = Field(default=None, alias="REDIS_URL")
 
+    # Clinical retrieval / RAG (embedding + pgvector search)
+    rag_enabled: bool = Field(default=True, alias="RAG_ENABLED")
+
     # Clinical retrieval embeddings (local/self-hosted by default in production)
     embedding_provider: str = Field(default="", alias="EMBEDDING_PROVIDER")
     local_embedding_model: str = Field(

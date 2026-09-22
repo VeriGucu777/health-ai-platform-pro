@@ -7,7 +7,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request, status
 
 from app.api.auth_audit_context import build_auth_audit_context
-from app.api.deps import ClinicalUser, get_audit_service, get_clinical_retrieval_service
+from app.api.deps import (
+    ClinicalUser,
+    get_audit_service,
+    get_clinical_retrieval_service,
+    require_clinical_rag_enabled,
+)
 from app.api.schemas.clinical_retrieval import (
     PatientClinicalRetrievalRequest,
     PatientClinicalRetrievalResponse,
@@ -56,6 +61,7 @@ async def post_patient_clinical_retrieval(
     body: PatientClinicalRetrievalRequest,
     request: Request,
     current_user: ClinicalUser,
+    _rag_enabled: Annotated[None, Depends(require_clinical_rag_enabled)],
     retrieval_service: Annotated[ClinicalRetrievalService, Depends(get_clinical_retrieval_service)],
     audit_service: Annotated[AuditService, Depends(get_audit_service)],
 ) -> PatientClinicalRetrievalResponse:

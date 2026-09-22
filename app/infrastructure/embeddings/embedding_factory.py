@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from app.application.clinical_retrieval.constants import FAKE_EMBEDDING_MODEL
 from app.core.config import Settings
-from app.core.exceptions import ConfigurationError
+from app.core.exceptions import ConfigurationError, FeatureDisabledError
 from app.domain.interfaces.embedding_provider import EmbeddingProvider
 from app.infrastructure.embeddings.deterministic_fake_embedding_provider import (
     DeterministicFakeEmbeddingProvider,
@@ -24,12 +24,23 @@ _provider_cache: dict[tuple[Hashable, ...], EmbeddingProvider] = {}
 def _provider_cache_key(settings: Settings) -> tuple[Hashable, ...]:
     kind = (settings.embedding_provider or "").strip().lower()
     return (
+        settings.rag_enabled,
         kind,
         settings.local_embedding_model.strip() if kind == "local" else "",
         settings.embedding_version.strip(),
         settings.fake_embedding_dimensions if kind == "fake" else 0,
         settings.clinical_retrieval_vector_dimension,
     )
+
+
+def require_rag_enabled(settings: Settings) -> None:
+    """Fail fast when RAG endpoints are invoked but embeddings are disabled for this deployment."""
+    if not settings.rag_enabled:
+        raise FeatureDisabledError(
+            "Clinical retrieval (RAG) is disabled in this deployment. "
+            "Enable RAG_ENABLED when embedding runtime capacity is available.",
+            details={"feature": "clinical_rag", "code": "rag_disabled"},
+        )
 
 
 def reset_embedding_provider_cache() -> None:
@@ -39,6 +50,7 @@ def reset_embedding_provider_cache() -> None:
 
 def get_embedding_provider(settings: Settings) -> EmbeddingProvider:
     """Return a process-scoped embedding provider (single ONNX model load per config)."""
+    require_rag_enabled(settings)
     key = _provider_cache_key(settings)
     cached = _provider_cache.get(key)
     if cached is not None:
@@ -50,6 +62,7 @@ def get_embedding_provider(settings: Settings) -> EmbeddingProvider:
 
 def create_embedding_provider(settings: Settings) -> EmbeddingProvider:
     """Build embedding provider; never fall back to fake in production/staging."""
+    require_rag_enabled(settings)
     kind = (settings.embedding_provider or "").strip().lower()
     storage_dim = settings.clinical_retrieval_vector_dimension
 

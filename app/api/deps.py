@@ -45,7 +45,7 @@ from app.core.config import Settings
 from app.core.exceptions import AppException
 from app.domain.entities.user import UserRole
 from app.infrastructure.database.session import get_db_session
-from app.infrastructure.embeddings.embedding_factory import get_embedding_provider
+from app.infrastructure.embeddings.embedding_factory import get_embedding_provider, require_rag_enabled
 from app.infrastructure.llm.narrative_generator_factory import get_clinical_narrative_generator
 from app.infrastructure.repositories.appointment_repository import SQLAlchemyAppointmentRepository
 from app.infrastructure.repositories.clinical_retrieval_vector_repository import (
@@ -81,8 +81,24 @@ def get_app_settings(request: Request) -> Settings:
     return request.app.state.settings
 
 
+def require_clinical_rag_enabled(
+    settings: Annotated[Settings, Depends(get_app_settings)],
+) -> None:
+    """Gate RAG endpoints before opening a DB session (pilot: RAG_ENABLED=false)."""
+    require_rag_enabled(settings)
+
+
 async def get_db_session_from_app(request: Request) -> AsyncGenerator[AsyncSession, None]:
     """Yield a DB session using the app-scoped settings."""
+    async for session in get_db_session(request.app.state.settings):
+        yield session
+
+
+async def get_db_session_when_rag_enabled(
+    request: Request,
+    _: Annotated[None, Depends(require_clinical_rag_enabled)],
+) -> AsyncGenerator[AsyncSession, None]:
+    """Yield a DB session only after RAG is enabled for this deployment."""
     async for session in get_db_session(request.app.state.settings):
         yield session
 
@@ -339,10 +355,11 @@ def get_patient_clinical_summary_service(
 
 
 def get_clinical_retrieval_service(
-    session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+    session: Annotated[AsyncSession, Depends(get_db_session_when_rag_enabled)],
     settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> ClinicalRetrievalService:
     """Provide patient-scoped clinical retrieval with pgvector index."""
+    require_rag_enabled(settings)
     (
         patient_repository,
         _membership_repository,
@@ -377,10 +394,11 @@ def get_clinical_retrieval_service(
 
 
 def get_clinical_narrative_service(
-    session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+    session: Annotated[AsyncSession, Depends(get_db_session_when_rag_enabled)],
     settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> ClinicalNarrativeService:
     """Provide RAG-backed clinical narrative generation."""
+    require_rag_enabled(settings)
     (
         patient_repository,
         _membership_repository,

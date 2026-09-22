@@ -61,6 +61,17 @@ class ConfigurationError(AppException):
         super().__init__(message, status_code=500, **kwargs)
 
 
+class FeatureDisabledError(AppException):
+    """Optional product feature is turned off for this deployment (pilot / capacity)."""
+
+    def __init__(
+        self,
+        message: str = "This feature is disabled in the current deployment",
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(message, status_code=503, **kwargs)
+
+
 class RateLimitExceededError(AppException):
     """Too many requests from the same client."""
 
