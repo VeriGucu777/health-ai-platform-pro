@@ -19,6 +19,12 @@ from app.core.reference_ranges import (
     WEIGHT_INFO_CHANGE_PERCENT,
     WEIGHT_WARNING_CHANGE_PERCENT,
 )
+from app.application.reports.report_i18n import (
+    METRIC_LABELS,
+    InsightMessages,
+    ReportLocale,
+    get_insight_messages,
+)
 from app.domain.entities.health_measurement import HealthMeasurement
 
 InsightSeverity = Literal["normal", "info", "warning", "urgent"]
@@ -35,13 +41,6 @@ InsightStatus = Literal[
 RecommendationCategory = Literal["monitoring", "follow_up", "tracking"]
 
 SEVERITY_RANK = {"normal": 0, "info": 1, "warning": 2, "urgent": 3}
-
-EMPTY_HISTORY_RECOMMENDATION = (
-    "monitoring",
-    "Add more health measurements over time to generate meaningful insights.",
-    (),
-)
-
 
 def extract_latest_measurement(
     measurements: list[HealthMeasurement],
@@ -79,8 +78,12 @@ def compute_overall_status(severities: list[InsightSeverity]) -> InsightSeverity
 def classify_metric_insight(
     measurements: list[HealthMeasurement],
     metric: str,
+    *,
+    messages: InsightMessages | None = None,
 ) -> dict[str, object]:
     """Build one deterministic insight entry for a metric."""
+    if messages is None:
+        messages = get_insight_messages("en")
     stats = compute_metric_statistics(measurements, metric)
     latest_value = extract_latest_value(measurements, metric)
     average_value = stats["average"]
@@ -94,7 +97,7 @@ def classify_metric_insight(
             "latest_value": None,
             "average_value": None,
             "trend_direction": "insufficient_data",
-            "message": _message_for_no_data(metric),
+            "message": messages.no_data_message(metric),
         }
 
     if metric == "blood_glucose":
@@ -103,35 +106,40 @@ def classify_metric_insight(
         severity, status, message = _classify_blood_glucose(
             latest_value,
             latest_measurement.glucose_context,
+            messages=messages,
         )
     elif metric == "systolic_pressure":
         severity, status, message = _classify_numeric_metric(
             latest_value,
             SYSTOLIC_PRESSURE_THRESHOLDS,
-            metric_label="systolic blood pressure",
-            reference_description="general adult blood pressure reference ranges",
+            metric=metric,
+            messages=messages,
+            reference_description=messages.reference_bp(),
         )
     elif metric == "diastolic_pressure":
         severity, status, message = _classify_numeric_metric(
             latest_value,
             DIASTOLIC_PRESSURE_THRESHOLDS,
-            metric_label="diastolic blood pressure",
-            reference_description="general adult blood pressure reference ranges",
+            metric=metric,
+            messages=messages,
+            reference_description=messages.reference_bp(),
         )
     elif metric == "heart_rate":
         severity, status, message = _classify_numeric_metric(
             latest_value,
             RESTING_HEART_RATE_THRESHOLDS,
-            metric_label="resting heart rate",
-            reference_description="resting adult heart rate reference ranges",
+            metric=metric,
+            messages=messages,
+            reference_description=messages.reference_hr(),
         )
     elif metric == "weight_kg":
         severity, status, message = _classify_weight(
             measurements,
             trend_direction=str(trend_direction),
+            messages=messages,
         )
     else:
-        severity, status, message = "info", "insufficient_data", "Metric insight is not available."
+        severity, status, message = "info", "insufficient_data", messages.metric_unavailable()
 
     severity, status, message = _apply_trend_adjustment(
         metric=metric,
@@ -139,6 +147,7 @@ def classify_metric_insight(
         status=status,
         trend_direction=str(trend_direction),
         message=message,
+        messages=messages,
     )
 
     return {
@@ -173,15 +182,17 @@ def build_recommendations(
     alerts: list[dict[str, object]],
     *,
     has_any_measurements: bool,
+    messages: InsightMessages | None = None,
 ) -> list[dict[str, object]]:
     """Build deduplicated, non-prescriptive recommendations."""
+    if messages is None:
+        messages = get_insight_messages("en")
     if not has_any_measurements:
-        category, message, related_metrics = EMPTY_HISTORY_RECOMMENDATION
         return [
             {
-                "category": category,
-                "message": message,
-                "related_metrics": list(related_metrics),
+                "category": "monitoring",
+                "message": messages.empty_history_recommendation(),
+                "related_metrics": [],
             }
         ]
 
@@ -189,7 +200,11 @@ def build_recommendations(
     seen_messages: set[str] = set()
 
     for alert in alerts:
-        recommendation = _recommendation_for_alert(str(alert["metric"]), str(alert["severity"]))
+        recommendation = _recommendation_for_alert(
+            str(alert["metric"]),
+            str(alert["severity"]),
+            messages=messages,
+        )
         if recommendation is None:
             continue
         category, message, related_metrics = recommendation
@@ -207,15 +222,24 @@ def build_recommendations(
     return recommendations
 
 
-def build_insights(measurements: list[HealthMeasurement]) -> dict[str, object]:
+def build_insights(
+    measurements: list[HealthMeasurement],
+    *,
+    locale: ReportLocale = "en",
+) -> dict[str, object]:
     """Compute insights, alerts, recommendations, and overall status."""
-    insights = [classify_metric_insight(measurements, metric) for metric in INSIGHT_METRICS]
+    messages = get_insight_messages(locale)
+    insights = [
+        classify_metric_insight(measurements, metric, messages=messages)
+        for metric in INSIGHT_METRICS
+    ]
     alerts = build_alerts(insights)
     has_any_measurements = len(measurements) > 0
     recommendations = build_recommendations(
         insights,
         alerts,
         has_any_measurements=has_any_measurements,
+        messages=messages,
     )
     overall_status = compute_overall_status([insight["severity"] for insight in insights])
     return {
@@ -229,6 +253,8 @@ def build_insights(measurements: list[HealthMeasurement]) -> dict[str, object]:
 def _classify_blood_glucose(
     value: Decimal,
     glucose_context: str | None,
+    *,
+    messages: InsightMessages,
 ) -> tuple[InsightSeverity, InsightStatus, str]:
     context = glucose_context.strip().lower() if isinstance(glucose_context, str) else None
     context_missing = context not in KNOWN_GLUCOSE_CONTEXTS
@@ -251,15 +277,14 @@ def _classify_blood_glucose(
             status = "context_required"
         elif status == "within_reference_range":
             status = "context_required"
-        message = (
-            "Blood glucose was evaluated using a conservative generic adult reference range "
-            "because glucose context was not recorded. Recording fasting or post-meal context "
-            "supports a more meaningful assessment. "
-            + _glucose_value_message(value, severity, status, context_label)
-        )
-        return severity, status, message
 
-    message = _glucose_value_message(value, severity, status, context_label)
+    message = messages.glucose_context_message(
+        value=value,
+        severity=severity,
+        status=status,
+        context_label=context_label,
+        context_missing=context_missing,
+    )
     return severity, status, message
 
 
@@ -267,20 +292,20 @@ def _classify_numeric_metric(
     value: Decimal,
     thresholds,
     *,
-    metric_label: str,
+    metric: str,
+    messages: InsightMessages,
     reference_description: str,
 ) -> tuple[InsightSeverity, InsightStatus, str]:
     severity, status = _classify_against_thresholds(value, thresholds)
-    message = (
-        f"The latest {metric_label} reading is {_status_phrase(status)} "
-        f"based on {reference_description} for informational tracking only. "
-        f"This is not a diagnosis."
+    metric_label = METRIC_LABELS[messages.locale].get(metric, metric.replace("_", " "))
+    if messages.locale == "en":
+        metric_label = metric_label.lower()
+    message = messages.numeric_metric_message(
+        metric_label=metric_label,
+        status=status,
+        reference_description=reference_description,
+        urgent=severity == "urgent",
     )
-    if severity == "urgent":
-        message += (
-            " Prompt professional evaluation should be considered. "
-            "If severe symptoms are present, follow local emergency guidance."
-        )
     return severity, status, message
 
 
@@ -288,6 +313,7 @@ def _classify_weight(
     measurements: list[HealthMeasurement],
     *,
     trend_direction: str,
+    messages: InsightMessages,
 ) -> tuple[InsightSeverity, InsightStatus, str]:
     weight_measurements = sorted(
         [
@@ -301,7 +327,7 @@ def _classify_weight(
         return (
             "info",
             "insufficient_data",
-            "Not enough weight measurements are available to assess trend meaningfully.",
+            messages.weight_insufficient(),
         )
 
     earliest = extract_metric_value(weight_measurements[0], "weight_kg")
@@ -324,24 +350,13 @@ def _classify_weight(
 
     if percent_change <= WEIGHT_INFO_CHANGE_PERCENT and trend_direction == "stable":
         severity: InsightSeverity = "normal"
-        message = (
-            "Weight readings appear relatively stable across the selected period. "
-            "This trend summary is informational and does not indicate a medical condition."
-        )
+        message = messages.weight_stable()
     elif percent_change <= WEIGHT_WARNING_CHANGE_PERCENT:
         severity = "info"
-        message = (
-            "Weight readings show a moderate change over the selected period. "
-            "Continue routine tracking and discuss significant changes with a qualified "
-            "healthcare professional if needed."
-        )
+        message = messages.weight_moderate_change()
     else:
         severity = "warning"
-        message = (
-            "Weight readings show a notable percentage change over the selected period. "
-            "This tracking summary is informational only and does not diagnose a condition "
-            "or indicate an emergency."
-        )
+        message = messages.weight_notable_change()
 
     return severity, status, message
 
@@ -378,6 +393,7 @@ def _apply_trend_adjustment(
     status: InsightStatus,
     trend_direction: str,
     message: str,
+    messages: InsightMessages,
 ) -> tuple[InsightSeverity, InsightStatus, str]:
     if metric == "weight_kg" or trend_direction in {"insufficient_data", "stable"}:
         return severity, status, message
@@ -389,87 +405,30 @@ def _apply_trend_adjustment(
         return (
             "info",
             "increasing_trend",
-            message + " Readings show an increasing trend over the selected period.",
+            message + messages.trend_suffix_increasing(),
         )
 
     return (
         "info",
         "decreasing_trend",
-        message + " Readings show a decreasing trend over the selected period.",
+        message + messages.trend_suffix_decreasing(),
     )
-
-
-def _glucose_value_message(
-    value: Decimal,
-    severity: InsightSeverity,
-    status: InsightStatus,
-    context_label: str | None,
-) -> str:
-    context_text = f"{context_label} " if context_label else ""
-    base = (
-        f"The latest {context_text}blood glucose reading is {_status_phrase(status)} "
-        "using general adult reference ranges for informational tracking only. "
-        "This is not a diagnosis."
-    )
-    if severity == "urgent":
-        base += (
-            " Prompt professional evaluation should be considered. "
-            "If severe symptoms are present, follow local emergency guidance."
-        )
-    return base
-
-
-def _status_phrase(status: InsightStatus) -> str:
-    mapping = {
-        "within_reference_range": "within the informational reference range",
-        "below_reference_range": "below the informational reference range",
-        "above_reference_range": "above the informational reference range",
-        "context_required": "recorded without sufficient measurement context",
-        "insufficient_data": "not available for assessment",
-        "stable_trend": "associated with a stable trend",
-        "increasing_trend": "associated with an increasing trend",
-        "decreasing_trend": "associated with a decreasing trend",
-    }
-    return mapping.get(status, "available for review")
-
-
-def _message_for_no_data(metric: str) -> str:
-    labels = {
-        "blood_glucose": "blood glucose",
-        "systolic_pressure": "systolic blood pressure",
-        "diastolic_pressure": "diastolic blood pressure",
-        "heart_rate": "resting heart rate",
-        "weight_kg": "weight",
-    }
-    label = labels.get(metric, metric.replace("_", " "))
-    return f"No {label} measurements were recorded in the selected date range."
 
 
 def _recommendation_for_alert(
     metric: str,
     severity: InsightSeverity,
+    *,
+    messages: InsightMessages,
 ) -> tuple[RecommendationCategory, str, tuple[str, ...]] | None:
     if severity not in {"warning", "urgent"}:
         return None
 
-    labels = {
-        "blood_glucose": "blood glucose",
-        "systolic_pressure": "systolic blood pressure",
-        "diastolic_pressure": "diastolic blood pressure",
-        "heart_rate": "resting heart rate",
-        "weight_kg": "weight",
-    }
-    label = labels.get(metric, metric.replace("_", " "))
+    label = METRIC_LABELS[messages.locale].get(metric, metric.replace("_", " "))
+    if messages.locale == "en":
+        label = label.lower()
 
     if severity == "urgent":
-        message = (
-            f"Prompt professional evaluation should be considered for recent {label} readings. "
-            "If severe symptoms are present, follow local emergency guidance."
-        )
-        return "follow_up", message, (metric,)
+        return "follow_up", messages.alert_recommendation_urgent(label), (metric,)
 
-    message = (
-        f"Consider sharing recent {label} readings with a qualified healthcare professional "
-        "and repeat measurements as appropriate for ongoing tracking."
-    )
-    return "follow_up", message, (metric,)
+    return "follow_up", messages.alert_recommendation_warning(label), (metric,)

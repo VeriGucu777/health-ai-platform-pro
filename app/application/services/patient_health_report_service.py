@@ -6,6 +6,12 @@ from uuid import UUID
 from app.application.dtos.medical_record import MedicalRecordDTO
 from app.application.dtos.patient_health_report import PatientHealthReportContextDTO
 from app.application.reports.patient_health_pdf_builder import build_patient_health_pdf
+from app.application.reports.report_i18n import (
+    ReportLocale,
+    get_report_copy,
+    parse_report_locale,
+    patient_notes_for_report,
+)
 from app.application.services.base import BaseService
 from app.application.services.health_measurement_analytics_service import (
     HealthMeasurementAnalyticsService,
@@ -43,7 +49,13 @@ class PatientHealthReportService(BaseService):
         patient_id: UUID,
         date_from: datetime | None = None,
         date_to: datetime | None = None,
+        locale: str | ReportLocale | None = None,
     ) -> tuple[bytes, str, UUID | None]:
+        if locale in ("en", "tr"):
+            report_locale: ReportLocale = locale  # type: ignore[assignment]
+        else:
+            report_locale = parse_report_locale(str(locale) if locale is not None else None)
+        report_copy = get_report_copy(report_locale)
         patient, organization_id = await self._patients.get_patient_for_user_with_context(
             actor_id,
             actor_role,
@@ -70,6 +82,7 @@ class PatientHealthReportService(BaseService):
             patient_id=patient_id,
             date_from=date_from,
             date_to=date_to,
+            locale=report_locale,
         )
 
         medical_records, total_in_range, truncated = await self._load_medical_records(
@@ -80,8 +93,11 @@ class PatientHealthReportService(BaseService):
             date_to=summary.date_to,
         )
 
+        patient_for_report = patient.model_copy(
+            update={"notes": patient_notes_for_report(patient.notes)}
+        )
         context = PatientHealthReportContextDTO(
-            patient=patient,
+            patient=patient_for_report,
             date_from=summary.date_from,
             date_to=summary.date_to,
             generated_at=datetime.now(UTC),
@@ -91,6 +107,9 @@ class PatientHealthReportService(BaseService):
             measurement_summary=summary,
             measurement_trends=trends,
             clinical_insights=insights,
+            locale=report_locale,
+            insights_disclaimer=report_copy.insights_disclaimer,
+            report_disclaimer=report_copy.report_disclaimer,
         )
         filename = f"patient-health-report-{patient_id}.pdf"
         return build_patient_health_pdf(context), filename, organization_id

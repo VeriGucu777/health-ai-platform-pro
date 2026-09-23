@@ -89,19 +89,32 @@ export function PatientsListPanel() {
           {patients.map((patient) => (
             <tr key={patient.id} className="border-b border-border last:border-b-0">
               <td className="px-4 py-3 font-medium text-text-primary">
-                {patient.first_name} {patient.last_name}
+                <Link
+                  href={`/patients/${patient.id}`}
+                  className="text-brand-800 hover:text-brand-900 hover:underline"
+                >
+                  {patient.first_name} {patient.last_name}
+                </Link>
               </td>
               <td className="px-4 py-3 text-text-secondary">{formatDate(patient.date_of_birth)}</td>
               <td className="px-4 py-3 text-text-secondary">
                 {formatPatientGender(patient.gender, content.patients.genders)}
               </td>
               <td className="px-4 py-3">
-                <Link
-                  href={`/patients/${patient.id}/timeline`}
-                  className="inline-flex min-h-10 items-center rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
-                >
-                  {content.patients.viewTimeline}
-                </Link>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={`/patients/${patient.id}`}
+                    className="inline-flex min-h-10 items-center rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium text-text-primary hover:bg-brand-50"
+                  >
+                    {content.patients.viewPatient}
+                  </Link>
+                  <Link
+                    href={`/patients/${patient.id}/timeline`}
+                    className="inline-flex min-h-10 items-center rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                  >
+                    {content.patients.viewTimeline}
+                  </Link>
+                </div>
               </td>
             </tr>
           ))}

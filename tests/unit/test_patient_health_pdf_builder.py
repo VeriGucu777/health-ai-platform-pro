@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.application.analytics.health_measurement_insights import build_insights
 from app.application.dtos.health_measurement_analytics import (
     HealthMeasurementSummaryDTO,
     HealthMeasurementTrendsDTO,
@@ -21,10 +22,13 @@ from app.application.dtos.patient import PatientDTO
 from app.application.dtos.patient_health_report import PatientHealthReportContextDTO
 from app.application.reports.patient_health_pdf_builder import build_patient_health_pdf
 from app.application.reports.pdf_fonts import PdfFontUnavailableError, validate_pdf_font_available
-from app.core.reference_ranges import REPORT_PDF_DISCLAIMER
+from app.application.reports.report_i18n import get_report_copy
+from tests.support.pdf_locale_acceptance import (
+    assert_english_pdf_meets_locale_acceptance,
+    assert_turkish_pdf_meets_locale_acceptance,
+)
 from tests.support.pdf_report_helpers import (
     assert_disclaimers_present,
-    assert_english_content_present,
     assert_pdf_has_unicode_font_embedding,
     assert_turkish_content_present,
     extract_pdf_text,
@@ -48,10 +52,15 @@ def _patient(*, first_name: str = "Şahin", last_name: str = "Öğüt") -> Patie
     )
 
 
-def _context(*, medical_records: list[MedicalRecordDTO] | None = None) -> PatientHealthReportContextDTO:
+def _context(
+    *,
+    medical_records: list[MedicalRecordDTO] | None = None,
+    locale: str = "tr",
+) -> PatientHealthReportContextDTO:
     now = datetime(2026, 8, 1, tzinfo=UTC)
     patient = _patient()
     patient_id = patient.id
+    payload = build_insights([], locale=locale)  # type: ignore[arg-type]
     summary = HealthMeasurementSummaryDTO(
         patient_id=patient_id,
         metric=None,
@@ -84,27 +93,14 @@ def _context(*, medical_records: list[MedicalRecordDTO] | None = None) -> Patien
         patient_id=patient_id,
         date_from=now,
         date_to=datetime(2026, 8, 31, tzinfo=UTC),
-        overall_status="info",
-        insights=[
-            MetricInsightDTO(
-                metric="blood_glucose",
-                status="insufficient_data",
-                severity="info",
-                latest_value=None,
-                average_value=None,
-                trend_direction="insufficient_data",
-                message="No blood glucose measurements were recorded in the selected date range.",
-            )
-        ],
+        overall_status=str(payload["overall_status"]),
+        insights=[MetricInsightDTO(**item) for item in payload["insights"]],
         alerts=[],
         recommendations=[
-            HealthRecommendationDTO(
-                category="monitoring",
-                message="Add more health measurements over time to generate meaningful insights.",
-                related_metrics=[],
-            )
+            HealthRecommendationDTO(**item) for item in payload["recommendations"]
         ],
     )
+    copy = get_report_copy(locale)  # type: ignore[arg-type]
     return PatientHealthReportContextDTO(
         patient=patient,
         date_from=now,
@@ -116,6 +112,9 @@ def _context(*, medical_records: list[MedicalRecordDTO] | None = None) -> Patien
         measurement_summary=summary,
         measurement_trends=trends,
         clinical_insights=insights,
+        locale=locale,  # type: ignore[arg-type]
+        insights_disclaimer=copy.insights_disclaimer,
+        report_disclaimer=copy.report_disclaimer,
     )
 
 
@@ -125,26 +124,29 @@ def test_build_pdf_starts_with_pdf_signature() -> None:
 
 
 def test_build_pdf_contains_turkish_characters() -> None:
-    pdf_bytes = build_patient_health_pdf(_context())
+    pdf_bytes = build_patient_health_pdf(_context(locale="tr"))
     text = extract_pdf_text(pdf_bytes)
     assert_turkish_content_present(pdf_bytes, text)
     assert "Şahin" in text
     assert "Öğüt" in text
     assert "Türkçe karakter testi" in text
+    assert "Erkek" in text
 
 
-def test_build_pdf_contains_english_content() -> None:
-    pdf_bytes = build_patient_health_pdf(_context())
-    text = extract_pdf_text(pdf_bytes)
-    assert_english_content_present(text)
-    assert "Add more health measurements over time" in text
+def test_build_pdf_turkish_locale_acceptance() -> None:
+    pdf_bytes = build_patient_health_pdf(_context(locale="tr"))
+    assert_turkish_pdf_meets_locale_acceptance(extract_pdf_text(pdf_bytes))
 
 
-def test_build_pdf_contains_mixed_english_and_turkish_content() -> None:
-    pdf_bytes = build_patient_health_pdf(_context())
+def test_build_pdf_english_locale_acceptance() -> None:
+    pdf_bytes = build_patient_health_pdf(_context(locale="en"))
+    assert_english_pdf_meets_locale_acceptance(extract_pdf_text(pdf_bytes))
+
+
+def test_build_pdf_turkish_unicode_font() -> None:
+    pdf_bytes = build_patient_health_pdf(_context(locale="tr"))
     text = extract_pdf_text(pdf_bytes)
     assert_turkish_content_present(pdf_bytes, text)
-    assert_english_content_present(text)
     assert "Hasta Sağlık Raporu" in text
     assert_pdf_has_unicode_font_embedding(pdf_bytes)
 
@@ -166,16 +168,16 @@ def test_build_pdf_fails_when_font_missing(monkeypatch: pytest.MonkeyPatch) -> N
     assert exc_info.value.details["expected_filename"] == "NotoSans-Regular.ttf"
 
 
-def test_build_pdf_contains_mandatory_disclaimers() -> None:
-    pdf_bytes = build_patient_health_pdf(_context())
-    assert_disclaimers_present(pdf_bytes)
+def test_build_pdf_contains_mandatory_disclaimers_turkish() -> None:
+    pdf_bytes = build_patient_health_pdf(_context(locale="tr"))
+    assert_disclaimers_present(pdf_bytes, locale="tr")
 
 
-def test_build_pdf_empty_history_sections() -> None:
-    pdf_bytes = build_patient_health_pdf(_context())
+def test_build_pdf_empty_history_sections_turkish() -> None:
+    pdf_bytes = build_patient_health_pdf(_context(locale="tr"))
     text = extract_pdf_text(pdf_bytes)
     assert "Seçilen dönemde tıbbi kayıt bulunmamaktadır." in text
-    assert "Add more health measurements over time" in text
+    assert "Anlamlı içgörüler için" in text
 
 
 def test_build_pdf_shows_medical_record_limit_notice() -> None:
@@ -200,7 +202,7 @@ def test_build_pdf_shows_medical_record_limit_notice() -> None:
         )
         for index in range(3)
     ]
-    context = _context(medical_records=records)
+    context = _context(medical_records=records, locale="tr")
     context.medical_records_total_in_range = 150
     context.medical_records_truncated = True
     pdf_bytes = build_patient_health_pdf(context)
@@ -210,5 +212,9 @@ def test_build_pdf_shows_medical_record_limit_notice() -> None:
 
 
 def test_mandatory_disclaimer_constant_present() -> None:
-    assert "not a diagnosis" in REPORT_PDF_DISCLAIMER
-    assert "official clinical document" in REPORT_PDF_DISCLAIMER
+    copy = get_report_copy("en")
+    assert "not a diagnosis" in copy.report_disclaimer
+    assert "official clinical document" in copy.report_disclaimer
+    copy_tr = get_report_copy("tr")
+    assert "resmi klinik belge değildir" in copy_tr.report_disclaimer
+    assert "Tanı değildir" in copy_tr.insights_disclaimer or "Tanı" in copy_tr.insights_disclaimer

@@ -10,6 +10,7 @@ from starlette.responses import Response
 from app.api.deps import ClinicalUser, get_audit_service, get_patient_health_report_service
 from app.api.health_report_audit import run_health_report_export_with_audit
 from app.application.services.audit_service import AuditService
+from app.application.reports.report_i18n import REPORT_LOCALE_RESPONSE_HEADER, resolve_report_locale
 from app.application.services.patient_health_report_service import PatientHealthReportService
 
 router = APIRouter()
@@ -36,8 +37,13 @@ async def generate_patient_health_summary_pdf(
     audit_service: Annotated[AuditService, Depends(get_audit_service)],
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    locale: str | None = None,
 ) -> Response:
     """Generate a PDF health summary for one owned patient within the requested UTC date range."""
+    report_locale = resolve_report_locale(
+        locale,
+        request.headers.get("accept-language"),
+    )
     pdf_bytes, filename = await run_health_report_export_with_audit(
         request=request,
         current_user=current_user,
@@ -49,10 +55,14 @@ async def generate_patient_health_summary_pdf(
             patient_id=patient_id,
             date_from=date_from,
             date_to=date_to,
+            locale=report_locale,
         ),
     )
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            REPORT_LOCALE_RESPONSE_HEADER: report_locale,
+        },
     )

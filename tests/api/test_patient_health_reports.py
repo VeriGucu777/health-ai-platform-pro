@@ -66,8 +66,16 @@ def _pdf_text(content: bytes) -> str:
     return extract_pdf_text(content)
 
 
-def _report_url(patient_id: str, *, date_range: str = REPORT_DATE_RANGE) -> str:
-    return f"/api/v1/patients/{patient_id}/reports/health-summary.pdf?{date_range}"
+def _report_url(
+    patient_id: str,
+    *,
+    date_range: str = REPORT_DATE_RANGE,
+    locale: str | None = None,
+) -> str:
+    suffix = date_range
+    if locale:
+        suffix = f"{date_range}&locale={locale}"
+    return f"/api/v1/patients/{patient_id}/reports/health-summary.pdf?{suffix}"
 
 
 @pytest.mark.asyncio
@@ -80,16 +88,22 @@ async def test_generate_report_returns_valid_pdf(client: AsyncClient) -> None:
         last_name="Öğüt",
     )
 
-    response = await client.get(_report_url(patient_id), headers=headers)
+    response = await client.get(_report_url(patient_id, locale="tr"), headers=headers)
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/pdf")
     assert response.content.startswith(b"%PDF")
     assert "attachment" in response.headers["content-disposition"]
     assert f'patient-health-report-{patient_id}.pdf' in response.headers["content-disposition"]
 
-    assert_turkish_content_present(response.content, _pdf_text(response.content))
-    assert_english_content_present(_pdf_text(response.content))
-    assert_disclaimers_present(response.content)
+    text = _pdf_text(response.content)
+    assert_turkish_content_present(response.content, text)
+    assert "Hasta Sağlık Raporu" in text
+    assert_disclaimers_present(response.content, locale="tr")
+
+    response_en = await client.get(_report_url(patient_id, locale="en"), headers=headers)
+    assert response_en.status_code == 200
+    assert_english_content_present(_pdf_text(response_en.content))
+    assert_disclaimers_present(response_en.content, locale="en")
 
 
 @pytest.mark.asyncio
@@ -97,11 +111,12 @@ async def test_generate_report_empty_history(client: AsyncClient) -> None:
     headers = await _register_and_login(client, email="phr-empty@example.com")
     patient_id = await _create_patient(client, headers)
 
-    response = await client.get(_report_url(patient_id), headers=headers)
+    response = await client.get(_report_url(patient_id, locale="tr"), headers=headers)
     assert response.status_code == 200
     text = _pdf_text(response.content)
     assert "Seçilen dönemde tıbbi kayıt bulunmamaktadır." in text
-    assert "Add more health measurements over time" in text
+    assert "Anlamlı içgörüler için" in text
+    assert "Add more health measurements over time" not in text
 
 
 @pytest.mark.asyncio
@@ -128,6 +143,7 @@ async def test_generate_report_date_filter(client: AsyncClient) -> None:
         _report_url(
             patient_id,
             date_range="date_from=2026-08-01T00:00:00Z&date_to=2026-08-31T23:59:59Z",
+            locale="en",
         ),
         headers=headers,
     )
@@ -156,6 +172,7 @@ async def test_generate_report_medical_record_limit_notice(client: AsyncClient) 
         _report_url(
             patient_id,
             date_range="date_from=2026-06-01T00:00:00Z&date_to=2026-09-15T23:59:59Z",
+            locale="tr",
         ),
         headers=headers,
     )
@@ -230,9 +247,9 @@ async def test_generate_report_includes_alerts_and_recommendations(client: Async
         headers=headers,
     )
 
-    response = await client.get(_report_url(patient_id), headers=headers)
+    response = await client.get(_report_url(patient_id, locale="tr"), headers=headers)
     assert response.status_code == 200
     text = _pdf_text(response.content)
     assert "Uyarılar" in text
-    assert "Takip Önerileri" in text
-    assert "Prompt professional evaluation" in text
+    assert "Takip önerileri" in text
+    assert "profesyonel değerlendirme" in text.lower()

@@ -2,6 +2,8 @@
 
 from datetime import datetime
 
+from pydantic import Field
+
 from app.application.dtos.base import BaseSchema
 from app.application.dtos.health_measurement_analytics import (
     HealthMeasurementSummaryDTO,
@@ -10,7 +12,7 @@ from app.application.dtos.health_measurement_analytics import (
 from app.application.dtos.health_measurement_insights import HealthMeasurementInsightsDTO
 from app.application.dtos.medical_record import MedicalRecordDTO
 from app.application.dtos.patient import PatientDTO
-from app.core.reference_ranges import INSIGHTS_DISCLAIMER, REPORT_PDF_DISCLAIMER
+from app.application.reports.report_i18n import ReportLocale, get_report_copy
 
 
 class PatientHealthReportContextDTO(BaseSchema):
@@ -26,5 +28,8 @@ class PatientHealthReportContextDTO(BaseSchema):
     measurement_summary: HealthMeasurementSummaryDTO
     measurement_trends: HealthMeasurementTrendsDTO
     clinical_insights: HealthMeasurementInsightsDTO
-    insights_disclaimer: str = INSIGHTS_DISCLAIMER
-    report_disclaimer: str = REPORT_PDF_DISCLAIMER
+    locale: ReportLocale = "en"
+    insights_disclaimer: str = Field(
+        default_factory=lambda: get_report_copy("en").insights_disclaimer
+    )
+    report_disclaimer: str = Field(default_factory=lambda: get_report_copy("en").report_disclaimer)

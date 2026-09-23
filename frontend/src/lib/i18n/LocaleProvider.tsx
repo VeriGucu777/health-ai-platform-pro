@@ -15,6 +15,8 @@ import type { CommonContent } from "@/lib/i18n/types";
 
 type LocaleContextValue = {
   locale: SupportedLocale;
+  /** Locale used for API/report requests; matches visible UI language after hydration. */
+  effectiveLocale: SupportedLocale;
   content: CommonContent;
   setLocale: (locale: SupportedLocale) => void;
   isReady: boolean;
@@ -93,13 +95,14 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
   const value = useMemo(
     () => ({
       locale,
+      effectiveLocale: contentLocale,
       content,
       setLocale,
       isReady,
       formatDate,
       formatDateTime,
     }),
-    [content, formatDate, formatDateTime, isReady, locale, setLocale],
+    [content, contentLocale, formatDate, formatDateTime, isReady, locale, setLocale],
   );
 
   return (

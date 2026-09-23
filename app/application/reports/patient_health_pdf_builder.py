@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from io import BytesIO
 
@@ -14,35 +14,20 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 from app.application.dtos.patient_health_report import PatientHealthReportContextDTO
 from app.application.reports.pdf_fonts import PDF_FONT_NAME, ensure_pdf_unicode_font_registered
-from app.core.reference_ranges import REPORT_STATISTICS_METRICS
+from app.application.reports.report_i18n import (
+    ReportCopy,
+    format_report_date,
+    format_report_datetime,
+    get_report_copy,
+)
+from app.core.reference_ranges import MAX_MEDICAL_RECORDS_IN_REPORT, REPORT_STATISTICS_METRICS
 
 MAX_TREND_ROWS = 10
-
-METRIC_LABELS_TR = {
-    "blood_glucose": "Kan Şekeri",
-    "systolic_pressure": "Sistolik Tansiyon",
-    "diastolic_pressure": "Diyastolik Tansiyon",
-    "heart_rate": "Nabız",
-    "weight_kg": "Kilo",
-}
-
-TREND_LABELS_TR = {
-    "increasing": "Artış",
-    "decreasing": "Azalış",
-    "stable": "Stabil",
-    "insufficient_data": "Yetersiz veri",
-}
-
-RANGE_LABELS_TR = {
-    "within_reference_range": "Referans aralığında",
-    "below_reference_range": "Referans altı",
-    "above_reference_range": "Referans üstü",
-    "not_applicable": "Uygulanamaz",
-}
 
 
 def build_patient_health_pdf(context: PatientHealthReportContextDTO) -> bytes:
     """Render the patient health report PDF and return raw bytes."""
+    copy = get_report_copy(context.locale)
     font_name = ensure_pdf_unicode_font_registered()
     buffer = BytesIO()
     doc = SimpleDocTemplate(
@@ -52,32 +37,33 @@ def build_patient_health_pdf(context: PatientHealthReportContextDTO) -> bytes:
         leftMargin=2 * cm,
         topMargin=2 * cm,
         bottomMargin=2 * cm,
-        title="Patient Health Report",
+        title=copy.document_title,
     )
 
     styles = _build_styles(font_name)
     story: list = []
 
-    story.append(Paragraph("Health AI Platform Pro", styles["title"]))
-    story.append(Paragraph("Hasta Sağlık Raporu", styles["heading"]))
+    story.append(Paragraph(_escape(copy.platform_name), styles["title"]))
+    story.append(Paragraph(_escape(copy.report_title), styles["heading"]))
     story.append(
         Paragraph(
-            f"Oluşturulma Tarihi (UTC): {_format_datetime(context.generated_at)}",
+            f"{_escape(copy.generated_at_label)}: "
+            f"{_format_datetime(context.generated_at, context.locale)}",
             styles["body"],
         )
     )
     story.append(Spacer(1, 0.4 * cm))
 
-    story.extend(_patient_section(context, styles))
-    story.extend(_period_section(context, styles))
-    story.extend(_medical_records_section(context, styles))
-    story.extend(_measurement_summary_section(context, styles))
-    story.extend(_statistics_section(context, styles))
-    story.extend(_trends_section(context, styles))
-    story.extend(_insights_section(context, styles))
-    story.extend(_alerts_section(context, styles))
-    story.extend(_recommendations_section(context, styles))
-    story.extend(_disclaimer_section(context, styles))
+    story.extend(_patient_section(context, styles, copy))
+    story.extend(_period_section(context, styles, copy))
+    story.extend(_medical_records_section(context, styles, copy))
+    story.extend(_measurement_summary_section(context, styles, copy))
+    story.extend(_statistics_section(context, styles, copy))
+    story.extend(_trends_section(context, styles, copy))
+    story.extend(_insights_section(context, styles, copy))
+    story.extend(_alerts_section(context, styles, copy))
+    story.extend(_recommendations_section(context, styles, copy))
+    story.extend(_disclaimer_section(context, styles, copy))
 
     doc.build(story)
     return buffer.getvalue()
@@ -130,22 +116,31 @@ def _build_styles(font_name: str) -> dict[str, ParagraphStyle]:
 def _patient_section(
     context: PatientHealthReportContextDTO,
     styles: dict[str, ParagraphStyle],
+    copy: ReportCopy,
 ) -> list:
     patient = context.patient
     full_name = f"{patient.first_name} {patient.last_name}"
+    status = copy.active_label if patient.is_active else copy.inactive_label
     lines = [
-        Paragraph("Hasta Bilgileri", styles["heading"]),
-        Paragraph(f"Ad Soyad: {_escape(full_name)}", styles["body"]),
-        Paragraph(f"Doğum Tarihi: {patient.date_of_birth.isoformat()}", styles["body"]),
-        Paragraph(f"Cinsiyet: {_escape(patient.gender)}", styles["body"]),
-        Paragraph(f"Telefon: {_escape(patient.phone or '-')}", styles["body"]),
+        Paragraph(_escape(copy.patient_section_title), styles["heading"]),
+        Paragraph(f"{_escape(copy.full_name_label)}: {_escape(full_name)}", styles["body"]),
         Paragraph(
-            f"Durum: {'Aktif' if patient.is_active else 'Pasif'}",
+            f"{_escape(copy.date_of_birth_label)}: "
+            f"{format_report_date(patient.date_of_birth, context.locale)}",
             styles["body"],
         ),
+        Paragraph(
+            f"{_escape(copy.gender_label)}: "
+            f"{_escape(copy.gender_label_value(patient.gender))}",
+            styles["body"],
+        ),
+        Paragraph(f"{_escape(copy.phone_label)}: {_escape(patient.phone or '-')}", styles["body"]),
+        Paragraph(f"{_escape(copy.status_label)}: {_escape(status)}", styles["body"]),
     ]
     if patient.notes:
-        lines.append(Paragraph(f"Notlar: {_escape(patient.notes)}", styles["body"]))
+        lines.append(
+            Paragraph(f"{_escape(copy.notes_label)}: {_escape(patient.notes)}", styles["body"])
+        )
     lines.append(Spacer(1, 0.2 * cm))
     return lines
 
@@ -153,15 +148,18 @@ def _patient_section(
 def _period_section(
     context: PatientHealthReportContextDTO,
     styles: dict[str, ParagraphStyle],
+    copy: ReportCopy,
 ) -> list:
     return [
-        Paragraph("Rapor Dönemi", styles["heading"]),
+        Paragraph(_escape(copy.period_section_title), styles["heading"]),
         Paragraph(
-            f"Başlangıç (UTC): {_format_datetime(context.date_from)}",
+            f"{_escape(copy.period_from_label)}: "
+            f"{_format_datetime(context.date_from, context.locale)}",
             styles["body"],
         ),
         Paragraph(
-            f"Bitiş (UTC): {_format_datetime(context.date_to)}",
+            f"{_escape(copy.period_to_label)}: "
+            f"{_format_datetime(context.date_to, context.locale)}",
             styles["body"],
         ),
         Spacer(1, 0.2 * cm),
@@ -171,31 +169,41 @@ def _period_section(
 def _medical_records_section(
     context: PatientHealthReportContextDTO,
     styles: dict[str, ParagraphStyle],
+    copy: ReportCopy,
 ) -> list:
-    lines = [Paragraph("Tıbbi Kayıt Özeti", styles["heading"])]
+    lines = [Paragraph(_escape(copy.medical_records_title), styles["heading"])]
     if not context.medical_records:
-        lines.append(
-            Paragraph("Seçilen dönemde tıbbi kayıt bulunmamaktadır.", styles["body"])
-        )
+        lines.append(Paragraph(_escape(copy.no_medical_records), styles["body"]))
         lines.append(Spacer(1, 0.2 * cm))
         return lines
 
     if context.medical_records_truncated:
         lines.append(
             Paragraph(
-                "Bu raporda en yeni 100 tıbbi kayıt gösterilmektedir. "
-                f"Seçilen dönemde toplam {context.medical_records_total_in_range} kayıt "
-                "bulunmaktadır.",
+                _escape(
+                    copy.medical_records_truncated.format(
+                        limit=MAX_MEDICAL_RECORDS_IN_REPORT,
+                        total=context.medical_records_total_in_range,
+                    )
+                ),
                 styles["small"],
             )
         )
 
-    table_data = [["Tarih", "Tür", "Başlık", "Doktor", "Hastane"]]
+    table_data = [
+        [
+            copy.table_date,
+            copy.table_type,
+            copy.table_title,
+            copy.table_doctor,
+            copy.table_hospital,
+        ]
+    ]
     for record in context.medical_records:
         table_data.append(
             [
-                _format_datetime(record.record_date),
-                _escape(record.record_type),
+                _format_datetime(record.record_date, context.locale),
+                _escape(copy.record_type_label(record.record_type)),
                 _escape(record.title),
                 _escape(record.doctor_name or "-"),
                 _escape(record.hospital_name or "-"),
@@ -221,11 +229,12 @@ def _medical_records_section(
 def _measurement_summary_section(
     context: PatientHealthReportContextDTO,
     styles: dict[str, ParagraphStyle],
+    copy: ReportCopy,
 ) -> list:
     return [
-        Paragraph("Sağlık Ölçümü Özeti", styles["heading"]),
+        Paragraph(_escape(copy.measurement_summary_title), styles["heading"]),
         Paragraph(
-            f"Seçilen dönemdeki toplam ölçüm sayısı: "
+            f"{_escape(copy.measurement_count_label)}: "
             f"{context.measurement_summary.total_measurement_count}",
             styles["body"],
         ),
@@ -236,33 +245,42 @@ def _measurement_summary_section(
 def _statistics_section(
     context: PatientHealthReportContextDTO,
     styles: dict[str, ParagraphStyle],
+    copy: ReportCopy,
 ) -> list:
-    lines = [Paragraph("Temel Metrik İstatistikleri", styles["heading"])]
+    lines = [Paragraph(_escape(copy.statistics_title), styles["heading"])]
     stats_by_metric = {
         item.metric: item for item in context.measurement_summary.overall
     }
 
-    table_data = [["Metrik", "Adet", "Ort.", "Min", "Max", "Trend", "Referans"]]
+    table_data = [
+        [
+            copy.table_metric,
+            copy.table_count,
+            copy.table_avg,
+            copy.table_min,
+            copy.table_max,
+            copy.table_trend,
+            copy.table_reference,
+        ]
+    ]
     for metric in REPORT_STATISTICS_METRICS:
         item = stats_by_metric.get(metric)
         if item is None:
             continue
         table_data.append(
             [
-                METRIC_LABELS_TR.get(metric, metric),
+                copy.metric_label(metric),
                 str(item.measurement_count),
                 _format_decimal(item.average),
                 _format_decimal(item.minimum),
                 _format_decimal(item.maximum),
-                TREND_LABELS_TR.get(item.trend_direction, item.trend_direction),
-                RANGE_LABELS_TR.get(item.target_range_status, item.target_range_status),
+                copy.trend_label(item.trend_direction),
+                copy.range_label(item.target_range_status),
             ]
         )
 
     if len(table_data) == 1:
-        lines.append(
-            Paragraph("Seçilen dönemde rapor metrikleri için veri bulunmamaktadır.", styles["body"])
-        )
+        lines.append(Paragraph(_escape(copy.no_statistics), styles["body"]))
         lines.append(Spacer(1, 0.2 * cm))
         return lines
 
@@ -288,15 +306,16 @@ def _statistics_section(
 def _trends_section(
     context: PatientHealthReportContextDTO,
     styles: dict[str, ParagraphStyle],
+    copy: ReportCopy,
 ) -> list:
-    lines = [Paragraph("Haftalık Sağlık Ölçümü Trendleri", styles["heading"])]
+    lines = [Paragraph(_escape(copy.trends_title), styles["heading"])]
     periods = context.measurement_trends.periods[-MAX_TREND_ROWS:]
     if not periods:
-        lines.append(Paragraph("Seçilen dönemde haftalık trend verisi bulunmamaktadır.", styles["body"]))
+        lines.append(Paragraph(_escape(copy.no_trends), styles["body"]))
         lines.append(Spacer(1, 0.2 * cm))
         return lines
 
-    table_data = [["Hafta Başlangıcı", "Metrik", "Adet", "Ortalama"]]
+    table_data = [[copy.table_week_start, copy.table_metric, copy.table_count, copy.table_avg]]
     for period in periods:
         metrics_by_name = {item.metric: item for item in period.metrics}
         for metric in REPORT_STATISTICS_METRICS:
@@ -305,15 +324,15 @@ def _trends_section(
                 continue
             table_data.append(
                 [
-                    _format_datetime(period.period_start),
-                    METRIC_LABELS_TR.get(metric, metric),
+                    _format_datetime(period.period_start, context.locale),
+                    copy.metric_label(metric),
                     str(item.measurement_count),
                     _format_decimal(item.average),
                 ]
             )
 
     if len(table_data) == 1:
-        lines.append(Paragraph("Seçilen dönemde haftalık trend verisi bulunmamaktadır.", styles["body"]))
+        lines.append(Paragraph(_escape(copy.no_trends), styles["body"]))
         lines.append(Spacer(1, 0.2 * cm))
         return lines
 
@@ -323,8 +342,8 @@ def _trends_section(
             [
                 ("FONTNAME", (0, 0), (-1, -1), PDF_FONT_NAME),
                 ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E5E7EB")),
                 ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E5E7EB")),
             ]
         )
     )
@@ -335,21 +354,24 @@ def _trends_section(
 def _insights_section(
     context: PatientHealthReportContextDTO,
     styles: dict[str, ParagraphStyle],
+    copy: ReportCopy,
 ) -> list:
+    overall = copy.overall_status_label(context.clinical_insights.overall_status)
     lines = [
-        Paragraph("Klinik İçgörüler", styles["heading"]),
+        Paragraph(_escape(copy.insights_title), styles["heading"]),
         Paragraph(
-            f"Genel durum: {_escape(context.clinical_insights.overall_status)}",
+            f"{_escape(copy.overall_status_heading)}: {_escape(overall)}",
             styles["body"],
         ),
     ]
     for insight in context.clinical_insights.insights:
-        metric_label = METRIC_LABELS_TR.get(insight.metric, insight.metric)
+        metric_label = copy.metric_label(insight.metric)
+        severity = copy.severity_label(insight.severity)
         lines.append(
             Paragraph(
-                f"{_escape(metric_label)} | {_escape(insight.severity)} | "
-                f"Son: {_format_decimal(insight.latest_value)} | "
-                f"Ort: {_format_decimal(insight.average_value)}",
+                f"{_escape(metric_label)} | {_escape(severity)} | "
+                f"{_escape(copy.latest_label)}: {_format_decimal(insight.latest_value)} | "
+                f"{_escape(copy.average_label)}: {_format_decimal(insight.average_value)}",
                 styles["small"],
             )
         )
@@ -361,18 +383,20 @@ def _insights_section(
 def _alerts_section(
     context: PatientHealthReportContextDTO,
     styles: dict[str, ParagraphStyle],
+    copy: ReportCopy,
 ) -> list:
-    lines = [Paragraph("Uyarılar", styles["heading"])]
+    lines = [Paragraph(_escape(copy.alerts_title), styles["heading"])]
     if not context.clinical_insights.alerts:
-        lines.append(Paragraph("Seçilen dönemde uyarı bulunmamaktadır.", styles["body"]))
+        lines.append(Paragraph(_escape(copy.no_alerts), styles["body"]))
         lines.append(Spacer(1, 0.2 * cm))
         return lines
 
     for alert in context.clinical_insights.alerts:
-        metric_label = METRIC_LABELS_TR.get(alert.metric, alert.metric)
+        metric_label = copy.metric_label(alert.metric)
+        severity = copy.severity_label(alert.severity)
         lines.append(
             Paragraph(
-                f"{_escape(metric_label)} ({_escape(alert.severity)}): {_escape(alert.message)}",
+                f"{_escape(metric_label)} ({_escape(severity)}): {_escape(alert.message)}",
                 styles["small"],
             )
         )
@@ -383,10 +407,11 @@ def _alerts_section(
 def _recommendations_section(
     context: PatientHealthReportContextDTO,
     styles: dict[str, ParagraphStyle],
+    copy: ReportCopy,
 ) -> list:
-    lines = [Paragraph("Takip Önerileri", styles["heading"])]
+    lines = [Paragraph(_escape(copy.recommendations_title), styles["heading"])]
     if not context.clinical_insights.recommendations:
-        lines.append(Paragraph("Takip önerisi bulunmamaktadır.", styles["body"]))
+        lines.append(Paragraph(_escape(copy.no_recommendations), styles["body"]))
         lines.append(Spacer(1, 0.2 * cm))
         return lines
 
@@ -399,20 +424,24 @@ def _recommendations_section(
 def _disclaimer_section(
     context: PatientHealthReportContextDTO,
     styles: dict[str, ParagraphStyle],
+    copy: ReportCopy,
 ) -> list:
     return [
-        Paragraph("Tıbbi Sorumluluk Reddi", styles["heading"]),
+        Paragraph(_escape(copy.disclaimer_title), styles["heading"]),
         Paragraph(_escape(context.insights_disclaimer), styles["disclaimer"]),
         Paragraph(_escape(context.report_disclaimer), styles["disclaimer"]),
     ]
 
 
-def _format_datetime(value: datetime) -> str:
-    from datetime import UTC
+def _format_datetime(value: datetime, locale: str) -> str:
+    from app.application.reports.report_i18n import ReportLocale, parse_report_locale
 
-    if value.tzinfo is None:
-        return value.isoformat(sep=" ", timespec="seconds") + " UTC"
-    return value.astimezone(UTC).isoformat(sep=" ", timespec="seconds").replace("+00:00", " UTC")
+    report_locale: ReportLocale = parse_report_locale(locale)
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=UTC)
+        return format_report_datetime(value, report_locale)
+    return format_report_datetime(value, report_locale)
 
 
 def _format_decimal(value: Decimal | None) -> str:

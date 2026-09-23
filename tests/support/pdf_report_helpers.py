@@ -10,9 +10,9 @@ TURKISH_ALPHABET_SAMPLES = "ÇĞİÖŞÜıçğöşü"
 TURKISH_FIXTURE_WORDS = (
     "Şahin",
     "Öğüt",
-    "Kan Şekeri",
+    "Kan şekeri",
     "Sağlık",
-    "İçgörüler",
+    "içgörü",
     "Türkçe",
     "Seçilen",
     "Doğum",
@@ -55,17 +55,37 @@ def assert_turkish_content_present(pdf_bytes: bytes, text: str | None = None) ->
 
 
 def assert_english_content_present(text: str) -> None:
-    """Assert English report content is present alongside Turkish labels."""
+    """Assert English report content is present."""
     normalized = normalize_pdf_text(text)
     assert "Health AI Platform Pro" in normalized
+    assert "Patient Health Report" in normalized
     assert "not a diagnosis" in normalized
     assert "qualified healthcare professional" in normalized
 
 
-def assert_disclaimers_present(pdf_bytes: bytes, text: str | None = None) -> None:
+def assert_turkish_disclaimers_present(text: str) -> None:
+    normalized = normalize_pdf_text(text)
+    assert "Klinik" in normalized and "içgörü" in normalized
+    assert "Bu hasta sağlık raporu" in normalized
+    assert "değildir" in normalized
+    assert "Tanı" in normalized or "tanı" in normalized
+
+
+def assert_disclaimers_present(
+    pdf_bytes: bytes,
+    text: str | None = None,
+    *,
+    locale: str = "en",
+) -> None:
     content = text if text is not None else extract_pdf_text(pdf_bytes)
+    if locale == "tr":
+        assert_turkish_disclaimers_present(content)
+        return
     normalized = normalize_pdf_text(content)
-    assert "Clinical insights and health alerts are informational tracking summaries only." in normalized
+    assert (
+        "Clinical insights and health alerts are informational tracking summaries only."
+        in normalized
+    )
     assert "not a diagnosis" in normalized
     assert "qualified healthcare professional" in normalized
     assert "official clinical document" in normalized

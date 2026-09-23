@@ -10,6 +10,7 @@ from app.application.analytics.health_measurement_analytics import (
     metrics_to_include,
 )
 from app.application.analytics.health_measurement_insights import build_insights
+from app.application.reports.report_i18n import ReportLocale
 from app.application.dtos.health_measurement_analytics import (
     HealthMeasurementSummaryDTO,
     HealthMeasurementTrendsDTO,
@@ -124,6 +125,7 @@ class HealthMeasurementAnalyticsService(ClinicalPatientChildService):
         patient_id: UUID,
         date_from: datetime | None = None,
         date_to: datetime | None = None,
+        locale: ReportLocale = "en",
     ) -> HealthMeasurementInsightsDTO:
         measurements, resolved_from, resolved_to = await self._load_measurements(
             actor_id,
@@ -133,7 +135,7 @@ class HealthMeasurementAnalyticsService(ClinicalPatientChildService):
             date_from=date_from,
             date_to=date_to,
         )
-        insight_payload = build_insights(measurements)
+        insight_payload = build_insights(measurements, locale=locale)
         return HealthMeasurementInsightsDTO(
             patient_id=patient_id,
             date_from=resolved_from,
