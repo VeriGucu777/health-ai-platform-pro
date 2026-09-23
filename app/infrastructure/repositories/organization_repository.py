@@ -1,5 +1,6 @@
 """SQLAlchemy organization repository."""
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.interfaces.organization_repository import OrganizationRepository as OrganizationRepositoryPort
@@ -16,6 +17,15 @@ class SQLAlchemyOrganizationRepository(
 
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, OrganizationModel)
+
+    async def get_by_slug(self, slug: str) -> Organization | None:
+        normalized = slug.strip()
+        if not normalized:
+            return None
+        stmt = select(OrganizationModel).where(OrganizationModel.slug == normalized)
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        return self._to_entity(model) if model else None
 
     def _to_entity(self, model: OrganizationModel) -> Organization:
         return Organization(

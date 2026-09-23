@@ -21,8 +21,12 @@ copy .env.example .env.local
 | Variable | Description | Example |
 |---|---|---|
 | `NEXT_PUBLIC_API_BASE_URL` | Base URL of the FastAPI backend (no trailing slash) | `http://127.0.0.1:8001` |
+| `NEXT_PUBLIC_API_USE_DEV_PROXY` | When `true` in development, browser uses same-origin `/api/v1` (see `API_PROXY_TARGET`) | `true` |
+| `API_PROXY_TARGET` | Server-only rewrite target in `next.config.ts` (not exposed to the browser) | `https://…onrender.com` |
 
 The centralized API client reads this value from `src/lib/config/env.ts` and targets `/api/v1` routes. Do not hard-code backend URLs inside components.
+
+**Local UI + production API:** Production backends must not allow `localhost` in `CORS_ORIGINS`. Enable the dev proxy (`NEXT_PUBLIC_API_USE_DEV_PROXY=true` and `API_PROXY_TARGET`) so the browser talks to `http://localhost:3000/api/v1` only. Restart `npm run dev` after changing env vars.
 
 ## Local Development
 

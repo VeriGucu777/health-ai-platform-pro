@@ -35,6 +35,13 @@ export function LoginForm() {
     } catch (submitError) {
       if (submitError instanceof ApiClientError) {
         setError(submitError.message);
+      } else if (
+        submitError instanceof TypeError &&
+        /failed to fetch|networkerror/i.test(submitError.message)
+      ) {
+        setError(
+          "Cannot reach the API. If using a remote backend from localhost, enable NEXT_PUBLIC_API_USE_DEV_PROXY in .env.local and restart the dev server.",
+        );
       } else {
         setError(content.auth.loginError ?? content.auth.genericError);
       }
