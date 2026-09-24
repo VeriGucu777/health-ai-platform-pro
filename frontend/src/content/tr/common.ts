@@ -8,7 +8,7 @@ export const commonContent: CommonContent = {
     login: "Giriş yap",
     register: "Hesap oluştur",
     patients: "Hastalar",
-    management: "Doktor atamaları",
+    management: "Klinik yönetimi",
     logout: "Çıkış yap",
     skipToContent: "Ana içeriğe geç",
     openMenu: "Menüyü aç",
@@ -223,9 +223,9 @@ export const commonContent: CommonContent = {
     },
   },
   management: {
-    title: "Doktor atamaları",
+    title: "Klinik yönetimi",
     description:
-      "Organizasyon üyeliğinizi görüntüleyin, doktorları listeleyin ve hastalara atama yönetin.",
+      "Organizasyonunuza hasta kaydedin, onam durumunu kaydedin ve doktor atamalarını yönetin.",
     forbiddenTitle: "Erişim engellendi",
     forbiddenDescription:
       "Bu yönetim ekranı yalnızca klinik yöneticisi (clinic_admin) hesapları içindir.",
@@ -238,10 +238,16 @@ export const commonContent: CommonContent = {
     selectPatient: "Hasta seçin",
     selectDoctor: "Doktor seçin",
     noPatientSelected: "Atamaları görmek için listeden bir hasta seçin.",
+    organizationName: "Organizasyon",
+    membershipStatus: "Üyelik durumu",
     membershipId: "Üyelik kimliği",
     organizationId: "Organizasyon kimliği",
     membershipRole: "Üyelik rolü",
     joinedAt: "Katılım tarihi",
+    doctorName: "Doktor",
+    doctorEmail: "E-posta",
+    assignedDoctor: "Atanan doktor",
+    technicalDetails: "Teknik tanımlayıcılar",
     userId: "Kullanıcı kimliği",
     patientLabel: "Hasta",
     isPrimary: "Birincil atama",
@@ -258,6 +264,10 @@ export const commonContent: CommonContent = {
     membershipRoles: {
       doctor: "Doktor",
       clinic_admin: "Klinik yöneticisi",
+    },
+    membershipStatuses: {
+      active: "Aktif",
+      inactive: "Pasif",
     },
     assignmentStatuses: {
       active: "Aktif",
@@ -284,6 +294,15 @@ export const commonContent: CommonContent = {
       lastName: "Soyad",
       dateOfBirth: "Doğum tarihi",
       gender: "Cinsiyet",
+      genderOptions: {
+        female: "Kadın",
+        male: "Erkek",
+        other: "Diğer",
+      },
+      demoNotesDefault:
+        "Sentetik pilot kayıt — gerçek hasta verisi kullanmayın.",
+      consentGrantFailedWarning:
+        "Hasta kaydedildi ancak onam kaydedilemedi. Sağdaki panelden onamı verebilirsiniz.",
       phoneOptional: "Telefon (isteğe bağlı)",
       notesOptional: "Notlar (isteğe bağlı)",
       grantConsentOnCreate: "Kayıttan sonra klinik veri işleme onamını kaydet",

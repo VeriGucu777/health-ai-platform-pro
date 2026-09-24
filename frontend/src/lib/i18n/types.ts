@@ -155,10 +155,16 @@ export type CommonContent = {
     selectPatient: string;
     selectDoctor: string;
     noPatientSelected: string;
+    organizationName: string;
+    membershipStatus: string;
     membershipId: string;
     organizationId: string;
     membershipRole: string;
     joinedAt: string;
+    doctorName: string;
+    doctorEmail: string;
+    assignedDoctor: string;
+    technicalDetails: string;
     userId: string;
     patientLabel: string;
     isPrimary: string;
@@ -173,6 +179,7 @@ export type CommonContent = {
     createSuccess: string;
     deactivateSuccess: string;
     membershipRoles: Record<string, string>;
+    membershipStatuses: Record<string, string>;
     assignmentStatuses: Record<string, string>;
     errors: {
       duplicateAssignment: string;
@@ -192,6 +199,9 @@ export type CommonContent = {
       lastName: string;
       dateOfBirth: string;
       gender: string;
+      genderOptions: Record<string, string>;
+      demoNotesDefault: string;
+      consentGrantFailedWarning: string;
       phoneOptional: string;
       notesOptional: string;
       grantConsentOnCreate: string;

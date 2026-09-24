@@ -8,7 +8,7 @@ export const commonContent: CommonContent = {
     login: "Sign in",
     register: "Create account",
     patients: "Patients",
-    management: "Doctor assignments",
+    management: "Clinic management",
     logout: "Sign out",
     skipToContent: "Skip to main content",
     openMenu: "Open menu",
@@ -201,9 +201,9 @@ export const commonContent: CommonContent = {
     },
   },
   management: {
-    title: "Doctor assignments",
+    title: "Clinic management",
     description:
-      "Review your organization membership, list doctors, and manage patient assignments.",
+      "Register patients in your organization, record consent, and manage doctor assignments.",
     forbiddenTitle: "Access denied",
     forbiddenDescription: "This management screen is only available to clinic_admin accounts.",
     organizationSection: "Organization membership",
@@ -215,10 +215,16 @@ export const commonContent: CommonContent = {
     selectPatient: "Choose a patient",
     selectDoctor: "Choose a doctor",
     noPatientSelected: "Select a patient from the list to view assignments.",
+    organizationName: "Organization",
+    membershipStatus: "Membership status",
     membershipId: "Membership ID",
     organizationId: "Organization ID",
     membershipRole: "Membership role",
     joinedAt: "Joined at",
+    doctorName: "Doctor",
+    doctorEmail: "Email",
+    assignedDoctor: "Assigned doctor",
+    technicalDetails: "Technical identifiers",
     userId: "User ID",
     patientLabel: "Patient",
     isPrimary: "Primary assignment",
@@ -235,6 +241,10 @@ export const commonContent: CommonContent = {
     membershipRoles: {
       doctor: "Doctor",
       clinic_admin: "Clinic admin",
+    },
+    membershipStatuses: {
+      active: "Active",
+      inactive: "Inactive",
     },
     assignmentStatuses: {
       active: "Active",
@@ -260,6 +270,15 @@ export const commonContent: CommonContent = {
       lastName: "Last name",
       dateOfBirth: "Date of birth",
       gender: "Gender",
+      genderOptions: {
+        female: "Female",
+        male: "Male",
+        other: "Other",
+      },
+      demoNotesDefault:
+        "Synthetic pilot record — do not use real patient data.",
+      consentGrantFailedWarning:
+        "Patient was created, but consent could not be recorded. You can grant consent from the panel on the right.",
       phoneOptional: "Phone (optional)",
       notesOptional: "Notes (optional)",
       grantConsentOnCreate: "Record clinical data processing consent after registration",

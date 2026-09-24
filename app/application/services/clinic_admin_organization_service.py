@@ -13,8 +13,10 @@ from app.application.dtos.clinic_admin_organization import (
 from app.application.services.base import BaseService
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
 from app.domain.interfaces.organization_membership_repository import OrganizationMembershipRepository
+from app.domain.interfaces.organization_repository import OrganizationRepository
 from app.domain.interfaces.patient_assignment_repository import PatientAssignmentRepository
 from app.domain.interfaces.patient_repository import PatientRepository
+from app.domain.interfaces.user_repository import UserRepository
 from app.domain.organization.entities import PatientAssignment
 from app.domain.organization.enums import (
     AssignmentStatus,
@@ -31,10 +33,14 @@ class ClinicAdminOrganizationService(BaseService):
         membership_repository: OrganizationMembershipRepository,
         assignment_repository: PatientAssignmentRepository,
         patient_repository: PatientRepository,
+        user_repository: UserRepository,
+        organization_repository: OrganizationRepository,
     ) -> None:
         self._memberships = membership_repository
         self._assignments = assignment_repository
         self._patients = patient_repository
+        self._users = user_repository
+        self._organizations = organization_repository
 
     async def get_my_clinic_admin_membership(
         self,
@@ -47,10 +53,14 @@ class ClinicAdminOrganizationService(BaseService):
         )
         if membership is None or membership.status != MembershipStatus.ACTIVE:
             raise ForbiddenError("Insufficient permissions")
+        organization = await self._organizations.get_by_id(membership.organization_id)
+        organization_name = organization.name if organization is not None else "Organization"
         return ClinicAdminMembershipDTO(
             membership_id=membership.id,
             organization_id=membership.organization_id,
+            organization_name=organization_name,
             membership_role=membership.membership_role,
+            membership_status=membership.status,
             joined_at=membership.joined_at,
         )
 
@@ -62,14 +72,21 @@ class ClinicAdminOrganizationService(BaseService):
         doctor_memberships = await self._memberships.list_active_doctor_memberships_in_organization(
             organization_id,
         )
-        items = [
-            OrganizationDoctorMemberDTO(
-                membership_id=membership.id,
-                user_id=membership.user_id,
-                joined_at=membership.joined_at,
+        items: list[OrganizationDoctorMemberDTO] = []
+        for membership in doctor_memberships:
+            user = await self._users.get_by_id(membership.user_id)
+            if user is None:
+                continue
+            items.append(
+                OrganizationDoctorMemberDTO(
+                    membership_id=membership.id,
+                    user_id=membership.user_id,
+                    email=user.email,
+                    first_name=user.first_name,
+                    last_name=user.last_name,
+                    joined_at=membership.joined_at,
+                ),
             )
-            for membership in doctor_memberships
-        ]
         return OrganizationDoctorMemberListDTO(items=items)
 
     async def list_patient_assignments(

@@ -4,7 +4,11 @@ from datetime import datetime
 from uuid import UUID
 
 from app.application.dtos.base import BaseSchema
-from app.domain.organization.enums import AssignmentStatus, OrganizationMembershipRole
+from app.domain.organization.enums import (
+    AssignmentStatus,
+    MembershipStatus,
+    OrganizationMembershipRole,
+)
 
 
 class ClinicAdminMembershipDTO(BaseSchema):
@@ -12,15 +16,20 @@ class ClinicAdminMembershipDTO(BaseSchema):
 
     membership_id: UUID
     organization_id: UUID
+    organization_name: str
     membership_role: OrganizationMembershipRole
+    membership_status: MembershipStatus
     joined_at: datetime
 
 
 class OrganizationDoctorMemberDTO(BaseSchema):
-    """Active doctor member in the clinic_admin's organization (ids only, no PHI)."""
+    """Active doctor member in the clinic_admin's organization (display-safe fields)."""
 
     membership_id: UUID
     user_id: UUID
+    email: str
+    first_name: str
+    last_name: str
     joined_at: datetime
 
 

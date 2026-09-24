@@ -21,4 +21,12 @@ describe("resolveManagementErrorMessage", () => {
     expect(resolveManagementErrorMessage(error, messages).message).toBe(messages.patientNotFound);
     expect(resolveManagementErrorMessage(error, messages).status).toBe(404);
   });
+
+  it("maps 409 duplicate consent", () => {
+    const error = new ApiClientError(
+      "An active consent already exists for this patient and consent type",
+      409,
+    );
+    expect(resolveManagementErrorMessage(error, messages).message).toBe(messages.duplicateConsent);
+  });
 });

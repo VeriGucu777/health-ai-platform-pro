@@ -60,6 +60,7 @@ from tests.support.memory_medical_record_repository import InMemoryMedicalRecord
 from tests.support.memory_organization_membership_repository import (
     InMemoryOrganizationMembershipRepository,
 )
+from tests.support.memory_organization_repository import InMemoryOrganizationRepository
 from tests.support.memory_patient_assignment_repository import InMemoryPatientAssignmentRepository
 from tests.support.memory_patient_consent_repository import InMemoryPatientConsentRepository
 from tests.support.memory_patient_repository import InMemoryPatientRepository
@@ -138,6 +139,12 @@ def membership_repository() -> InMemoryOrganizationMembershipRepository:
 
 
 @pytest.fixture
+def organization_repository() -> InMemoryOrganizationRepository:
+    """Fresh in-memory organization store for each test."""
+    return InMemoryOrganizationRepository()
+
+
+@pytest.fixture
 def patient_repository(
     assignment_repository: InMemoryPatientAssignmentRepository,
 ) -> InMemoryPatientRepository:
@@ -188,6 +195,7 @@ async def client(
     audit_log_repository: InMemoryAuditLogRepository,
     patient_repository: InMemoryPatientRepository,
     membership_repository: InMemoryOrganizationMembershipRepository,
+    organization_repository: InMemoryOrganizationRepository,
     assignment_repository: InMemoryPatientAssignmentRepository,
     consent_repository: InMemoryPatientConsentRepository,
     appointment_repository: InMemoryAppointmentRepository,
@@ -223,6 +231,8 @@ async def client(
             membership_repository,
             assignment_repository,
             patient_repository,
+            user_repository,
+            organization_repository,
         )
 
     def override_patient_consent_service(_request: Request) -> PatientConsentService:

@@ -22,10 +22,16 @@ const localeFixture = {
         selectPatient: "Choose patient",
         selectDoctor: "Choose doctor",
         noPatientSelected: "Select a patient",
+        organizationName: "Organization",
+        membershipStatus: "Status",
         membershipId: "Membership",
         organizationId: "Org",
         membershipRole: "Role",
         joinedAt: "Joined",
+        doctorName: "Doctor",
+        doctorEmail: "Email",
+        assignedDoctor: "Assigned doctor",
+        technicalDetails: "Technical",
         userId: "User",
         patientLabel: "Patient",
         isPrimary: "Primary",
@@ -39,6 +45,7 @@ const localeFixture = {
         createSuccess: "Created",
         deactivateSuccess: "Deactivated",
         membershipRoles: { doctor: "Doctor", clinic_admin: "Admin" },
+        membershipStatuses: { active: "Active", inactive: "Inactive" },
         assignmentStatuses: { active: "Active", inactive: "Inactive" },
         errors: {
           duplicateAssignment: "Duplicate assignment",
@@ -58,6 +65,9 @@ const localeFixture = {
           lastName: "Last",
           dateOfBirth: "DOB",
           gender: "Gender",
+          genderOptions: { female: "Female", male: "Male", other: "Other" },
+          demoNotesDefault: "Notes default",
+          consentGrantFailedWarning: "Consent warn",
           phoneOptional: "Phone",
           notesOptional: "Notes",
           grantConsentOnCreate: "Grant on create",
@@ -124,11 +134,22 @@ describe("ManagementPageContent", () => {
     fetchMyOrganizationMembership.mockResolvedValue({
       membership_id: "m1",
       organization_id: "o1",
+      organization_name: "Demo Clinic",
       membership_role: "clinic_admin",
+      membership_status: "active",
       joined_at: "2026-01-01T00:00:00Z",
     });
     fetchOrganizationDoctors.mockResolvedValue({
-      items: [{ membership_id: "dm1", user_id: "doc-1", joined_at: "2026-01-01T00:00:00Z" }],
+      items: [
+        {
+          membership_id: "dm1",
+          user_id: "doc-1",
+          email: "doc@example.com",
+          first_name: "Jane",
+          last_name: "Doctor",
+          joined_at: "2026-01-01T00:00:00Z",
+        },
+      ],
     });
     fetchPatients.mockResolvedValue({
       items: [
@@ -181,6 +202,17 @@ describe("ManagementPageContent", () => {
     deactivatePatientAssignment.mockResolvedValue({});
   });
 
+  it("shows doctor names instead of raw user ids in the doctor select", async () => {
+    render(<ManagementPageContent />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Doctor assignments")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Jane Doctor")).toBeInTheDocument();
+    expect(screen.getByText("Demo Clinic")).toBeInTheDocument();
+  });
+
   it("creates assignment from UI", async () => {
     render(<ManagementPageContent />);
 
@@ -194,6 +226,10 @@ describe("ManagementPageContent", () => {
 
     await waitFor(() => {
       expect(fetchPatientAssignments).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Choose doctor")).toBeInTheDocument();
     });
 
     fireEvent.change(screen.getByLabelText("Choose doctor"), {

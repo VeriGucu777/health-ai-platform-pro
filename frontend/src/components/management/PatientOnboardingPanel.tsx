@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import {
   fetchPatientConsents,
@@ -10,16 +10,12 @@ import {
 } from "@/lib/api/consents";
 import { createPatient, type Patient, type PatientCreatePayload } from "@/lib/api/patients";
 import { resolveManagementErrorMessage } from "@/lib/management/error-messages";
+import {
+  buildGenderOptions,
+  isPatientGenderValue,
+  type PatientGenderValue,
+} from "@/lib/management/patient-gender";
 import { useLocale } from "@/lib/i18n/use-locale";
-
-const DEMO_PATIENT_DEFAULTS: PatientCreatePayload = {
-  first_name: "Demo",
-  last_name: "Pilot Patient",
-  date_of_birth: "1992-04-15",
-  gender: "female",
-  phone: null,
-  notes: "Sentetik pilot kayıt — gerçek hasta verisi kullanmayın.",
-};
 
 type PatientOnboardingPanelProps = {
   accessToken: string;
@@ -32,6 +28,19 @@ function sectionCardClassName(): string {
   return "rounded-xl border border-border bg-white p-4 sm:p-5";
 }
 
+function buildDefaultForm(onboarding: {
+  demoNotesDefault: string;
+}): PatientCreatePayload {
+  return {
+    first_name: "Demo",
+    last_name: "Pilot Patient",
+    date_of_birth: "1992-04-15",
+    gender: "female",
+    phone: null,
+    notes: onboarding.demoNotesDefault,
+  };
+}
+
 export function PatientOnboardingPanel({
   accessToken,
   selectedPatientId,
@@ -41,16 +50,41 @@ export function PatientOnboardingPanel({
   const { content, formatDateTime } = useLocale();
   const onboarding = content.management.onboarding;
 
-  const [form, setForm] = useState<PatientCreatePayload>({ ...DEMO_PATIENT_DEFAULTS });
+  const defaultForm = useMemo(
+    () => buildDefaultForm(onboarding),
+    [onboarding.demoNotesDefault],
+  );
+
+  const genderOptions = useMemo(
+    () =>
+      buildGenderOptions({
+        female: onboarding.genderOptions.female,
+        male: onboarding.genderOptions.male,
+        other: onboarding.genderOptions.other,
+      }),
+    [onboarding.genderOptions.female, onboarding.genderOptions.male, onboarding.genderOptions.other],
+  );
+
+  const [form, setForm] = useState<PatientCreatePayload>(() => ({ ...defaultForm }));
   const [grantConsentOnCreate, setGrantConsentOnCreate] = useState(true);
   const [submitPending, setSubmitPending] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [submitWarning, setSubmitWarning] = useState<string | null>(null);
 
   const [consents, setConsents] = useState<PatientConsent[]>([]);
   const [consentsLoading, setConsentsLoading] = useState(false);
   const [consentsError, setConsentsError] = useState<string | null>(null);
   const [consentActionPending, setConsentActionPending] = useState(false);
+
+  useEffect(() => {
+    setForm((current) => ({
+      ...current,
+      notes: current.notes === defaultForm.notes || !current.notes?.trim()
+        ? defaultForm.notes
+        : current.notes,
+    }));
+  }, [defaultForm.notes]);
 
   const loadConsents = useCallback(async () => {
     if (!accessToken || !selectedPatientId) {
@@ -82,33 +116,48 @@ export function PatientOnboardingPanel({
     (row) => row.status === "granted" && row.consent_type === "clinical_data_processing",
   );
 
+  const genderValue: PatientGenderValue = isPatientGenderValue(form.gender)
+    ? form.gender
+    : "female";
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setSubmitPending(true);
     setSubmitError(null);
     setSubmitSuccess(null);
+    setSubmitWarning(null);
 
     try {
       const patient = await createPatient(accessToken, {
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim(),
         date_of_birth: form.date_of_birth,
-        gender: form.gender.trim(),
+        gender: genderValue,
         phone: form.phone?.trim() || null,
         notes: form.notes?.trim() || null,
         is_active: true,
       });
 
-      if (grantConsentOnCreate) {
-        await grantPatientConsent(accessToken, patient.id);
-      }
-
       setSubmitSuccess(onboarding.createSuccess);
       onPatientCreated(patient);
+
       if (grantConsentOnCreate) {
-        onConsentChanged();
+        try {
+          await grantPatientConsent(accessToken, patient.id);
+          onConsentChanged();
+        } catch (consentErr) {
+          const resolved = resolveManagementErrorMessage(
+            consentErr,
+            content.management.errors,
+          );
+          setSubmitWarning(onboarding.consentGrantFailedWarning);
+          if (resolved.status !== 409) {
+            setSubmitWarning(`${onboarding.consentGrantFailedWarning} ${resolved.message}`);
+          }
+        }
       }
-      setForm({ ...DEMO_PATIENT_DEFAULTS });
+
+      setForm({ ...defaultForm });
     } catch (err) {
       const resolved = resolveManagementErrorMessage(err, content.management.errors);
       setSubmitError(resolved.message);
@@ -166,6 +215,11 @@ export function PatientOnboardingPanel({
             {submitSuccess}
           </p>
         ) : null}
+        {submitWarning ? (
+          <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950" role="status">
+            {submitWarning}
+          </p>
+        ) : null}
         {submitError ? (
           <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert">
             {submitError}
@@ -210,14 +264,24 @@ export function PatientOnboardingPanel({
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-text-secondary">{onboarding.gender}</span>
-            <input
+            <select
               required
-              maxLength={50}
-              className="min-h-11 rounded-lg border border-border px-3 py-2"
-              value={form.gender}
-              onChange={(event) => setForm((prev) => ({ ...prev, gender: event.target.value }))}
+              className="min-h-11 rounded-lg border border-border bg-white px-3 py-2 text-text-primary"
+              value={genderValue}
+              onChange={(event) => {
+                const next = event.target.value;
+                if (isPatientGenderValue(next)) {
+                  setForm((prev) => ({ ...prev, gender: next }));
+                }
+              }}
               disabled={submitPending}
-            />
+            >
+              {genderOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-text-secondary">{onboarding.phoneOptional}</span>

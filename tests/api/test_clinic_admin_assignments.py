@@ -111,8 +111,13 @@ async def test_clinic_admin_lists_doctors(
     headers = await _login(client, admin.email)
     response = await client.get("/api/v1/organizations/me/members/doctors", headers=headers)
     assert response.status_code == 200
-    user_ids = {item["user_id"] for item in response.json()["items"]}
+    payload = response.json()["items"]
+    user_ids = {item["user_id"] for item in payload}
     assert str(doctor_b.id) in user_ids
+    doctor_row = next(item for item in payload if item["user_id"] == str(doctor_b.id))
+    assert doctor_row["email"] == doctor_b.email
+    assert doctor_row["first_name"] == "Test"
+    assert doctor_row["last_name"] == "User"
 
 
 @pytest.mark.asyncio

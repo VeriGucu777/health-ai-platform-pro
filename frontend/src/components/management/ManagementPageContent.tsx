@@ -17,6 +17,12 @@ import {
 import { fetchPatients, type Patient } from "@/lib/api/patients";
 import { PatientOnboardingPanel } from "@/components/management/PatientOnboardingPanel";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import {
+  findDoctorByUserId,
+  formatDoctorDisplayName,
+  formatDoctorOptionLabel,
+  formatPatientListLabel,
+} from "@/lib/management/doctor-display";
 import { resolveManagementErrorMessage } from "@/lib/management/error-messages";
 import { useLocale } from "@/lib/i18n/use-locale";
 
@@ -220,12 +226,8 @@ export function ManagementPageContent() {
           {membership ? (
             <dl className="mt-4 space-y-2 text-sm">
               <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between">
-                <dt className="text-text-secondary">{mgmt.membershipId}</dt>
-                <dd className="break-all font-mono text-text-primary">{membership.membership_id}</dd>
-              </div>
-              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between">
-                <dt className="text-text-secondary">{mgmt.organizationId}</dt>
-                <dd className="break-all font-mono text-text-primary">{membership.organization_id}</dd>
+                <dt className="text-text-secondary">{mgmt.organizationName}</dt>
+                <dd className="font-medium text-text-primary">{membership.organization_name}</dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between">
                 <dt className="text-text-secondary">{mgmt.membershipRole}</dt>
@@ -234,9 +236,27 @@ export function ManagementPageContent() {
                 </dd>
               </div>
               <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between">
+                <dt className="text-text-secondary">{mgmt.membershipStatus}</dt>
+                <dd className="text-text-primary">
+                  {mgmt.membershipStatuses[membership.membership_status] ??
+                    membership.membership_status}
+                </dd>
+              </div>
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between">
                 <dt className="text-text-secondary">{mgmt.joinedAt}</dt>
                 <dd className="text-text-primary">{formatDateTime(membership.joined_at)}</dd>
               </div>
+              <details className="pt-2 text-xs text-text-secondary">
+                <summary className="cursor-pointer font-medium">{mgmt.technicalDetails}</summary>
+                <div className="mt-2 space-y-1 font-mono break-all">
+                  <div>
+                    {mgmt.organizationId}: {membership.organization_id}
+                  </div>
+                  <div>
+                    {mgmt.membershipId}: {membership.membership_id}
+                  </div>
+                </div>
+              </details>
             </dl>
           ) : null}
         </section>
@@ -252,16 +272,18 @@ export function ManagementPageContent() {
               <table className="min-w-full text-left text-sm">
                 <thead className="border-b border-border text-text-secondary">
                   <tr>
-                    <th className="py-2 pr-4 font-medium">{mgmt.userId}</th>
-                    <th className="py-2 pr-4 font-medium">{mgmt.membershipId}</th>
+                    <th className="py-2 pr-4 font-medium">{mgmt.doctorName}</th>
+                    <th className="py-2 pr-4 font-medium">{mgmt.doctorEmail}</th>
                     <th className="py-2 font-medium">{mgmt.joinedAt}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {doctors.map((doctor) => (
                     <tr key={doctor.membership_id} className="border-b border-border last:border-b-0">
-                      <td className="py-2 pr-4 font-mono text-xs sm:text-sm">{doctor.user_id}</td>
-                      <td className="py-2 pr-4 font-mono text-xs sm:text-sm">{doctor.membership_id}</td>
+                      <td className="py-2 pr-4 text-text-primary">
+                        {formatDoctorDisplayName(doctor)}
+                      </td>
+                      <td className="py-2 pr-4 text-text-secondary">{doctor.email}</td>
                       <td className="py-2 text-text-secondary">{formatDateTime(doctor.joined_at)}</td>
                     </tr>
                   ))}
@@ -291,7 +313,7 @@ export function ManagementPageContent() {
                 <option value="">{mgmt.selectPatient}</option>
                 {patients.map((patient) => (
                   <option key={patient.id} value={patient.id}>
-                    {patient.first_name} {patient.last_name} ({patient.id})
+                    {formatPatientListLabel(patient)}
                   </option>
                 ))}
               </select>
@@ -320,7 +342,7 @@ export function ManagementPageContent() {
           <>
             {selectedPatient ? (
               <p className="mt-2 text-sm text-text-secondary">
-                {mgmt.patientLabel}: {selectedPatient.first_name} {selectedPatient.last_name}
+                {mgmt.patientLabel}: {formatPatientListLabel(selectedPatient)}
               </p>
             ) : null}
 
@@ -337,7 +359,7 @@ export function ManagementPageContent() {
                   <option value="">{mgmt.selectDoctor}</option>
                   {doctors.map((doctor) => (
                     <option key={doctor.user_id} value={doctor.user_id}>
-                      {doctor.user_id}
+                      {formatDoctorOptionLabel(doctor)}
                     </option>
                   ))}
                 </select>
@@ -367,8 +389,7 @@ export function ManagementPageContent() {
                 <table className="min-w-full text-left text-sm">
                   <thead className="border-b border-border bg-brand-50/40 text-text-secondary">
                     <tr>
-                      <th className="px-2 py-2 font-medium">{mgmt.assignmentId}</th>
-                      <th className="px-2 py-2 font-medium">{mgmt.assigneeUserId}</th>
+                      <th className="px-2 py-2 font-medium">{mgmt.assignedDoctor}</th>
                       <th className="px-2 py-2 font-medium">{mgmt.status}</th>
                       <th className="px-2 py-2 font-medium">{mgmt.isPrimary}</th>
                       <th className="px-2 py-2 font-medium">{mgmt.assignedAt}</th>
@@ -378,34 +399,45 @@ export function ManagementPageContent() {
                     </tr>
                   </thead>
                   <tbody>
-                    {assignments.map((assignment) => (
-                      <tr key={assignment.id} className="border-b border-border last:border-b-0">
-                        <td className="px-2 py-2 font-mono text-xs">{assignment.id}</td>
-                        <td className="px-2 py-2 font-mono text-xs">{assignment.assignee_user_id}</td>
-                        <td className="px-2 py-2">
-                          {mgmt.assignmentStatuses[assignment.status] ?? assignment.status}
-                        </td>
-                        <td className="px-2 py-2">{assignment.is_primary ? "✓" : "—"}</td>
-                        <td className="px-2 py-2 text-text-secondary">
-                          {formatDateTime(assignment.assigned_at)}
-                        </td>
-                        <td className="px-2 py-2">
-                          {assignment.status === "active" ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="secondary"
-                              disabled={actionPending}
-                              onClick={() => void handleDeactivate(assignment)}
-                            >
-                              {mgmt.removeAssignment}
-                            </Button>
-                          ) : (
-                            <span className="text-text-secondary">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {assignments.map((assignment) => {
+                      const doctor = findDoctorByUserId(doctors, assignment.assignee_user_id);
+                      const doctorLabel = doctor
+                        ? formatDoctorDisplayName(doctor)
+                        : mgmt.errors.doctorNotFound;
+
+                      return (
+                        <tr key={assignment.id} className="border-b border-border last:border-b-0">
+                          <td className="px-2 py-2 text-text-primary">
+                            <div>{doctorLabel}</div>
+                            {doctor ? (
+                              <div className="text-xs text-text-secondary">{doctor.email}</div>
+                            ) : null}
+                          </td>
+                          <td className="px-2 py-2">
+                            {mgmt.assignmentStatuses[assignment.status] ?? assignment.status}
+                          </td>
+                          <td className="px-2 py-2">{assignment.is_primary ? "✓" : "—"}</td>
+                          <td className="px-2 py-2 text-text-secondary">
+                            {formatDateTime(assignment.assigned_at)}
+                          </td>
+                          <td className="px-2 py-2">
+                            {assignment.status === "active" ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                disabled={actionPending}
+                                onClick={() => void handleDeactivate(assignment)}
+                              >
+                                {mgmt.removeAssignment}
+                              </Button>
+                            ) : (
+                              <span className="text-text-secondary">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

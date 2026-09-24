@@ -71,6 +71,7 @@ from app.infrastructure.repositories.patient_repository import SQLAlchemyPatient
 from app.infrastructure.repositories.risk_assessment_history_repository import (
     SQLAlchemyRiskAssessmentHistoryRepository,
 )
+from app.infrastructure.repositories.organization_repository import SQLAlchemyOrganizationRepository
 from app.infrastructure.repositories.user_repository import SQLAlchemyUserRepository
 
 _bearer_scheme = HTTPBearer(auto_error=False)
@@ -533,6 +534,8 @@ def get_clinic_admin_organization_service(
         membership_repository,
         assignment_repository,
         patient_repository,
+        SQLAlchemyUserRepository(session),
+        SQLAlchemyOrganizationRepository(session),
     )
 
 

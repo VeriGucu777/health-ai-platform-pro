@@ -3,15 +3,21 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
-from app.domain.organization.enums import AssignmentStatus, OrganizationMembershipRole
+from app.domain.organization.enums import (
+    AssignmentStatus,
+    MembershipStatus,
+    OrganizationMembershipRole,
+)
 
 
 class ClinicAdminMembershipResponse(BaseModel):
     membership_id: UUID
     organization_id: UUID
+    organization_name: str
     membership_role: OrganizationMembershipRole
+    membership_status: MembershipStatus
     joined_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -20,6 +26,9 @@ class ClinicAdminMembershipResponse(BaseModel):
 class OrganizationDoctorMemberResponse(BaseModel):
     membership_id: UUID
     user_id: UUID
+    email: str
+    first_name: str
+    last_name: str
     joined_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
