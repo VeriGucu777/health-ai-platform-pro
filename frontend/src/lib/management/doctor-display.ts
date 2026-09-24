@@ -17,9 +17,18 @@ export function findDoctorByUserId(
   return doctors.find((doctor) => doctor.user_id === userId);
 }
 
-export function formatPatientListLabel(patient: {
-  first_name: string;
-  last_name: string;
-}): string {
-  return `${patient.first_name} ${patient.last_name}`.trim();
+export function formatPatientListLabel(
+  patient: {
+    first_name: string;
+    last_name: string;
+    date_of_birth?: string;
+  },
+  formatDate?: (value: string) => string,
+): string {
+  const name = `${patient.first_name} ${patient.last_name}`.trim();
+  if (!patient.date_of_birth) {
+    return name;
+  }
+  const dobLabel = formatDate ? formatDate(patient.date_of_birth) : patient.date_of_birth;
+  return `${name} (${dobLabel})`;
 }

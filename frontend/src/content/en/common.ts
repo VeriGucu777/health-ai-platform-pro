@@ -278,13 +278,13 @@ export const commonContent: CommonContent = {
       demoNotesDefault:
         "Synthetic pilot record — do not use real patient data.",
       consentGrantFailedWarning:
-        "Patient was created, but consent could not be recorded. You can grant consent from the panel on the right.",
+        "Patient was created, but clinical data processing consent could not be recorded.",
       phoneOptional: "Phone (optional)",
       notesOptional: "Notes (optional)",
       grantConsentOnCreate: "Record clinical data processing consent after registration",
       submitCreate: "Create patient",
-      submitting: "Creating…",
-      createSuccess: "Patient registered successfully.",
+      submitting: "Creating patient…",
+      createSuccess: "Patient created successfully.",
       selectPatientForConsent: "Select a patient to view or update consent.",
       consentStatusGranted: "Active consent: granted",
       consentStatusNotGranted: "No active granted consent on file.",

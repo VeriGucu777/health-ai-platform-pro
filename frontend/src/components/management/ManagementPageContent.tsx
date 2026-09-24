@@ -32,7 +32,7 @@ function sectionCardClassName(): string {
 
 export function ManagementPageContent() {
   const { accessToken } = useAuth();
-  const { content, formatDateTime } = useLocale();
+  const { content, formatDate, formatDateTime } = useLocale();
   const mgmt = content.management;
 
   const [membership, setMembership] = useState<ClinicAdminMembership | null>(null);
@@ -50,6 +50,16 @@ export function ManagementPageContent() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [actionPending, setActionPending] = useState(false);
+  const [patientCreateNotice, setPatientCreateNotice] = useState<string | null>(null);
+
+  const loadPatients = useCallback(async () => {
+    if (!accessToken) {
+      return null;
+    }
+    const patientsData = await fetchPatients(accessToken, { page: 1, page_size: 100 });
+    setPatients(patientsData.items);
+    return patientsData.items;
+  }, [accessToken]);
 
   const loadBootstrap = useCallback(async () => {
     if (!accessToken) {
@@ -91,7 +101,6 @@ export function ManagementPageContent() {
 
     setAssignmentsLoading(true);
     setAssignmentsError(null);
-    setActionMessage(null);
 
     try {
       const response = await fetchPatientAssignments(accessToken, selectedPatientId);
@@ -186,6 +195,16 @@ export function ManagementPageContent() {
         <p className="mt-2 text-text-secondary">{mgmt.description}</p>
       </header>
 
+      {patientCreateNotice ? (
+        <p
+          className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-900"
+          role="status"
+          aria-live="polite"
+        >
+          {patientCreateNotice}
+        </p>
+      ) : null}
+
       {actionMessage ? (
         <p className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900" role="status">
           {actionMessage}
@@ -202,15 +221,26 @@ export function ManagementPageContent() {
         <PatientOnboardingPanel
           accessToken={accessToken}
           selectedPatientId={selectedPatientId}
-          onPatientCreated={(patient) => {
-            setPatients((current) => {
-              if (current.some((row) => row.id === patient.id)) {
-                return current;
-              }
-              return [patient, ...current];
-            });
+          onPatientCreated={async (patient) => {
+            setPatientCreateNotice(mgmt.onboarding.createSuccess);
             setSelectedPatientId(patient.id);
-            setActionMessage(mgmt.onboarding.createSuccess);
+            if (!accessToken) {
+              return;
+            }
+            try {
+              const items = await loadPatients();
+              if (items && !items.some((row) => row.id === patient.id)) {
+                setPatients([patient, ...items]);
+              }
+            } catch {
+              setPatients((current) => {
+                if (current.some((row) => row.id === patient.id)) {
+                  return current;
+                }
+                return [patient, ...current];
+              });
+            }
+            setSelectedPatientId(patient.id);
           }}
           onConsentChanged={() => {
             void loadAssignments();
@@ -313,7 +343,7 @@ export function ManagementPageContent() {
                 <option value="">{mgmt.selectPatient}</option>
                 {patients.map((patient) => (
                   <option key={patient.id} value={patient.id}>
-                    {formatPatientListLabel(patient)}
+                    {formatPatientListLabel(patient, formatDate)}
                   </option>
                 ))}
               </select>
@@ -342,7 +372,7 @@ export function ManagementPageContent() {
           <>
             {selectedPatient ? (
               <p className="mt-2 text-sm text-text-secondary">
-                {mgmt.patientLabel}: {formatPatientListLabel(selectedPatient)}
+                {mgmt.patientLabel}: {formatPatientListLabel(selectedPatient, formatDate)}
               </p>
             ) : null}
 

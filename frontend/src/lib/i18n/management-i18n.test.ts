@@ -11,4 +11,11 @@ describe("management i18n", () => {
     expect(en.management.errors.duplicateAssignment).toBeTruthy();
     expect(tr.management.errors.duplicateAssignment).toBeTruthy();
   });
+
+  it("uses distinct create loading and success copy in TR and EN", () => {
+    expect(en.management.onboarding.submitting).toBe("Creating patient…");
+    expect(tr.management.onboarding.submitting).toBe("Hasta oluşturuluyor…");
+    expect(en.management.onboarding.createSuccess).toBe("Patient created successfully.");
+    expect(tr.management.onboarding.createSuccess).toBe("Hasta başarıyla oluşturuldu.");
+  });
 });

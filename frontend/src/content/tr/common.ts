@@ -302,13 +302,13 @@ export const commonContent: CommonContent = {
       demoNotesDefault:
         "Sentetik pilot kayıt — gerçek hasta verisi kullanmayın.",
       consentGrantFailedWarning:
-        "Hasta kaydedildi ancak onam kaydedilemedi. Sağdaki panelden onamı verebilirsiniz.",
+        "Hasta oluşturuldu ancak klinik veri işleme onamı kaydedilemedi.",
       phoneOptional: "Telefon (isteğe bağlı)",
       notesOptional: "Notlar (isteğe bağlı)",
       grantConsentOnCreate: "Kayıttan sonra klinik veri işleme onamını kaydet",
       submitCreate: "Hastayı oluştur",
-      submitting: "Oluşturuluyor…",
-      createSuccess: "Hasta başarıyla kaydedildi.",
+      submitting: "Hasta oluşturuluyor…",
+      createSuccess: "Hasta başarıyla oluşturuldu.",
       selectPatientForConsent: "Onamı görüntülemek veya güncellemek için hasta seçin.",
       consentStatusGranted: "Aktif onam: verildi",
       consentStatusNotGranted: "Kayıtlı aktif onam yok.",

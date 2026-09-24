@@ -31,8 +31,8 @@ const localeFixture = {
         notesOptional: "Notes",
         grantConsentOnCreate: "Grant on create",
         submitCreate: "Create patient",
-        submitting: "Saving",
-        createSuccess: "Patient created",
+        submitting: "Creating patient…",
+        createSuccess: "Patient created successfully.",
         selectPatientForConsent: "Select patient",
         consentStatusGranted: "Granted",
         consentStatusNotGranted: "Not granted",
@@ -89,35 +89,13 @@ describe("PatientOnboardingPanel", () => {
     grantPatientConsent.mockResolvedValue({});
   });
 
-  it("submits canonical gender and shows success", async () => {
-    const onPatientCreated = vi.fn();
-
-    render(
-      <PatientOnboardingPanel
-        accessToken="token"
-        selectedPatientId=""
-        onPatientCreated={onPatientCreated}
-        onConsentChanged={vi.fn()}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Create patient" }));
-
-    await waitFor(() => {
-      expect(createPatient).toHaveBeenCalledWith(
-        "token",
-        expect.objectContaining({ gender: "female" }),
-      );
-    });
-
-    expect(screen.getByText("Patient created")).toBeInTheDocument();
-    expect(onPatientCreated).toHaveBeenCalled();
-  });
-
-  it("shows warning when patient is created but consent grant fails", async () => {
-    const { ApiClientError } = await import("@/lib/api/client");
-    grantPatientConsent.mockRejectedValue(
-      new ApiClientError("An active consent already exists for this patient and consent type", 409),
+  it("disables submit and shows loading label while create is in flight", async () => {
+    let resolveCreate: (value: unknown) => void = () => undefined;
+    createPatient.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCreate = resolve;
+        }),
     );
 
     render(
@@ -132,12 +110,113 @@ describe("PatientOnboardingPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create patient" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Patient created")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Creating patient…" })).toBeDisabled();
+    });
+
+    resolveCreate({
+      id: "new-pat",
+      owner_id: "admin",
+      first_name: "Demo",
+      last_name: "Pilot Patient",
+      date_of_birth: "1992-04-15",
+      gender: "female",
+      phone: null,
+      notes: "Synthetic notes",
+      is_active: true,
+      created_at: "",
+      updated_at: "",
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Create patient" })).toBeEnabled();
+    });
+  });
+
+  it("sends only one create request on rapid double click", async () => {
+    let resolveCreate: (value: unknown) => void = () => undefined;
+    createPatient.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCreate = resolve;
+        }),
+    );
+
+    render(
+      <PatientOnboardingPanel
+        accessToken="token"
+        selectedPatientId=""
+        onPatientCreated={vi.fn()}
+        onConsentChanged={vi.fn()}
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: "Create patient" });
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(createPatient).toHaveBeenCalledTimes(1);
+    });
+
+    resolveCreate({
+      id: "new-pat",
+      owner_id: "admin",
+      first_name: "Demo",
+      last_name: "Pilot Patient",
+      date_of_birth: "1992-04-15",
+      gender: "female",
+      phone: null,
+      notes: null,
+      is_active: true,
+      created_at: "",
+      updated_at: "",
+    });
+  });
+
+  it("shows accessible success message and notifies parent", async () => {
+    const onPatientCreated = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <PatientOnboardingPanel
+        accessToken="token"
+        selectedPatientId=""
+        onPatientCreated={onPatientCreated}
+        onConsentChanged={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Create patient" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Patient created successfully.");
+    });
+    expect(onPatientCreated).toHaveBeenCalled();
+  });
+
+  it("shows warning when patient is created but consent grant fails", async () => {
+    const { ApiClientError } = await import("@/lib/api/client");
+    grantPatientConsent.mockRejectedValue(
+      new ApiClientError("An active consent already exists for this patient and consent type", 409),
+    );
+
+    render(
+      <PatientOnboardingPanel
+        accessToken="token"
+        selectedPatientId=""
+        onPatientCreated={vi.fn().mockResolvedValue(undefined)}
+        onConsentChanged={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Create patient" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Patient created successfully.")).toBeInTheDocument();
       expect(screen.getByText("Consent failed warning")).toBeInTheDocument();
     });
   });
 
-  it("shows API error when patient create fails", async () => {
+  it("shows API error when patient create fails and re-enables submit", async () => {
     const { ApiClientError } = await import("@/lib/api/client");
     createPatient.mockRejectedValue(new ApiClientError("Forbidden", 403));
 
@@ -153,7 +232,8 @@ describe("PatientOnboardingPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create patient" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Forbidden")).toBeInTheDocument();
+      expect(screen.getByRole("alert")).toHaveTextContent("Forbidden");
+      expect(screen.getByRole("button", { name: "Create patient" })).toBeEnabled();
     });
   });
 });

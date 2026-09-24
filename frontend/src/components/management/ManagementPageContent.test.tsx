@@ -71,9 +71,9 @@ const localeFixture = {
           phoneOptional: "Phone",
           notesOptional: "Notes",
           grantConsentOnCreate: "Grant on create",
-          submitCreate: "Create",
-          submitting: "Saving",
-          createSuccess: "Created patient",
+          submitCreate: "Create patient",
+          submitting: "Creating patient…",
+          createSuccess: "Patient created successfully.",
           selectPatientForConsent: "Select patient",
           consentStatusGranted: "Granted",
           consentStatusNotGranted: "Not granted",
@@ -95,6 +95,7 @@ vi.mock("@/lib/i18n/use-locale", () => ({
 const fetchMyOrganizationMembership = vi.fn();
 const fetchOrganizationDoctors = vi.fn();
 const fetchPatients = vi.fn();
+const createPatient = vi.fn();
 const fetchPatientAssignments = vi.fn();
 const createPatientAssignment = vi.fn();
 const deactivatePatientAssignment = vi.fn();
@@ -106,6 +107,7 @@ vi.mock("@/lib/api/organizations", () => ({
 
 vi.mock("@/lib/api/patients", () => ({
   fetchPatients: (...args: unknown[]) => fetchPatients(...args),
+  createPatient: (...args: unknown[]) => createPatient(...args),
 }));
 
 vi.mock("@/lib/api/assignments", () => ({
@@ -318,5 +320,80 @@ describe("ManagementPageContent", () => {
     await waitFor(() => {
       expect(screen.getByText("Duplicate assignment")).toBeInTheDocument();
     });
+  });
+
+  it("refetches patients, selects new patient, and shows page-level create success", async () => {
+    const newPatient = {
+      id: "pat-new",
+      owner_id: "admin",
+      first_name: "Demo",
+      last_name: "Pilot Patient",
+      date_of_birth: "1992-04-15",
+      gender: "female",
+      phone: null,
+      notes: null,
+      is_active: true,
+      created_at: "",
+      updated_at: "",
+    };
+    createPatient.mockResolvedValue(newPatient);
+    fetchPatients
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: "pat-1",
+            owner_id: "x",
+            first_name: "Ada",
+            last_name: "Lovelace",
+            date_of_birth: "1990-01-01",
+            gender: "female",
+            phone: null,
+            notes: null,
+            is_active: true,
+            created_at: "",
+            updated_at: "",
+          },
+        ],
+        total: 1,
+        page: 1,
+        page_size: 100,
+        pages: 1,
+      })
+      .mockResolvedValueOnce({
+        items: [newPatient, {
+          id: "pat-1",
+          owner_id: "x",
+          first_name: "Ada",
+          last_name: "Lovelace",
+          date_of_birth: "1990-01-01",
+          gender: "female",
+          phone: null,
+          notes: null,
+          is_active: true,
+          created_at: "",
+          updated_at: "",
+        }],
+        total: 2,
+        page: 1,
+        page_size: 100,
+        pages: 1,
+      });
+
+    render(<ManagementPageContent />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Doctor assignments")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Create patient" }));
+
+    await waitFor(() => {
+      expect(createPatient).toHaveBeenCalledTimes(1);
+      expect(fetchPatients.mock.calls.length).toBeGreaterThanOrEqual(2);
+      expect(screen.getAllByText("Patient created successfully.").length).toBeGreaterThan(0);
+    });
+
+    const patientSelect = screen.getByLabelText("Choose patient") as HTMLSelectElement;
+    expect(patientSelect.value).toBe("pat-new");
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import {
   fetchPatientConsents,
@@ -20,7 +20,7 @@ import { useLocale } from "@/lib/i18n/use-locale";
 type PatientOnboardingPanelProps = {
   accessToken: string;
   selectedPatientId: string;
-  onPatientCreated: (patient: Patient) => void;
+  onPatientCreated: (patient: Patient) => void | Promise<void>;
   onConsentChanged: () => void;
 };
 
@@ -76,6 +76,8 @@ export function PatientOnboardingPanel({
   const [consentsLoading, setConsentsLoading] = useState(false);
   const [consentsError, setConsentsError] = useState<string | null>(null);
   const [consentActionPending, setConsentActionPending] = useState(false);
+  const createInFlightRef = useRef(false);
+  const createSuccessRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     setForm((current) => ({
@@ -122,6 +124,11 @@ export function PatientOnboardingPanel({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (submitPending || createInFlightRef.current) {
+      return;
+    }
+
+    createInFlightRef.current = true;
     setSubmitPending(true);
     setSubmitError(null);
     setSubmitSuccess(null);
@@ -139,7 +146,7 @@ export function PatientOnboardingPanel({
       });
 
       setSubmitSuccess(onboarding.createSuccess);
-      onPatientCreated(patient);
+      await onPatientCreated(patient);
 
       if (grantConsentOnCreate) {
         try {
@@ -158,10 +165,14 @@ export function PatientOnboardingPanel({
       }
 
       setForm({ ...defaultForm });
+      requestAnimationFrame(() => {
+        createSuccessRef.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+      });
     } catch (err) {
       const resolved = resolveManagementErrorMessage(err, content.management.errors);
       setSubmitError(resolved.message);
     } finally {
+      createInFlightRef.current = false;
       setSubmitPending(false);
     }
   };
@@ -210,11 +221,17 @@ export function PatientOnboardingPanel({
         </h2>
         <p className="mt-1 text-sm text-text-secondary">{onboarding.createHint}</p>
 
-        {submitSuccess ? (
-          <p className="mt-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-900" role="status">
-            {submitSuccess}
-          </p>
-        ) : null}
+        <div aria-live="polite" aria-atomic="true" className="mt-3 empty:hidden">
+          {submitSuccess ? (
+            <p
+              ref={createSuccessRef}
+              className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-900"
+              role="status"
+            >
+              {submitSuccess}
+            </p>
+          ) : null}
+        </div>
         {submitWarning ? (
           <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950" role="status">
             {submitWarning}
@@ -317,7 +334,7 @@ export function PatientOnboardingPanel({
             />
             <span>{onboarding.grantConsentOnCreate}</span>
           </label>
-          <Button type="submit" disabled={submitPending}>
+          <Button type="submit" disabled={submitPending} aria-busy={submitPending}>
             {submitPending ? onboarding.submitting : onboarding.submitCreate}
           </Button>
         </form>
