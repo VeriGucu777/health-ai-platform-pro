@@ -22,6 +22,16 @@ export type PatientListResponse = {
   pages: number;
 };
 
+export type PatientCreatePayload = {
+  first_name: string;
+  last_name: string;
+  date_of_birth: string;
+  gender: string;
+  phone?: string | null;
+  notes?: string | null;
+  is_active?: boolean;
+};
+
 export async function fetchPatients(
   authToken: string,
   params?: { page?: number; page_size?: number },
@@ -42,4 +52,11 @@ export async function fetchPatients(
 
 export async function fetchPatient(authToken: string, patientId: string): Promise<Patient> {
   return apiClient.get<Patient>(`/patients/${patientId}`, { authToken });
+}
+
+export async function createPatient(
+  authToken: string,
+  payload: PatientCreatePayload,
+): Promise<Patient> {
+  return apiClient.post<Patient>("/patients", { authToken, body: payload });
 }

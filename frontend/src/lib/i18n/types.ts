@@ -177,10 +177,35 @@ export type CommonContent = {
     errors: {
       duplicateAssignment: string;
       duplicatePrimary: string;
+      duplicateConsent: string;
       patientNotFound: string;
       assignmentNotFound: string;
       doctorNotFound: string;
       generic: string;
+    };
+    onboarding: {
+      createSection: string;
+      createHint: string;
+      consentSection: string;
+      consentHint: string;
+      firstName: string;
+      lastName: string;
+      dateOfBirth: string;
+      gender: string;
+      phoneOptional: string;
+      notesOptional: string;
+      grantConsentOnCreate: string;
+      submitCreate: string;
+      submitting: string;
+      createSuccess: string;
+      selectPatientForConsent: string;
+      consentStatusGranted: string;
+      consentStatusNotGranted: string;
+      grantConsent: string;
+      revokeConsent: string;
+      noConsentHistory: string;
+      consentTypes: Record<string, string>;
+      consentStatuses: Record<string, string>;
     };
   };
 };

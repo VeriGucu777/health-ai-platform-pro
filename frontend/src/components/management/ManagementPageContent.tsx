@@ -15,6 +15,7 @@ import {
   type OrganizationDoctorMember,
 } from "@/lib/api/organizations";
 import { fetchPatients, type Patient } from "@/lib/api/patients";
+import { PatientOnboardingPanel } from "@/components/management/PatientOnboardingPanel";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { resolveManagementErrorMessage } from "@/lib/management/error-messages";
 import { useLocale } from "@/lib/i18n/use-locale";
@@ -189,6 +190,26 @@ export function ManagementPageContent() {
         <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
           {actionError}
         </p>
+      ) : null}
+
+      {accessToken ? (
+        <PatientOnboardingPanel
+          accessToken={accessToken}
+          selectedPatientId={selectedPatientId}
+          onPatientCreated={(patient) => {
+            setPatients((current) => {
+              if (current.some((row) => row.id === patient.id)) {
+                return current;
+              }
+              return [patient, ...current];
+            });
+            setSelectedPatientId(patient.id);
+            setActionMessage(mgmt.onboarding.createSuccess);
+          }}
+          onConsentChanged={() => {
+            void loadAssignments();
+          }}
+        />
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">

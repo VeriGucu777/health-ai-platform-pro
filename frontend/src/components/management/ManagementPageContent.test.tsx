@@ -43,10 +43,35 @@ const localeFixture = {
         errors: {
           duplicateAssignment: "Duplicate assignment",
           duplicatePrimary: "Duplicate primary",
+          duplicateConsent: "Duplicate consent",
           patientNotFound: "Patient missing",
           assignmentNotFound: "Assignment missing",
           doctorNotFound: "Doctor missing",
           generic: "Generic error",
+        },
+        onboarding: {
+          createSection: "Register",
+          createHint: "Hint",
+          consentSection: "Consent",
+          consentHint: "Consent hint",
+          firstName: "First",
+          lastName: "Last",
+          dateOfBirth: "DOB",
+          gender: "Gender",
+          phoneOptional: "Phone",
+          notesOptional: "Notes",
+          grantConsentOnCreate: "Grant on create",
+          submitCreate: "Create",
+          submitting: "Saving",
+          createSuccess: "Created patient",
+          selectPatientForConsent: "Select patient",
+          consentStatusGranted: "Granted",
+          consentStatusNotGranted: "Not granted",
+          grantConsent: "Grant",
+          revokeConsent: "Revoke",
+          noConsentHistory: "No history",
+          consentTypes: { clinical_data_processing: "Clinical" },
+          consentStatuses: { granted: "Granted", revoked: "Revoked" },
         },
       },
     },
@@ -77,6 +102,16 @@ vi.mock("@/lib/api/assignments", () => ({
   fetchPatientAssignments: (...args: unknown[]) => fetchPatientAssignments(...args),
   createPatientAssignment: (...args: unknown[]) => createPatientAssignment(...args),
   deactivatePatientAssignment: (...args: unknown[]) => deactivatePatientAssignment(...args),
+}));
+
+const fetchPatientConsents = vi.fn();
+const grantPatientConsent = vi.fn();
+const revokePatientConsent = vi.fn();
+
+vi.mock("@/lib/api/consents", () => ({
+  fetchPatientConsents: (...args: unknown[]) => fetchPatientConsents(...args),
+  grantPatientConsent: (...args: unknown[]) => grantPatientConsent(...args),
+  revokePatientConsent: (...args: unknown[]) => revokePatientConsent(...args),
 }));
 
 describe("ManagementPageContent", () => {
@@ -117,6 +152,21 @@ describe("ManagementPageContent", () => {
       pages: 1,
     });
     fetchPatientAssignments.mockResolvedValue({ items: [] });
+    fetchPatientConsents.mockResolvedValue({ items: [] });
+    grantPatientConsent.mockResolvedValue({
+      id: "c1",
+      patient_id: "pat-1",
+      organization_id: "o1",
+      consent_type: "clinical_data_processing",
+      status: "granted",
+      granted_at: "2026-01-01T00:00:00Z",
+      revoked_at: null,
+      recorded_by_user_id: "admin",
+      version: 1,
+      source: "test",
+      created_at: "2026-01-01T00:00:00Z",
+    });
+    revokePatientConsent.mockResolvedValue({});
     createPatientAssignment.mockResolvedValue({
       id: "a-new",
       organization_id: "o1",
@@ -220,6 +270,13 @@ describe("ManagementPageContent", () => {
       expect(fetchPatientAssignments).toHaveBeenCalled();
     });
 
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Assign doctor" })).toBeEnabled();
+    });
+
+    fireEvent.change(screen.getByLabelText("Choose doctor"), {
+      target: { value: "doc-1" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Assign doctor" }));
 
     await waitFor(() => {

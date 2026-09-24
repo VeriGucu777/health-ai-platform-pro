@@ -267,10 +267,42 @@ export const commonContent: CommonContent = {
       duplicateAssignment:
         "Bu doktor ve hasta için zaten aktif bir atama var.",
       duplicatePrimary: "Bu hasta için zaten aktif bir birincil atama var.",
+      duplicateConsent: "Bu hasta için zaten aktif bir onam kaydı var.",
       patientNotFound: "Hasta bulunamadı veya organizasyonunuz dışında.",
       assignmentNotFound: "Atama bulunamadı.",
       doctorNotFound: "Doktor bulunamadı veya organizasyonunuz dışında.",
       generic: "İşlem tamamlanamadı. Lütfen tekrar deneyin.",
+    },
+    onboarding: {
+      createSection: "Hasta kaydı",
+      createHint:
+        "Hastalar otomatik olarak organizasyonunuza bağlanır. Yalnızca sentetik demo verisi kullanın.",
+      consentSection: "Klinik veri onamı",
+      consentHint:
+        "Klinik veri işleme onamının alınıp alınmadığını kaydedin (KVKK / pilot karar destek).",
+      firstName: "Ad",
+      lastName: "Soyad",
+      dateOfBirth: "Doğum tarihi",
+      gender: "Cinsiyet",
+      phoneOptional: "Telefon (isteğe bağlı)",
+      notesOptional: "Notlar (isteğe bağlı)",
+      grantConsentOnCreate: "Kayıttan sonra klinik veri işleme onamını kaydet",
+      submitCreate: "Hastayı oluştur",
+      submitting: "Oluşturuluyor…",
+      createSuccess: "Hasta başarıyla kaydedildi.",
+      selectPatientForConsent: "Onamı görüntülemek veya güncellemek için hasta seçin.",
+      consentStatusGranted: "Aktif onam: verildi",
+      consentStatusNotGranted: "Kayıtlı aktif onam yok.",
+      grantConsent: "Onam kaydet",
+      revokeConsent: "Onamı geri al",
+      noConsentHistory: "Henüz onam kaydı yok.",
+      consentTypes: {
+        clinical_data_processing: "Klinik veri işleme",
+      },
+      consentStatuses: {
+        granted: "Verildi",
+        revoked: "Geri alındı",
+      },
     },
   },
 };

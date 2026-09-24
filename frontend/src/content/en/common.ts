@@ -243,10 +243,42 @@ export const commonContent: CommonContent = {
     errors: {
       duplicateAssignment: "An active assignment already exists for this doctor and patient.",
       duplicatePrimary: "An active primary assignment already exists for this patient.",
+      duplicateConsent: "An active consent record already exists for this patient.",
       patientNotFound: "Patient not found or outside your organization.",
       assignmentNotFound: "Assignment not found.",
       doctorNotFound: "Doctor not found or outside your organization.",
       generic: "The operation could not be completed. Please try again.",
+    },
+    onboarding: {
+      createSection: "Register patient",
+      createHint:
+        "Patients are linked to your organization automatically. Use synthetic demo data only.",
+      consentSection: "Clinical data consent",
+      consentHint:
+        "Record whether clinical data processing consent was obtained (KVKK / decision-support pilot).",
+      firstName: "First name",
+      lastName: "Last name",
+      dateOfBirth: "Date of birth",
+      gender: "Gender",
+      phoneOptional: "Phone (optional)",
+      notesOptional: "Notes (optional)",
+      grantConsentOnCreate: "Record clinical data processing consent after registration",
+      submitCreate: "Create patient",
+      submitting: "Creating…",
+      createSuccess: "Patient registered successfully.",
+      selectPatientForConsent: "Select a patient to view or update consent.",
+      consentStatusGranted: "Active consent: granted",
+      consentStatusNotGranted: "No active granted consent on file.",
+      grantConsent: "Record consent",
+      revokeConsent: "Revoke consent",
+      noConsentHistory: "No consent records yet.",
+      consentTypes: {
+        clinical_data_processing: "Clinical data processing",
+      },
+      consentStatuses: {
+        granted: "Granted",
+        revoked: "Revoked",
+      },
     },
   },
 };

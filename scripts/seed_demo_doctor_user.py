@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ensure demo doctor user exists with known password (DATABASE_URL required, ops only)."""
+"""Ensure demo doctor user exists with known password (run manually with DATABASE_URL)."""
 
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ async def _run() -> int:
         await dispose_engine()
 
     print(
-        "Demo doctor user ensure finished "
+        "Demo doctor user seed finished "
         f"(user_id={result.user_id}, role={result.role}, "
         f"created_user={result.created_user}, "
         f"password_reset={result.password_reset}, "

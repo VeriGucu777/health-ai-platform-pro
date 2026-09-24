@@ -3,6 +3,7 @@ import { ApiClientError } from "@/lib/api/client";
 export type ManagementErrorMessages = {
   duplicateAssignment: string;
   duplicatePrimary: string;
+  duplicateConsent: string;
   patientNotFound: string;
   assignmentNotFound: string;
   doctorNotFound: string;
@@ -12,6 +13,7 @@ export type ManagementErrorMessages = {
 const DUPLICATE_ASSIGNMENT =
   "An active assignment already exists for this doctor and patient";
 const DUPLICATE_PRIMARY = "An active primary assignment already exists for this patient";
+const DUPLICATE_CONSENT = "An active consent already exists for this patient and consent type";
 const PATIENT_NOT_FOUND = "Patient not found";
 const ASSIGNMENT_NOT_FOUND = "Assignment not found";
 const DOCTOR_NOT_FOUND = "Doctor not found";
@@ -32,6 +34,9 @@ export function resolveManagementErrorMessage(
     }
     if (detail.includes(DUPLICATE_ASSIGNMENT)) {
       return { message: messages.duplicateAssignment, status: 409 };
+    }
+    if (detail.includes(DUPLICATE_CONSENT)) {
+      return { message: messages.duplicateConsent, status: 409 };
     }
   }
 

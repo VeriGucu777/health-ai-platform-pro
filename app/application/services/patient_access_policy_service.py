@@ -159,7 +159,7 @@ class DefaultPatientAccessPolicy(PatientAccessPolicy):
             return await self._resolve_create_for_clinic_admin(actor_id)
 
         if actor_role == UserRole.DOCTOR:
-            return await self._resolve_create_for_doctor(actor_id)
+            return self._deny(PatientAccessReasonCode.DENIED_ROLE, suggested_http_status=403)
 
         return self._deny(PatientAccessReasonCode.DENIED_ROLE, suggested_http_status=403)
 
@@ -175,21 +175,6 @@ class DefaultPatientAccessPolicy(PatientAccessPolicy):
         org_id = memberships[0].organization_id
         return self._allow(
             PatientAccessReasonCode.ALLOWED_CLINIC_ADMIN,
-            organization_id=org_id,
-        )
-
-    async def _resolve_create_for_doctor(self, actor_id: UUID) -> PatientAccessDecision:
-        memberships = await self._memberships.list_active_memberships_for_user(
-            actor_id,
-            membership_role=OrganizationMembershipRole.DOCTOR,
-        )
-        if not memberships:
-            return self._deny(PatientAccessReasonCode.DENIED_ROLE, suggested_http_status=403)
-        if len(memberships) > 1:
-            return self._deny(PatientAccessReasonCode.DENIED_ROLE, suggested_http_status=403)
-        org_id = memberships[0].organization_id
-        return self._allow(
-            PatientAccessReasonCode.ALLOWED_LEGACY_OWNER,
             organization_id=org_id,
         )
 
