@@ -235,6 +235,7 @@ export const commonContent: CommonContent = {
     assignmentsSection: "Mevcut atamalar",
     assignDoctor: "Doktor ata",
     removeAssignment: "Atamayı kaldır",
+    removingAssignment: "Atama kaldırılıyor…",
     selectPatient: "Hasta seçin",
     selectDoctor: "Doktor seçin",
     noPatientSelected: "Atamaları görmek için listeden bir hasta seçin.",

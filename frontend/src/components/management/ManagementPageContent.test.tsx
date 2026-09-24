@@ -19,6 +19,7 @@ const localeFixture = {
         assignmentsSection: "Assignments",
         assignDoctor: "Assign doctor",
         removeAssignment: "Remove assignment",
+        removingAssignment: "Removing assignment…",
         selectPatient: "Choose patient",
         selectDoctor: "Choose doctor",
         noPatientSelected: "Select a patient",
@@ -201,7 +202,19 @@ describe("ManagementPageContent", () => {
       ended_at: null,
       assigned_by_user_id: null,
     });
-    deactivatePatientAssignment.mockResolvedValue({});
+    deactivatePatientAssignment.mockImplementation(
+      async (_token: string, _patientId: string, assignmentId: string) => ({
+        id: assignmentId,
+        organization_id: "o1",
+        patient_id: "pat-1",
+        assignee_user_id: "doc-1",
+        is_primary: true,
+        status: "inactive",
+        assigned_at: "2026-01-02T00:00:00Z",
+        ended_at: "2026-01-03T00:00:00Z",
+        assigned_by_user_id: null,
+      }),
+    );
   });
 
   it("shows doctor names instead of raw user ids in the doctor select", async () => {
@@ -247,22 +260,38 @@ describe("ManagementPageContent", () => {
     });
   });
 
-  it("deactivates active assignment from UI", async () => {
-    fetchPatientAssignments.mockResolvedValue({
-      items: [
-        {
-          id: "a1",
-          organization_id: "o1",
-          patient_id: "pat-1",
-          assignee_user_id: "doc-1",
-          is_primary: true,
-          status: "active",
-          assigned_at: "2026-01-02T00:00:00Z",
-          ended_at: null,
-          assigned_by_user_id: null,
-        },
-      ],
-    });
+  it("deactivates active assignment, refetches, and removes row from current assignments", async () => {
+    fetchPatientAssignments
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: "a1",
+            organization_id: "o1",
+            patient_id: "pat-1",
+            assignee_user_id: "doc-1",
+            is_primary: true,
+            status: "active",
+            assigned_at: "2026-01-02T00:00:00Z",
+            ended_at: null,
+            assigned_by_user_id: null,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: "a1",
+            organization_id: "o1",
+            patient_id: "pat-1",
+            assignee_user_id: "doc-1",
+            is_primary: true,
+            status: "inactive",
+            assigned_at: "2026-01-02T00:00:00Z",
+            ended_at: "2026-01-03T00:00:00Z",
+            assigned_by_user_id: null,
+          },
+        ],
+      });
 
     render(<ManagementPageContent />);
 
@@ -282,6 +311,107 @@ describe("ManagementPageContent", () => {
 
     await waitFor(() => {
       expect(deactivatePatientAssignment).toHaveBeenCalledWith("token", "pat-1", "a1");
+      expect(fetchPatientAssignments.mock.calls.length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText("Deactivated")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Remove assignment" })).not.toBeInTheDocument();
+      expect(screen.getByText("No assignments")).toBeInTheDocument();
+    });
+  });
+
+  it("shows localized error when deactivate assignment fails", async () => {
+    const { ApiClientError } = await import("@/lib/api/client");
+    fetchPatientAssignments.mockResolvedValue({
+      items: [
+        {
+          id: "a1",
+          organization_id: "o1",
+          patient_id: "pat-1",
+          assignee_user_id: "doc-1",
+          is_primary: false,
+          status: "active",
+          assigned_at: "2026-01-02T00:00:00Z",
+          ended_at: null,
+          assigned_by_user_id: null,
+        },
+      ],
+    });
+    deactivatePatientAssignment.mockRejectedValue(new ApiClientError("Assignment not found", 404));
+
+    render(<ManagementPageContent />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Doctor assignments")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText("Choose patient"), {
+      target: { value: "pat-1" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Remove assignment" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove assignment" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("Assignment missing");
+      expect(screen.getByRole("button", { name: "Remove assignment" })).toBeInTheDocument();
+    });
+  });
+
+  it("sends only one deactivate request on rapid double click", async () => {
+    let resolveDeactivate: (value: unknown) => void = () => undefined;
+    fetchPatientAssignments.mockResolvedValue({
+      items: [
+        {
+          id: "a1",
+          organization_id: "o1",
+          patient_id: "pat-1",
+          assignee_user_id: "doc-1",
+          is_primary: false,
+          status: "active",
+          assigned_at: "2026-01-02T00:00:00Z",
+          ended_at: null,
+          assigned_by_user_id: null,
+        },
+      ],
+    });
+    deactivatePatientAssignment.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveDeactivate = resolve;
+        }),
+    );
+
+    render(<ManagementPageContent />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Doctor assignments")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText("Choose patient"), {
+      target: { value: "pat-1" },
+    });
+
+    const removeButton = await screen.findByRole("button", { name: "Remove assignment" });
+    fireEvent.click(removeButton);
+    fireEvent.click(removeButton);
+
+    await waitFor(() => {
+      expect(deactivatePatientAssignment).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole("button", { name: "Removing assignment…" })).toBeDisabled();
+    });
+
+    resolveDeactivate({
+      id: "a1",
+      organization_id: "o1",
+      patient_id: "pat-1",
+      assignee_user_id: "doc-1",
+      is_primary: false,
+      status: "inactive",
+      assigned_at: "2026-01-02T00:00:00Z",
+      ended_at: "2026-01-03T00:00:00Z",
+      assigned_by_user_id: null,
     });
   });
 

@@ -212,6 +212,7 @@ export const commonContent: CommonContent = {
     assignmentsSection: "Current assignments",
     assignDoctor: "Assign doctor",
     removeAssignment: "Remove assignment",
+    removingAssignment: "Removing assignment…",
     selectPatient: "Choose a patient",
     selectDoctor: "Choose a doctor",
     noPatientSelected: "Select a patient from the list to view assignments.",

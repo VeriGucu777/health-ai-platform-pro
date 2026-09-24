@@ -19,6 +19,11 @@ describe("management i18n", () => {
     expect(tr.management.onboarding.createSuccess).toBe("Hasta başarıyla oluşturuldu.");
   });
 
+  it("uses paired remove-assignment loading copy in TR and EN", () => {
+    expect(en.management.removingAssignment).toBe("Removing assignment…");
+    expect(tr.management.removingAssignment).toBe("Atama kaldırılıyor…");
+  });
+
   it("uses paired consent status copy in TR and EN", () => {
     expect(en.management.onboarding.consentStatusGranted).toBe("Active consent: granted");
     expect(tr.management.onboarding.consentStatusGranted).toBe("Aktif onam: verildi");

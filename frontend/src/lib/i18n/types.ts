@@ -152,6 +152,7 @@ export type CommonContent = {
     assignmentsSection: string;
     assignDoctor: string;
     removeAssignment: string;
+    removingAssignment: string;
     selectPatient: string;
     selectDoctor: string;
     noPatientSelected: string;

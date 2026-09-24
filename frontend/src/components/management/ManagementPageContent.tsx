@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import {
   createPatientAssignment,
@@ -49,7 +49,11 @@ export function ManagementPageContent() {
   const [assignmentsError, setAssignmentsError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
-  const [actionPending, setActionPending] = useState(false);
+  const [assignPending, setAssignPending] = useState(false);
+  const [deactivatingAssignmentId, setDeactivatingAssignmentId] = useState<string | null>(
+    null,
+  );
+  const deactivateInFlightRef = useRef<string | null>(null);
   const [patientCreateNotice, setPatientCreateNotice] = useState<string | null>(null);
 
   const loadPatients = useCallback(async () => {
@@ -99,6 +103,7 @@ export function ManagementPageContent() {
       return;
     }
 
+    setAssignments([]);
     setAssignmentsLoading(true);
     setAssignmentsError(null);
 
@@ -127,12 +132,17 @@ export function ManagementPageContent() {
     [patients, selectedPatientId],
   );
 
+  const activeAssignments = useMemo(
+    () => assignments.filter((row) => row.status === "active"),
+    [assignments],
+  );
+
   const handleAssign = async () => {
     if (!accessToken || !selectedPatientId || !selectedDoctorId) {
       return;
     }
 
-    setActionPending(true);
+    setAssignPending(true);
     setActionError(null);
     setActionMessage(null);
 
@@ -147,28 +157,42 @@ export function ManagementPageContent() {
       const resolved = resolveManagementErrorMessage(err, content.management.errors);
       setActionError(resolved.message);
     } finally {
-      setActionPending(false);
+      setAssignPending(false);
     }
   };
 
   const handleDeactivate = async (assignment: PatientAssignment) => {
-    if (!accessToken || !selectedPatientId || assignment.status !== "active") {
+    if (
+      !accessToken ||
+      !selectedPatientId ||
+      assignment.status !== "active" ||
+      deactivateInFlightRef.current === assignment.id
+    ) {
       return;
     }
 
-    setActionPending(true);
+    deactivateInFlightRef.current = assignment.id;
+    setDeactivatingAssignmentId(assignment.id);
     setActionError(null);
     setActionMessage(null);
 
     try {
-      await deactivatePatientAssignment(accessToken, selectedPatientId, assignment.id);
+      const updated = await deactivatePatientAssignment(
+        accessToken,
+        selectedPatientId,
+        assignment.id,
+      );
+      setAssignments((current) =>
+        current.map((row) => (row.id === updated.id ? updated : row)),
+      );
       setActionMessage(mgmt.deactivateSuccess);
       await loadAssignments();
     } catch (err) {
       const resolved = resolveManagementErrorMessage(err, content.management.errors);
       setActionError(resolved.message);
     } finally {
-      setActionPending(false);
+      deactivateInFlightRef.current = null;
+      setDeactivatingAssignmentId(null);
     }
   };
 
@@ -384,7 +408,7 @@ export function ManagementPageContent() {
                   className="min-h-11 rounded-lg border border-border bg-white px-3 py-2"
                   value={selectedDoctorId}
                   onChange={(event) => setSelectedDoctorId(event.target.value)}
-                  disabled={doctors.length === 0 || actionPending}
+                  disabled={doctors.length === 0 || assignPending || deactivatingAssignmentId !== null}
                 >
                   <option value="">{mgmt.selectDoctor}</option>
                   {doctors.map((doctor) => (
@@ -399,20 +423,20 @@ export function ManagementPageContent() {
                   type="checkbox"
                   checked={isPrimary}
                   onChange={(event) => setIsPrimary(event.target.checked)}
-                  disabled={actionPending}
+                  disabled={assignPending || deactivatingAssignmentId !== null}
                 />
                 {mgmt.isPrimary}
               </label>
               <Button
                 type="button"
-                onClick={handleAssign}
-                disabled={!selectedDoctorId || actionPending}
+                onClick={() => void handleAssign()}
+                disabled={!selectedDoctorId || assignPending || deactivatingAssignmentId !== null}
               >
                 {mgmt.assignDoctor}
               </Button>
             </div>
 
-            {assignments.length === 0 ? (
+            {activeAssignments.length === 0 ? (
               <p className="mt-4 text-sm text-text-secondary">{mgmt.emptyAssignments}</p>
             ) : (
               <div className="mt-4 overflow-x-auto">
@@ -429,7 +453,7 @@ export function ManagementPageContent() {
                     </tr>
                   </thead>
                   <tbody>
-                    {assignments.map((assignment) => {
+                    {activeAssignments.map((assignment) => {
                       const doctor = findDoctorByUserId(doctors, assignment.assignee_user_id);
                       const doctorLabel = doctor
                         ? formatDoctorDisplayName(doctor)
@@ -451,19 +475,18 @@ export function ManagementPageContent() {
                             {formatDateTime(assignment.assigned_at)}
                           </td>
                           <td className="px-2 py-2">
-                            {assignment.status === "active" ? (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="secondary"
-                                disabled={actionPending}
-                                onClick={() => void handleDeactivate(assignment)}
-                              >
-                                {mgmt.removeAssignment}
-                              </Button>
-                            ) : (
-                              <span className="text-text-secondary">—</span>
-                            )}
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              disabled={assignPending || deactivatingAssignmentId !== null}
+                              aria-busy={deactivatingAssignmentId === assignment.id}
+                              onClick={() => void handleDeactivate(assignment)}
+                            >
+                              {deactivatingAssignmentId === assignment.id
+                                ? mgmt.removingAssignment
+                                : mgmt.removeAssignment}
+                            </Button>
                           </td>
                         </tr>
                       );
