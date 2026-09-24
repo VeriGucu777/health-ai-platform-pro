@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { ApiClientError } from "@/lib/api/client";
-import { resolveManagementErrorMessage } from "@/lib/management/error-messages";
+import {
+  isDuplicateActiveConsentConflict,
+  resolveManagementErrorMessage,
+} from "@/lib/management/error-messages";
 import { commonContent as en } from "@/content/en/common";
 
 const messages = en.management.errors;
@@ -28,5 +31,23 @@ describe("resolveManagementErrorMessage", () => {
       409,
     );
     expect(resolveManagementErrorMessage(error, messages).message).toBe(messages.duplicateConsent);
+  });
+});
+
+describe("isDuplicateActiveConsentConflict", () => {
+  it("returns true for active consent 409", () => {
+    const error = new ApiClientError(
+      "An active consent already exists for this patient and consent type",
+      409,
+    );
+    expect(isDuplicateActiveConsentConflict(error, messages)).toBe(true);
+  });
+
+  it("returns false for other 409 conflicts", () => {
+    const error = new ApiClientError(
+      "An active assignment already exists for this doctor and patient",
+      409,
+    );
+    expect(isDuplicateActiveConsentConflict(error, messages)).toBe(false);
   });
 });

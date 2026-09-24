@@ -55,3 +55,12 @@ export function resolveManagementErrorMessage(
 
   return { message: detail || messages.generic, status: error.status };
 }
+
+/** POST grant returned 409 because an active consent already exists (not a hard failure). */
+export function isDuplicateActiveConsentConflict(
+  error: unknown,
+  messages: ManagementErrorMessages,
+): boolean {
+  const resolved = resolveManagementErrorMessage(error, messages);
+  return resolved.status === 409 && resolved.message === messages.duplicateConsent;
+}

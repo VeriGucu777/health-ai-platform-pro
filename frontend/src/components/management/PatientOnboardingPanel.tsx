@@ -9,7 +9,10 @@ import {
   type PatientConsent,
 } from "@/lib/api/consents";
 import { createPatient, type Patient, type PatientCreatePayload } from "@/lib/api/patients";
-import { resolveManagementErrorMessage } from "@/lib/management/error-messages";
+import {
+  isDuplicateActiveConsentConflict,
+  resolveManagementErrorMessage,
+} from "@/lib/management/error-messages";
 import {
   buildGenderOptions,
   isPatientGenderValue,
@@ -88,27 +91,32 @@ export function PatientOnboardingPanel({
     }));
   }, [defaultForm.notes]);
 
-  const loadConsents = useCallback(async () => {
-    if (!accessToken || !selectedPatientId) {
+  const loadConsents = useCallback(
+    async (patientIdOverride?: string) => {
+      const patientId = patientIdOverride ?? selectedPatientId;
+      if (!accessToken || !patientId) {
+        setConsents([]);
+        setConsentsError(null);
+        return;
+      }
+
       setConsents([]);
+      setConsentsLoading(true);
       setConsentsError(null);
-      return;
-    }
 
-    setConsentsLoading(true);
-    setConsentsError(null);
-
-    try {
-      const response = await fetchPatientConsents(accessToken, selectedPatientId);
-      setConsents(response.items);
-    } catch (err) {
-      const resolved = resolveManagementErrorMessage(err, content.management.errors);
-      setConsentsError(resolved.message);
-      setConsents([]);
-    } finally {
-      setConsentsLoading(false);
-    }
-  }, [accessToken, content.management.errors, selectedPatientId]);
+      try {
+        const response = await fetchPatientConsents(accessToken, patientId);
+        setConsents(response.items);
+      } catch (err) {
+        const resolved = resolveManagementErrorMessage(err, content.management.errors);
+        setConsentsError(resolved.message);
+        setConsents([]);
+      } finally {
+        setConsentsLoading(false);
+      }
+    },
+    [accessToken, content.management.errors, selectedPatientId],
+  );
 
   useEffect(() => {
     void loadConsents();
@@ -151,14 +159,17 @@ export function PatientOnboardingPanel({
       if (grantConsentOnCreate) {
         try {
           await grantPatientConsent(accessToken, patient.id);
+          await loadConsents(patient.id);
           onConsentChanged();
         } catch (consentErr) {
-          const resolved = resolveManagementErrorMessage(
-            consentErr,
-            content.management.errors,
-          );
-          setSubmitWarning(onboarding.consentGrantFailedWarning);
-          if (resolved.status !== 409) {
+          if (isDuplicateActiveConsentConflict(consentErr, content.management.errors)) {
+            await loadConsents(patient.id);
+            onConsentChanged();
+          } else {
+            const resolved = resolveManagementErrorMessage(
+              consentErr,
+              content.management.errors,
+            );
             setSubmitWarning(`${onboarding.consentGrantFailedWarning} ${resolved.message}`);
           }
         }
@@ -188,8 +199,13 @@ export function PatientOnboardingPanel({
       await loadConsents();
       onConsentChanged();
     } catch (err) {
-      const resolved = resolveManagementErrorMessage(err, content.management.errors);
-      setConsentsError(resolved.message);
+      if (isDuplicateActiveConsentConflict(err, content.management.errors)) {
+        await loadConsents();
+        onConsentChanged();
+      } else {
+        const resolved = resolveManagementErrorMessage(err, content.management.errors);
+        setConsentsError(resolved.message);
+      }
     } finally {
       setConsentActionPending(false);
     }
@@ -352,7 +368,7 @@ export function PatientOnboardingPanel({
           <p className="mt-4 text-sm text-text-secondary">{content.common.loading}</p>
         ) : (
           <>
-            {consentsError ? (
+            {consentsError && !activeGranted ? (
               <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert">
                 {consentsError}
               </p>

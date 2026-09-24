@@ -18,4 +18,13 @@ describe("management i18n", () => {
     expect(en.management.onboarding.createSuccess).toBe("Patient created successfully.");
     expect(tr.management.onboarding.createSuccess).toBe("Hasta başarıyla oluşturuldu.");
   });
+
+  it("uses paired consent status copy in TR and EN", () => {
+    expect(en.management.onboarding.consentStatusGranted).toBe("Active consent: granted");
+    expect(tr.management.onboarding.consentStatusGranted).toBe("Aktif onam: verildi");
+    expect(en.management.onboarding.consentStatusNotGranted).toContain("No active");
+    expect(tr.management.onboarding.consentStatusNotGranted).toBe("Kayıtlı aktif onam yok.");
+    expect(en.management.errors.duplicateConsent).toBeTruthy();
+    expect(tr.management.errors.duplicateConsent).toBeTruthy();
+  });
 });
