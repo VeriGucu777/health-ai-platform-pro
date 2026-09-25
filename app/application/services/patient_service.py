@@ -6,6 +6,10 @@ from uuid import UUID
 from app.application.dtos.patient import PatientDTO, PatientListDTO
 from app.application.services.base import BaseService
 from app.application.services.patient_access_errors import raise_for_patient_access_decision
+from app.application.services.patient_child_access import (
+    _ACCESSIBLE_PATIENTS_CAP,
+    filter_doctor_patients_for_active_memberships,
+)
 from app.core.exceptions import NotFoundError
 from app.domain.entities.patient import Patient
 from app.domain.entities.user import UserRole
@@ -131,12 +135,18 @@ class PatientService(BaseService):
         page, page_size, offset = self._normalize_pagination(page, page_size)
 
         if actor_role == UserRole.DOCTOR:
-            patients = await self._patients.list_visible_to_doctor(
+            visible = await self._patients.list_visible_to_doctor(
                 actor_id,
-                offset=offset,
-                limit=page_size,
+                offset=0,
+                limit=_ACCESSIBLE_PATIENTS_CAP,
             )
-            total = await self._patients.count_visible_to_doctor(actor_id)
+            visible = await filter_doctor_patients_for_active_memberships(
+                visible,
+                memberships=self._memberships,
+                actor_id=actor_id,
+            )
+            total = len(visible)
+            patients = visible[offset : offset + page_size]
         elif actor_role == UserRole.CLINIC_ADMIN:
             if self._memberships is None:
                 patients = []

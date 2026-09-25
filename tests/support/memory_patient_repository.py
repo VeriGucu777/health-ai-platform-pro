@@ -102,7 +102,9 @@ class InMemoryPatientRepository(PatientRepository):
         visible = {
             patient.id
             for patient in self._patients.values()
-            if patient.owner_id == doctor_id and patient.is_active
+            if patient.is_active
+            and patient.owner_id == doctor_id
+            and patient.organization_id is None
         }
         if self._assignment_repository is not None:
             for assignment in self._assignment_repository._assignments.values():

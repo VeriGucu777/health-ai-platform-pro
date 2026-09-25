@@ -428,7 +428,7 @@ async def test_system_admin_denied(policy, patient_repo) -> None:
 
 
 @pytest.mark.asyncio
-async def test_doctor_org_scoped_legacy_owner_allowed(
+async def test_doctor_org_scoped_owner_without_assignment_denied(
     policy, patient_repo, membership_repo,
 ) -> None:
     org_id = uuid4()
@@ -443,5 +443,32 @@ async def test_doctor_org_scoped_legacy_owner_allowed(
         patient_id=patient.id,
         action=PatientAccessAction.READ,
     )
+    assert decision.allowed is False
+    assert decision.reason_code == PatientAccessReasonCode.DENIED_UNASSIGNED
+    assert decision.suggested_http_status == 404
+
+
+@pytest.mark.asyncio
+async def test_doctor_org_scoped_owner_with_active_assignment_allowed(
+    policy, patient_repo, membership_repo, assignment_repo,
+) -> None:
+    org_id = uuid4()
+    doctor_id = uuid4()
+    patient = _patient(owner_id=doctor_id, organization_id=org_id)
+    await patient_repo.create(patient)
+    await _seed_membership(membership_repo, org_id=org_id, user_id=doctor_id)
+    await _seed_assignment(
+        assignment_repo,
+        org_id=org_id,
+        patient_id=patient.id,
+        doctor_id=doctor_id,
+    )
+
+    decision = await policy.resolve_access(
+        actor_id=doctor_id,
+        actor_role=UserRole.DOCTOR,
+        patient_id=patient.id,
+        action=PatientAccessAction.READ,
+    )
     assert decision.allowed is True
-    assert decision.reason_code == PatientAccessReasonCode.ALLOWED_LEGACY_OWNER
+    assert decision.reason_code == PatientAccessReasonCode.ALLOWED_ASSIGNMENT

@@ -101,12 +101,6 @@ class DefaultPatientAccessPolicy(PatientAccessPolicy):
             )
 
         if actor_role == UserRole.DOCTOR:
-            if owner_id == actor_id:
-                return self._allow(
-                    PatientAccessReasonCode.ALLOWED_LEGACY_OWNER,
-                    organization_id=organization_id,
-                )
-
             assignment = await self._assignments.get_by_patient_and_assignee(
                 patient_id,
                 actor_id,

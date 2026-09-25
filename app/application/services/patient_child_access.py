@@ -5,12 +5,32 @@ from uuid import UUID
 from app.application.services.patient_access_errors import raise_for_patient_access_decision
 from app.application.services.patient_access_types import ResolvedPatientRead
 from app.core.exceptions import NotFoundError
+from app.domain.entities.patient import Patient
 from app.domain.entities.user import UserRole
 from app.domain.interfaces.organization_membership_repository import OrganizationMembershipRepository
 from app.domain.interfaces.patient_access_policy import PatientAccessAction, PatientAccessPolicy
 from app.domain.interfaces.patient_repository import PatientRepository
 
 _ACCESSIBLE_PATIENTS_CAP = 10_000
+
+
+async def filter_doctor_patients_for_active_memberships(
+    patients: list[Patient],
+    *,
+    memberships: OrganizationMembershipRepository | None,
+    actor_id: UUID,
+) -> list[Patient]:
+    """Hide org-scoped patients when the doctor has no active membership in that org."""
+    if memberships is None:
+        return patients
+    active_org_ids = frozenset(
+        await memberships.list_active_organization_ids_for_user(actor_id),
+    )
+    return [
+        patient
+        for patient in patients
+        if patient.organization_id is None or patient.organization_id in active_org_ids
+    ]
 
 
 async def resolve_patient_access_for_action(
@@ -60,6 +80,11 @@ async def list_accessible_patient_ids(
             actor_id,
             offset=0,
             limit=_ACCESSIBLE_PATIENTS_CAP,
+        )
+        visible = await filter_doctor_patients_for_active_memberships(
+            visible,
+            memberships=memberships,
+            actor_id=actor_id,
         )
         return [patient.id for patient in visible]
 

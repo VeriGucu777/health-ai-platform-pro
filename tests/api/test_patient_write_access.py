@@ -98,27 +98,13 @@ async def test_clinic_admin_create_sets_organization_id(
 
 
 @pytest.mark.asyncio
-async def test_doctor_create_with_membership_and_primary_assignment(
+async def test_doctor_self_register_cannot_create_org_patient(
     client: AsyncClient,
-    assignment_repository,
-    patient_repository,
 ) -> None:
+    """Pilot policy: patient create is clinic_admin-only even for registered doctors."""
     headers = await _register_and_login(client, email="write-doc-create@example.com")
-    me = await client.get("/api/v1/auth/me", headers=headers)
-    doctor_id = UUID(me.json()["id"])
-
     response = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    assert response.status_code == 201
-    patient_id = UUID(response.json()["id"])
-    stored = await patient_repository.get_by_id(patient_id)
-    assert stored is not None
-    assert stored.organization_id is not None
-
-    assignment = await assignment_repository.get_by_patient_and_assignee(patient_id, doctor_id)
-    assert assignment is not None
-    assert assignment.is_primary is True
-    assert assignment.status == AssignmentStatus.ACTIVE
-    assert assignment.organization_id == stored.organization_id
+    assert response.status_code == 403
 
 
 @pytest.mark.asyncio

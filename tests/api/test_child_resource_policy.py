@@ -319,6 +319,7 @@ async def test_appointment_cross_patient_patient_id_tampering_rejected(
     user_repository,
     patient_repository,
     membership_repository,
+    assignment_repository,
 ) -> None:
     org_a = uuid4()
     org_b = uuid4()
@@ -332,19 +333,20 @@ async def test_appointment_cross_patient_patient_id_tampering_rejected(
     inaccessible = await patient_repository.create(
         _patient(owner_id=uuid4(), organization_id=org_b),
     )
+    accessible = await patient_repository.create(
+        _patient(owner_id=owner.id, organization_id=org_a),
+    )
+    await assignment_repository.create(
+        PatientAssignment(
+            organization_id=org_a,
+            patient_id=accessible.id,
+            assignee_user_id=owner.id,
+            is_primary=True,
+            status=AssignmentStatus.ACTIVE,
+        ),
+    )
     headers = await _login(client, owner.email)
-    p1 = (
-        await client.post(
-            "/api/v1/patients",
-            json={
-                "first_name": "A",
-                "last_name": "B",
-                "date_of_birth": "1990-01-01",
-                "gender": "male",
-            },
-            headers=headers,
-        )
-    ).json()["id"]
+    p1 = str(accessible.id)
     appt_id = (
         await client.post(
             "/api/v1/appointments",

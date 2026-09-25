@@ -246,6 +246,9 @@ async def test_doctor_list_includes_assigned_and_legacy_owner_without_duplicates
     legacy_owned = await patient_repository.create(
         _patient(owner_id=doctor.id, organization_id=None),
     )
+    org_owned_unassigned = await patient_repository.create(
+        _patient(owner_id=doctor.id, organization_id=org_id),
+    )
     org_owned = await patient_repository.create(
         _patient(owner_id=doctor.id, organization_id=org_id),
     )
@@ -282,6 +285,7 @@ async def test_doctor_list_includes_assigned_and_legacy_owner_without_duplicates
     assert response.status_code == 200
     data = response.json()
     ids = {item["id"] for item in data["items"]}
+    assert str(org_owned_unassigned.id) not in ids
     assert ids == {str(legacy_owned.id), str(org_owned.id), str(assigned_only.id)}
     assert data["total"] == 3
     assert len(data["items"]) == 3

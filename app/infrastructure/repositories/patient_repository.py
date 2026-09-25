@@ -132,7 +132,10 @@ class SQLAlchemyPatientRepository(
             .where(
                 PatientModel.is_active.is_(True),
                 or_(
-                    PatientModel.owner_id == doctor_id,
+                    and_(
+                        PatientModel.organization_id.is_(None),
+                        PatientModel.owner_id == doctor_id,
+                    ),
                     assignment.id.isnot(None),
                 ),
             )
