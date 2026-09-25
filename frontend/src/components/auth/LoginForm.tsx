@@ -34,7 +34,14 @@ export function LoginForm() {
       }
     } catch (submitError) {
       if (submitError instanceof ApiClientError) {
-        setError(submitError.message);
+        if (
+          submitError.status === 403 &&
+          submitError.body?.details?.reason_code === "email_not_verified"
+        ) {
+          setError(content.auth.emailNotVerified);
+        } else {
+          setError(submitError.message);
+        }
       } else if (
         submitError instanceof TypeError &&
         /failed to fetch|networkerror/i.test(submitError.message)

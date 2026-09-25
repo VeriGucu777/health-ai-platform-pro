@@ -8,6 +8,7 @@ from app.api.deps import (
     get_appointment_service,
     get_audit_service,
     get_auth_service,
+    get_email_verification_service,
     get_clinic_admin_organization_service,
     get_patient_consent_service,
     get_diabetes_risk_assessment_service,
@@ -27,6 +28,7 @@ from app.api.deps import (
 from app.application.services.appointment_service import AppointmentService
 from app.application.services.audit_service import AuditService
 from app.application.services.auth_service import AuthService
+from app.application.services.email_verification_service import EmailVerificationService
 from app.application.services.clinic_admin_organization_service import (
     ClinicAdminOrganizationService,
 )
@@ -64,7 +66,11 @@ from tests.support.memory_organization_repository import InMemoryOrganizationRep
 from tests.support.memory_patient_assignment_repository import InMemoryPatientAssignmentRepository
 from tests.support.memory_patient_consent_repository import InMemoryPatientConsentRepository
 from tests.support.memory_patient_repository import InMemoryPatientRepository
+from tests.support.memory_email_verification_token_repository import (
+    InMemoryEmailVerificationTokenRepository,
+)
 from tests.support.memory_user_repository import InMemoryUserRepository
+from app.infrastructure.email.recording_email_sender import RecordingEmailSender
 from tests.support.clinical_read_service_factory import (
     build_clinical_narrative_service,
     build_clinical_retrieval_service,
@@ -105,6 +111,10 @@ def test_settings() -> Settings:
         EMBEDDING_PROVIDER="fake",
         CLINICAL_NARRATIVE_PROVIDER="fake",
         CLINICAL_NARRATIVE_RATE_LIMIT_ENABLED=False,
+        EMAIL_VERIFICATION_ENFORCED=False,
+        EMAIL_VERIFICATION_PEPPER="test-email-verification-pepper",
+        FRONTEND_PUBLIC_URL="http://localhost:3000",
+        EMAIL_PROVIDER="logging",
     )
 
 
@@ -112,6 +122,18 @@ def test_settings() -> Settings:
 def user_repository() -> InMemoryUserRepository:
     """Fresh in-memory user store for each test."""
     return InMemoryUserRepository()
+
+
+@pytest.fixture
+def email_verification_token_repository() -> InMemoryEmailVerificationTokenRepository:
+    """Fresh in-memory verification token store for each test."""
+    return InMemoryEmailVerificationTokenRepository()
+
+
+@pytest.fixture
+def recording_email_sender() -> RecordingEmailSender:
+    """Captures verification emails for assertions."""
+    return RecordingEmailSender()
 
 
 @pytest.fixture
@@ -192,6 +214,8 @@ async def client(
     app,
     test_settings: Settings,
     user_repository: InMemoryUserRepository,
+    email_verification_token_repository: InMemoryEmailVerificationTokenRepository,
+    recording_email_sender: RecordingEmailSender,
     audit_log_repository: InMemoryAuditLogRepository,
     patient_repository: InMemoryPatientRepository,
     membership_repository: InMemoryOrganizationMembershipRepository,
@@ -209,12 +233,24 @@ async def client(
     def override_audit_service(_request: Request) -> AuditService:
         return AuditService(audit_log_repository)
 
+    def build_email_verification_service(request: Request) -> EmailVerificationService:
+        return EmailVerificationService(
+            user_repository,
+            email_verification_token_repository,
+            recording_email_sender,
+            request.app.state.settings,
+        )
+
+    def override_email_verification_service(request: Request) -> EmailVerificationService:
+        return build_email_verification_service(request)
+
     def override_auth_service(request: Request) -> AuthService:
         return AuthServiceWithDoctorMembership(
             user_repository,
             request.app.state.settings,
             AuditService(audit_log_repository),
             membership_repository,
+            email_verification_service=build_email_verification_service(request),
         )
 
     def override_patient_service(_request: Request) -> PatientService:
@@ -378,6 +414,7 @@ async def client(
         )
 
     app.dependency_overrides[get_audit_service] = override_audit_service
+    app.dependency_overrides[get_email_verification_service] = override_email_verification_service
     app.dependency_overrides[get_auth_service] = override_auth_service
     app.dependency_overrides[get_patient_service] = override_patient_service
     app.dependency_overrides[get_clinic_admin_organization_service] = (

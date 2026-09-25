@@ -17,6 +17,7 @@ class UserDTO(BaseSchema):
     role: UserRole
     is_active: bool
     is_verified: bool
+    email_verified_at: datetime | None
     created_at: datetime
     updated_at: datetime
 
@@ -30,6 +31,7 @@ class UserDTO(BaseSchema):
             role=user.role,
             is_active=user.is_active,
             is_verified=user.is_verified,
+            email_verified_at=user.email_verified_at,
             created_at=user.created_at,
             updated_at=user.updated_at,
         )

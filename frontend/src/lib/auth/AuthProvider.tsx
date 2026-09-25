@@ -33,7 +33,7 @@ type AuthContextValue = {
   isLoading: boolean;
   isHydrated: boolean;
   login: (payload: LoginPayload) => Promise<void>;
-  register: (payload: RegisterPayload) => Promise<void>;
+  register: (payload: RegisterPayload) => Promise<AuthUser>;
   logout: () => Promise<void>;
   getAccessToken: () => string | null;
   handleUnauthorized: () => void;
@@ -112,13 +112,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [persistSession, router],
   );
 
-  const register = useCallback(
-    async (payload: RegisterPayload) => {
-      await registerRequest(payload);
-      await login({ email: payload.email, password: payload.password });
-    },
-    [login],
-  );
+  const register = useCallback(async (payload: RegisterPayload) => {
+    const user = await registerRequest(payload);
+    router.push(
+      `/register/check-email?email=${encodeURIComponent(payload.email.trim())}`,
+    );
+    return user;
+  }, [router]);
 
   const logout = useCallback(async () => {
     const refreshToken = session?.refreshToken ?? getStoredRefreshToken();

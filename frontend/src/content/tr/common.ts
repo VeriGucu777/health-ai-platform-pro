@@ -97,6 +97,20 @@ export const commonContent: CommonContent = {
     genericError: "Bir sorun oluştu. Lütfen tekrar deneyin.",
     logout: "Çıkış yap",
     signedInAs: "Oturum:",
+    emailNotVerified:
+      "Giriş yapmadan önce e-postanızı doğrulayın. Gelen kutunuzu kontrol edin veya yeni doğrulama mesajı isteyin.",
+    checkEmailTitle: "E-postanızı kontrol edin",
+    checkEmailDescription:
+      "Adresinize bir doğrulama bağlantısı gönderdik. Hesabınızı etkinleştirmek için bağlantıyı açın, ardından giriş yapın.",
+    checkEmailResend: "Doğrulama e-postasını yeniden gönder",
+    checkEmailResendSuccess:
+      "Bu e-posta için kayıtlı bir hesap varsa doğrulama mesajı gönderildi.",
+    checkEmailBackToLogin: "Girişe dön",
+    verifyEmailTitle: "E-posta doğrulama",
+    verifyEmailSuccess: "E-postanız doğrulandı. Artık giriş yapabilirsiniz.",
+    verifyEmailInvalid: "Bu doğrulama bağlantısı geçersiz veya süresi dolmuş.",
+    verifyEmailMissingToken: "Doğrulama jetonu bulunamadı.",
+    verifyEmailWorking: "E-postanız doğrulanıyor…",
   },
   patients: {
     title: "Hastalar",

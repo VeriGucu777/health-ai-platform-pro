@@ -9,6 +9,7 @@ from app.application.dtos.user import TokenPairDTO, UserDTO
 from app.application.services.auth_audit_recorder import record_auth_audit_event
 from app.application.services.audit_service import AuditService
 from app.application.services.base import BaseService
+from app.application.services.email_verification_service import EmailVerificationService
 from app.core.config import Settings
 from app.core.exceptions import ConflictError, ForbiddenError, UnauthorizedError
 from app.core.security import (
@@ -35,10 +36,12 @@ class AuthService(BaseService):
         user_repository: UserRepository,
         settings: Settings,
         audit_service: AuditService | None = None,
+        email_verification_service: EmailVerificationService | None = None,
     ) -> None:
         self._users = user_repository
         self._settings = settings
         self._audit = audit_service
+        self._email_verification = email_verification_service
 
     async def register(
         self,
@@ -67,6 +70,8 @@ class AuthService(BaseService):
             role=role,
         )
         created = await self._users.create(user)
+        if self._email_verification is not None:
+            await self._email_verification.start_verification_for_user(created)
         return UserDTO.from_entity(created)
 
     async def login(
@@ -99,6 +104,12 @@ class AuthService(BaseService):
             )
             raise ForbiddenError("Account is deactivated")
 
+        await self._ensure_email_verified_for_auth(
+            user,
+            audit_context=audit_context,
+            audit_action=AuditAction.LOGIN_FAILURE,
+        )
+
         tokens = self._build_token_pair(user)
         await record_auth_audit_event(
             self._audit,
@@ -112,6 +123,7 @@ class AuthService(BaseService):
 
     async def refresh_tokens(self, refresh_token: str) -> TokenPairDTO:
         user = await self._validate_token_user(refresh_token, expected_type="refresh")
+        await self._ensure_email_verified_for_auth(user)
         return self._build_token_pair(user)
 
     async def logout(
@@ -182,7 +194,33 @@ class AuthService(BaseService):
         if not user.is_active:
             raise ForbiddenError("Account is deactivated")
 
+        await self._ensure_email_verified_for_auth(user)
+
         return UserDTO.from_entity(user)
+
+    async def _ensure_email_verified_for_auth(
+        self,
+        user: User,
+        *,
+        audit_context: AuthAuditContext | None = None,
+        audit_action: AuditAction = AuditAction.LOGIN_FAILURE,
+    ) -> None:
+        if not self._settings.email_verification_enforced:
+            return
+        if user.is_verified:
+            return
+        await record_auth_audit_event(
+            self._audit,
+            action=audit_action,
+            outcome=AuditOutcome.FAILURE,
+            http_status=403,
+            audit_context=audit_context,
+            metadata={"reason_code": "email_not_verified"},
+        )
+        raise ForbiddenError(
+            "Email address is not verified",
+            details={"reason_code": "email_not_verified"},
+        )
 
     def _build_token_pair(self, user: User) -> TokenPairDTO:
         extra_claims = {"role": user.role.value}
@@ -224,6 +262,8 @@ class AuthService(BaseService):
 
         if not user.is_active:
             raise ForbiddenError("Account is deactivated")
+
+        await self._ensure_email_verified_for_auth(user)
 
         return user_id
 

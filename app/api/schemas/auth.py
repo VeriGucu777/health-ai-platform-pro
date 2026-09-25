@@ -67,6 +67,23 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(min_length=8, max_length=128)
 
 
+class VerifyEmailRequest(BaseModel):
+    """Email verification token payload."""
+
+    token: str = Field(min_length=16, max_length=512)
+
+
+class ResendVerificationRequest(BaseModel):
+    """Resend verification email."""
+
+    email: EmailStr
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        return value.strip().lower()
+
+
 class UserResponse(BaseModel):
     """Public user profile — never exposes hashed_password."""
 
@@ -77,6 +94,7 @@ class UserResponse(BaseModel):
     role: UserRole
     is_active: bool
     is_verified: bool
+    email_verified_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request, status
 
 from app.api.auth_audit_context import build_auth_audit_context
-from app.api.deps import CurrentUser, get_auth_service, require_roles
+from app.api.deps import CurrentUser, get_auth_service, get_email_verification_service, require_roles
 from app.middleware.auth_rate_limit import auth_rate_limit
 from app.api.schemas.auth import (
     ChangePasswordRequest,
@@ -15,11 +15,14 @@ from app.api.schemas.auth import (
     MessageResponse,
     RefreshTokenRequest,
     RegisterRequest,
+    ResendVerificationRequest,
     TokenResponse,
     UserResponse,
+    VerifyEmailRequest,
 )
 from app.application.dtos.user import UserDTO
 from app.application.services.auth_service import AuthService
+from app.application.services.email_verification_service import EmailVerificationService
 from app.domain.entities.user import UserRole
 
 router = APIRouter()
@@ -133,6 +136,42 @@ async def change_password(
 async def get_me(current_user: CurrentUser) -> UserResponse:
     """Return the authenticated user's profile."""
     return _user_response(current_user)
+
+
+@router.post(
+    "/verify-email",
+    response_model=MessageResponse,
+    summary="Verify email address with one-time token",
+    dependencies=[Depends(auth_rate_limit("verify_email"))],
+)
+async def verify_email(
+    body: VerifyEmailRequest,
+    email_verification_service: Annotated[
+        EmailVerificationService,
+        Depends(get_email_verification_service),
+    ],
+) -> MessageResponse:
+    """Confirm email ownership using a hashed one-time token."""
+    await email_verification_service.verify_email(body.token.strip())
+    return MessageResponse(message="Email verified successfully")
+
+
+@router.post(
+    "/resend-verification",
+    response_model=MessageResponse,
+    summary="Resend email verification message",
+    dependencies=[Depends(auth_rate_limit("resend_verification"))],
+)
+async def resend_verification(
+    body: ResendVerificationRequest,
+    email_verification_service: Annotated[
+        EmailVerificationService,
+        Depends(get_email_verification_service),
+    ],
+) -> MessageResponse:
+    """Queue another verification email (generic response)."""
+    message = await email_verification_service.resend_verification(body.email)
+    return MessageResponse(message=message)
 
 
 @router.get(

@@ -21,8 +21,14 @@ class AuthServiceWithDoctorMembership(AuthService):
         settings,
         audit_service,
         membership_repository: InMemoryOrganizationMembershipRepository,
+        email_verification_service=None,
     ) -> None:
-        super().__init__(user_repository, settings, audit_service)
+        super().__init__(
+            user_repository,
+            settings,
+            audit_service,
+            email_verification_service=email_verification_service,
+        )
         self._memberships = membership_repository
 
     async def register(

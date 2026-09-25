@@ -76,6 +76,17 @@ export type CommonContent = {
     genericError: string;
     logout: string;
     signedInAs: string;
+    emailNotVerified: string;
+    checkEmailTitle: string;
+    checkEmailDescription: string;
+    checkEmailResend: string;
+    checkEmailResendSuccess: string;
+    checkEmailBackToLogin: string;
+    verifyEmailTitle: string;
+    verifyEmailSuccess: string;
+    verifyEmailInvalid: string;
+    verifyEmailMissingToken: string;
+    verifyEmailWorking: string;
   };
   patients: {
     title: string;

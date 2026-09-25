@@ -1,6 +1,8 @@
 export type ApiErrorBody = {
   detail?: string | { msg?: string; type?: string }[];
   message?: string;
+  details?: { reason_code?: string };
+  success?: boolean;
 };
 
 export class ApiClientError extends Error {

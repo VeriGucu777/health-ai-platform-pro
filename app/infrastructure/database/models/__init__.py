@@ -4,6 +4,7 @@ from app.infrastructure.database.base import Base
 from app.infrastructure.database.models.appointment import AppointmentModel
 from app.infrastructure.database.models.clinical_retrieval_vector import ClinicalRetrievalVectorModel
 from app.infrastructure.database.models.audit_log import AuditLogModel
+from app.infrastructure.database.models.email_verification_token import EmailVerificationTokenModel
 from app.infrastructure.database.models.health_measurement import HealthMeasurementModel
 from app.infrastructure.database.models.medical_record import MedicalRecordModel
 from app.infrastructure.database.models.organization import OrganizationModel
@@ -19,6 +20,7 @@ __all__ = [
     "AppointmentModel",
     "ClinicalRetrievalVectorModel",
     "AuditLogModel",
+    "EmailVerificationTokenModel",
     "HealthMeasurementModel",
     "MedicalRecordModel",
     "OrganizationModel",

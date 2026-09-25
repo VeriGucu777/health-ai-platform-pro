@@ -25,6 +25,8 @@ async def test_ensure_demo_doctor_creates_user_when_missing() -> None:
     user = await repo.get_by_email("doctor.demo1@gmail.com")
     assert user is not None
     assert user.is_active is True
+    assert user.is_verified is True
+    assert user.email_verified_at is not None
     assert verify_password("Demo12345!", user.hashed_password)
 
 

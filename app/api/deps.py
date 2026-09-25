@@ -13,6 +13,7 @@ from app.application.dtos.user import UserDTO
 from app.application.services.appointment_service import AppointmentService
 from app.application.services.audit_service import AuditService
 from app.application.services.auth_service import AuthService
+from app.application.services.email_verification_service import EmailVerificationService
 from app.application.services.diabetes_risk_assessment_service import DiabetesRiskAssessmentService
 from app.application.services.heart_disease_risk_assessment_service import (
     HeartDiseaseRiskAssessmentService,
@@ -72,7 +73,11 @@ from app.infrastructure.repositories.risk_assessment_history_repository import (
     SQLAlchemyRiskAssessmentHistoryRepository,
 )
 from app.infrastructure.repositories.organization_repository import SQLAlchemyOrganizationRepository
+from app.infrastructure.repositories.email_verification_token_repository import (
+    SQLAlchemyEmailVerificationTokenRepository,
+)
 from app.infrastructure.repositories.user_repository import SQLAlchemyUserRepository
+from app.infrastructure.email.email_sender_factory import get_email_sender
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -452,13 +457,37 @@ def get_audit_service() -> AuditService:
     return AuditService(IsolatedSQLAlchemyAuditLogRepository())
 
 
+def get_email_verification_service(
+    session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
+) -> EmailVerificationService:
+    """Provide EmailVerificationService for the current request session."""
+    user_repository = SQLAlchemyUserRepository(session)
+    token_repository = SQLAlchemyEmailVerificationTokenRepository(session)
+    return EmailVerificationService(
+        user_repository,
+        token_repository,
+        get_email_sender(settings),
+        settings,
+    )
+
+
 def get_auth_service(
     session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
     settings: Annotated[Settings, Depends(get_app_settings)],
     audit_service: Annotated[AuditService, Depends(get_audit_service)],
+    email_verification_service: Annotated[
+        EmailVerificationService,
+        Depends(get_email_verification_service),
+    ],
 ) -> AuthService:
     """Provide an AuthService bound to the current request session."""
-    return AuthService(SQLAlchemyUserRepository(session), settings, audit_service)
+    return AuthService(
+        SQLAlchemyUserRepository(session),
+        settings,
+        audit_service,
+        email_verification_service=email_verification_service,
+    )
 
 
 # Re-export common dependencies with type aliases for route signatures
@@ -480,8 +509,8 @@ async def get_current_user_id(
 
     try:
         return await auth_service.validate_access_token(credentials.credentials)
-    except AppException as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+    except AppException:
+        raise
     except (JWTError, ValueError) as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -496,8 +525,8 @@ async def get_current_user(
     """Load the authenticated user from the database."""
     try:
         return await auth_service.get_current_user(user_id)
-    except AppException as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+    except AppException:
+        raise
 
 
 CurrentUserId = Annotated[UUID, Depends(get_current_user_id)]

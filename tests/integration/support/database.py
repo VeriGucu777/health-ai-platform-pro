@@ -19,6 +19,7 @@ BLOCKED_DATABASE_NAMES = frozenset({"health_ai_platform"})
 EXPECTED_TABLES = frozenset(
     {
         "users",
+        "email_verification_tokens",
         "organizations",
         "organization_memberships",
         "patients",

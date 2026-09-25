@@ -1,6 +1,7 @@
 """User domain entity."""
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 
 from app.domain.entities.base import BaseEntity
@@ -26,6 +27,7 @@ class User(BaseEntity):
     role: UserRole
     is_active: bool = True
     is_verified: bool = False
+    email_verified_at: datetime | None = None
     token_version: int = 0
 
     @property

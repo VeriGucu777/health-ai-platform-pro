@@ -97,6 +97,20 @@ export const commonContent: CommonContent = {
     genericError: "Something went wrong. Please try again.",
     logout: "Sign out",
     signedInAs: "Signed in as",
+    emailNotVerified:
+      "Verify your email before signing in. Check your inbox or request a new verification message.",
+    checkEmailTitle: "Check your email",
+    checkEmailDescription:
+      "We sent a verification link to your address. Open the link to activate your account, then sign in.",
+    checkEmailResend: "Resend verification email",
+    checkEmailResendSuccess:
+      "If an account exists for this email, a verification message has been sent.",
+    checkEmailBackToLogin: "Back to sign in",
+    verifyEmailTitle: "Email verification",
+    verifyEmailSuccess: "Your email is verified. You can sign in now.",
+    verifyEmailInvalid: "This verification link is invalid or has expired.",
+    verifyEmailMissingToken: "No verification token was provided.",
+    verifyEmailWorking: "Verifying your email…",
   },
   patients: {
     title: "Patients",

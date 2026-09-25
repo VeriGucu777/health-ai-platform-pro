@@ -98,6 +98,46 @@ class Settings(BaseSettings):
         default=60,
         alias="AUTH_REGISTER_RATE_WINDOW_SECONDS",
     )
+    auth_verify_email_rate_limit: int = Field(
+        default=20,
+        alias="AUTH_VERIFY_EMAIL_RATE_LIMIT",
+    )
+    auth_verify_email_rate_window_seconds: int = Field(
+        default=60,
+        alias="AUTH_VERIFY_EMAIL_RATE_WINDOW_SECONDS",
+    )
+    auth_resend_verification_rate_limit: int = Field(
+        default=5,
+        alias="AUTH_RESEND_VERIFICATION_RATE_LIMIT",
+    )
+    auth_resend_verification_rate_window_seconds: int = Field(
+        default=3600,
+        alias="AUTH_RESEND_VERIFICATION_RATE_WINDOW_SECONDS",
+    )
+
+    # Email verification
+    email_verification_enforced: bool = Field(
+        default=False,
+        alias="EMAIL_VERIFICATION_ENFORCED",
+    )
+    email_verification_token_ttl_hours: int = Field(
+        default=24,
+        alias="EMAIL_VERIFICATION_TOKEN_TTL_HOURS",
+    )
+    email_verification_resend_cooldown_seconds: int = Field(
+        default=120,
+        alias="EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS",
+    )
+    email_verification_pepper: str = Field(
+        default="dev-email-verification-pepper-change-me",
+        alias="EMAIL_VERIFICATION_PEPPER",
+    )
+    frontend_public_url: str = Field(
+        default="http://localhost:3000",
+        alias="FRONTEND_PUBLIC_URL",
+    )
+    email_provider: str = Field(default="logging", alias="EMAIL_PROVIDER")
+    email_from_address: str = Field(default="", alias="EMAIL_FROM_ADDRESS")
 
     # Rate limiting backend
     auth_rate_limit_backend: Literal["memory", "redis"] = Field(

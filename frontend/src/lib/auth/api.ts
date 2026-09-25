@@ -42,6 +42,18 @@ export async function fetchCurrentUser(accessToken: string): Promise<AuthUser> {
   return getAuthClient().get<AuthUser>("/auth/me", { authToken: accessToken });
 }
 
+export async function verifyEmailRequest(token: string): Promise<{ message: string }> {
+  return getAuthClient().post<{ message: string }>("/auth/verify-email", {
+    body: { token },
+  });
+}
+
+export async function resendVerificationRequest(email: string): Promise<{ message: string }> {
+  return getAuthClient().post<{ message: string }>("/auth/resend-verification", {
+    body: { email },
+  });
+}
+
 export async function fetchHealthStatus(accessToken?: string) {
   return getAuthClient().get<{ status: string }>("/health", {
     authToken: accessToken,

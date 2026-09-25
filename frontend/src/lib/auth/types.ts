@@ -6,6 +6,7 @@ export type AuthUser = {
   role: string;
   is_active: boolean;
   is_verified: boolean;
+  email_verified_at?: string | null;
 };
 
 export type TokenPair = {

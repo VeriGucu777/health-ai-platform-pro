@@ -115,4 +115,14 @@ def _limits_for_scope(settings: Settings, scope: str) -> tuple[int, int]:
         return settings.auth_refresh_rate_limit, settings.auth_refresh_rate_window_seconds
     if scope == "register":
         return settings.auth_register_rate_limit, settings.auth_register_rate_window_seconds
+    if scope == "verify_email":
+        return (
+            settings.auth_verify_email_rate_limit,
+            settings.auth_verify_email_rate_window_seconds,
+        )
+    if scope == "resend_verification":
+        return (
+            settings.auth_resend_verification_rate_limit,
+            settings.auth_resend_verification_rate_window_seconds,
+        )
     return settings.auth_login_rate_limit, settings.auth_login_rate_window_seconds

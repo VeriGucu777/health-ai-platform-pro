@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from app.application.seeding.demo_organization_fixture_seed import DEMO_DOCTOR_EMAIL
 from app.core.security import hash_password, verify_password
@@ -43,6 +44,7 @@ async def ensure_demo_doctor_user(
     existing = await user_repository.get_by_email(normalized)
 
     if existing is None:
+        now = datetime.now(UTC)
         user = User(
             email=normalized,
             hashed_password=hash_password(cfg.password),
@@ -50,6 +52,8 @@ async def ensure_demo_doctor_user(
             last_name=cfg.last_name.strip(),
             role=UserRole.DOCTOR,
             is_active=True,
+            is_verified=True,
+            email_verified_at=now,
         )
         created = await user_repository.create(user)
         return DemoDoctorUserSeedResult(
@@ -74,7 +78,12 @@ async def ensure_demo_doctor_user(
     if activated_user:
         existing.is_active = True
 
-    if password_reset or activated_user:
+    verified_user = not existing.is_verified
+    if verified_user:
+        existing.is_verified = True
+        existing.email_verified_at = existing.email_verified_at or datetime.now(UTC)
+
+    if password_reset or activated_user or verified_user:
         await user_repository.update(existing)
 
     return DemoDoctorUserSeedResult(
