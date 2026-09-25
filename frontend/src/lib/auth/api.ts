@@ -48,9 +48,12 @@ export async function verifyEmailRequest(token: string): Promise<{ message: stri
   });
 }
 
-export async function resendVerificationRequest(email: string): Promise<{ message: string }> {
+export async function resendVerificationRequest(
+  email: string,
+  locale?: "tr" | "en",
+): Promise<{ message: string }> {
   return getAuthClient().post<{ message: string }>("/auth/resend-verification", {
-    body: { email },
+    body: { email, ...(locale ? { locale } : {}) },
   });
 }
 

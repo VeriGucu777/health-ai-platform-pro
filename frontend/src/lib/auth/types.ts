@@ -26,6 +26,7 @@ export type RegisterPayload = {
   first_name: string;
   last_name: string;
   role?: "patient" | "doctor";
+  locale?: "tr" | "en";
 };
 
 export type AuthSession = {

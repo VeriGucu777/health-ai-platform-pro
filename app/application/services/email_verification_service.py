@@ -86,7 +86,7 @@ class EmailVerificationService(BaseService):
         user.touch()
         await self._users.update(user)
 
-    async def resend_verification(self, email: str) -> str:
+    async def resend_verification(self, email: str, *, locale: str = "en") -> str:
         """Resend verification email; response is always generic."""
         normalized = normalize_email(email)
         user = await self._users.get_by_email(normalized)
@@ -100,7 +100,7 @@ class EmailVerificationService(BaseService):
             await self._email_sender.send_verification_email(
                 to_email=user.email,
                 verify_url=verify_url,
-                locale="en",
+                locale=locale,
             )
         except Exception:
             _logger.exception(

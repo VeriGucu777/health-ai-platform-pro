@@ -51,6 +51,7 @@ class AuthService(BaseService):
         first_name: str,
         last_name: str,
         role: UserRole = UserRole.PATIENT,
+        locale: str = "en",
     ) -> UserDTO:
         normalized_email = normalize_email(email)
 
@@ -71,7 +72,10 @@ class AuthService(BaseService):
         )
         created = await self._users.create(user)
         if self._email_verification is not None:
-            await self._email_verification.start_verification_for_user(created)
+            await self._email_verification.start_verification_for_user(
+                created,
+                locale=locale,
+            )
         return UserDTO.from_entity(created)
 
     async def login(

@@ -50,6 +50,7 @@ async def register(
         first_name=body.first_name,
         last_name=body.last_name,
         role=body.role,
+        locale=body.locale,
     )
     return _user_response(user)
 
@@ -170,7 +171,10 @@ async def resend_verification(
     ],
 ) -> MessageResponse:
     """Queue another verification email (generic response)."""
-    message = await email_verification_service.resend_verification(body.email)
+    message = await email_verification_service.resend_verification(
+        body.email,
+        locale=body.locale,
+    )
     return MessageResponse(message=message)
 
 

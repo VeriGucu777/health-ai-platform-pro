@@ -39,6 +39,7 @@ class AuthServiceWithDoctorMembership(AuthService):
         first_name: str,
         last_name: str,
         role: UserRole = UserRole.PATIENT,
+        locale: str = "en",
     ) -> UserDTO:
         user = await super().register(
             email=email,
@@ -46,6 +47,7 @@ class AuthServiceWithDoctorMembership(AuthService):
             first_name=first_name,
             last_name=last_name,
             role=role,
+            locale=locale,
         )
         if role == UserRole.DOCTOR:
             await self._memberships.create(

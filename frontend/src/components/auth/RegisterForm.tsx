@@ -9,7 +9,7 @@ import { ApiClientError } from "@/lib/api/client";
 import { useLocale } from "@/lib/i18n/use-locale";
 
 export function RegisterForm() {
-  const { content } = useLocale();
+  const { content, locale } = useLocale();
   const { register } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,7 +33,14 @@ export function RegisterForm() {
     }
 
     try {
-      await register({ email, password, first_name, last_name, role: "doctor" });
+      await register({
+        email,
+        password,
+        first_name,
+        last_name,
+        role: "doctor",
+        locale,
+      });
     } catch (submitError) {
       if (submitError instanceof ApiClientError) {
         setError(submitError.message);

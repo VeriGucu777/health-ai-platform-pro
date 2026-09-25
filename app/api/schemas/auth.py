@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.domain.entities.user import UserRole
+from app.infrastructure.email.verification_email_content import normalize_locale
 
 
 class TokenResponse(BaseModel):
@@ -36,6 +37,20 @@ class RegisterRequest(BaseModel):
     first_name: str = Field(min_length=1, max_length=100)
     last_name: str = Field(min_length=1, max_length=100)
     role: UserRole = UserRole.PATIENT
+    locale: str = Field(
+        default="en",
+        description="Verification email language (tr or en)",
+        max_length=16,
+    )
+
+    @field_validator("locale", mode="before")
+    @classmethod
+    def normalize_register_locale(cls, value: str | None) -> str:
+        if value is None:
+            return "en"
+        if isinstance(value, str) and not value.strip():
+            return "en"
+        return normalize_locale(str(value))
 
     @field_validator("email")
     @classmethod
@@ -77,6 +92,20 @@ class ResendVerificationRequest(BaseModel):
     """Resend verification email."""
 
     email: EmailStr
+    locale: str = Field(
+        default="en",
+        description="Verification email language (tr or en)",
+        max_length=16,
+    )
+
+    @field_validator("locale", mode="before")
+    @classmethod
+    def normalize_resend_locale(cls, value: str | None) -> str:
+        if value is None:
+            return "en"
+        if isinstance(value, str) and not value.strip():
+            return "en"
+        return normalize_locale(str(value))
 
     @field_validator("email")
     @classmethod

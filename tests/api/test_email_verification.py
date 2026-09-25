@@ -19,6 +19,8 @@ from tests.support.memory_organization_membership_repository import (
 )
 from tests.support.memory_organization_repository import InMemoryOrganizationRepository
 from tests.support.memory_user_repository import InMemoryUserRepository
+from app.infrastructure.email.verification_email_content import build_verification_email
+
 REGISTER = {
     "email": "verify-me@example.com",
     "password": "securepass123",
@@ -33,6 +35,12 @@ def _token_from_sender(recording_email_sender) -> str:
     url = recording_email_sender.sent[-1].verify_url
     parsed = parse_qs(urlparse(url).query)
     return parsed["token"][0]
+
+
+def _subject_from_recording(recording_email_sender) -> str:
+    sent = recording_email_sender.sent[-1]
+    subject, _, _ = build_verification_email(verify_url=sent.verify_url, locale=sent.locale)
+    return subject
 
 
 @pytest.fixture
@@ -451,3 +459,105 @@ async def test_raw_token_not_equal_to_hash(
         raw,
         pepper=test_settings.email_verification_pepper,
     )
+
+
+@pytest.mark.asyncio
+async def test_register_locale_tr_email_content(
+    client: AsyncClient,
+    recording_email_sender,
+) -> None:
+    payload = {**REGISTER, "email": "tr-locale@example.com", "locale": "tr"}
+    response = await client.post("/api/v1/auth/register", json=payload)
+    assert response.status_code == 201
+    assert recording_email_sender.sent[-1].locale == "tr"
+    assert "E-posta adresinizi doğrulayın" in _subject_from_recording(recording_email_sender)
+
+
+@pytest.mark.asyncio
+async def test_register_locale_en_email_content(
+    client: AsyncClient,
+    recording_email_sender,
+) -> None:
+    payload = {**REGISTER, "email": "en-locale@example.com", "locale": "en-US"}
+    response = await client.post("/api/v1/auth/register", json=payload)
+    assert response.status_code == 201
+    assert recording_email_sender.sent[-1].locale == "en"
+    assert "Verify your email address" in _subject_from_recording(recording_email_sender)
+
+
+@pytest.mark.asyncio
+async def test_register_without_locale_defaults_en(
+    client: AsyncClient,
+    recording_email_sender,
+) -> None:
+    payload = {**REGISTER, "email": "default-locale@example.com"}
+    response = await client.post("/api/v1/auth/register", json=payload)
+    assert response.status_code == 201
+    assert recording_email_sender.sent[-1].locale == "en"
+
+
+@pytest.mark.asyncio
+async def test_resend_locale_tr_email(
+    client: AsyncClient,
+    recording_email_sender,
+    app,
+) -> None:
+    app.state.settings = app.state.settings.model_copy(
+        update={"email_verification_resend_cooldown_seconds": 0},
+    )
+    email = "resend-tr@example.com"
+    await client.post("/api/v1/auth/register", json={**REGISTER, "email": email, "locale": "en"})
+    recording_email_sender.sent.clear()
+    resend = await client.post(
+        "/api/v1/auth/resend-verification",
+        json={"email": email, "locale": "tr-TR"},
+    )
+    assert resend.status_code == 200
+    assert recording_email_sender.sent[-1].locale == "tr"
+    assert "E-posta adresinizi doğrulayın" in _subject_from_recording(recording_email_sender)
+
+
+@pytest.mark.asyncio
+async def test_resend_locale_en_email(
+    client: AsyncClient,
+    recording_email_sender,
+    app,
+) -> None:
+    app.state.settings = app.state.settings.model_copy(
+        update={"email_verification_resend_cooldown_seconds": 0},
+    )
+    email = "resend-en@example.com"
+    await client.post("/api/v1/auth/register", json={**REGISTER, "email": email, "locale": "tr"})
+    recording_email_sender.sent.clear()
+    resend = await client.post(
+        "/api/v1/auth/resend-verification",
+        json={"email": email, "locale": "en"},
+    )
+    assert resend.status_code == 200
+    assert recording_email_sender.sent[-1].locale == "en"
+    assert "Verify your email address" in _subject_from_recording(recording_email_sender)
+
+
+@pytest.mark.asyncio
+async def test_register_unsupported_locale_falls_back_to_en(
+    client: AsyncClient,
+    recording_email_sender,
+) -> None:
+    payload = {**REGISTER, "email": "de-locale@example.com", "locale": "de-DE"}
+    response = await client.post("/api/v1/auth/register", json=payload)
+    assert response.status_code == 201
+    assert recording_email_sender.sent[-1].locale == "en"
+
+
+@pytest.mark.asyncio
+async def test_register_locale_does_not_affect_role_restrictions(client: AsyncClient) -> None:
+    response = await client.post(
+        "/api/v1/auth/register",
+        json={
+            **REGISTER,
+            "email": "admin-locale@example.com",
+            "role": "clinic_admin",
+            "locale": "tr",
+        },
+    )
+    assert response.status_code == 403

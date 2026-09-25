@@ -138,6 +138,11 @@ class Settings(BaseSettings):
     )
     email_provider: str = Field(default="logging", alias="EMAIL_PROVIDER")
     email_from_address: str = Field(default="", alias="EMAIL_FROM_ADDRESS")
+    postmark_server_token: str = Field(default="", alias="POSTMARK_SERVER_TOKEN")
+    postmark_request_timeout_seconds: float = Field(
+        default=10.0,
+        alias="POSTMARK_REQUEST_TIMEOUT_SECONDS",
+    )
 
     # Rate limiting backend
     auth_rate_limit_backend: Literal["memory", "redis"] = Field(
@@ -237,4 +242,6 @@ def get_settings() -> Settings:
     from app.core.jwt_settings import validate_settings_security
 
     validate_settings_security(settings)
-    return settings
+    from app.core.frontend_public_url import validate_and_normalize_frontend_public_url
+
+    return validate_and_normalize_frontend_public_url(settings)

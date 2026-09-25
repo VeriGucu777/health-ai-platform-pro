@@ -8,7 +8,7 @@ import { resendVerificationRequest } from "@/lib/auth/api";
 import { useLocale } from "@/lib/i18n/use-locale";
 
 export function CheckEmailPanel() {
-  const { content } = useLocale();
+  const { content, locale } = useLocale();
   const searchParams = useSearchParams();
   const email = (searchParams.get("email") ?? "").trim();
   const [notice, setNotice] = useState<string | null>(null);
@@ -21,7 +21,7 @@ export function CheckEmailPanel() {
     setPending(true);
     setNotice(null);
     try {
-      const response = await resendVerificationRequest(email);
+      const response = await resendVerificationRequest(email, locale);
       setNotice(response.message || content.auth.checkEmailResendSuccess);
     } catch {
       setNotice(content.auth.checkEmailResendSuccess);
