@@ -11,6 +11,8 @@ from app.application.services.base import BaseService
 from app.application.services.patient_read_access import resolve_patient_read_access
 from app.domain.entities.user import UserRole
 from app.domain.interfaces.patient_access_policy import PatientAccessPolicy
+from app.core.config import Settings
+from app.domain.interfaces.patient_consent_repository import PatientConsentRepository
 from app.domain.interfaces.patient_repository import PatientRepository
 from app.domain.interfaces.risk_assessment_history_repository import RiskAssessmentHistoryRepository
 from app.domain.risk.enums import RiskAssessmentType
@@ -24,10 +26,15 @@ class RiskAssessmentHistoryService(BaseService):
         history_repository: RiskAssessmentHistoryRepository,
         patient_repository: PatientRepository,
         access_policy: PatientAccessPolicy | None = None,
+        *,
+        settings: Settings | None = None,
+        consent_repository: PatientConsentRepository | None = None,
     ) -> None:
         self._history = history_repository
         self._patients = patient_repository
         self._access_policy = access_policy
+        self._settings = settings
+        self._consent_repository = consent_repository
 
     async def list_history_for_user(
         self,
@@ -47,6 +54,8 @@ class RiskAssessmentHistoryService(BaseService):
             actor_id=actor_id,
             actor_role=actor_role,
             patient_id=patient_id,
+            settings=self._settings,
+            consent_repository=self._consent_repository,
         )
         page, page_size, offset = self._normalize_pagination(page, page_size)
 

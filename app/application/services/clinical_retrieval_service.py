@@ -22,6 +22,8 @@ from app.domain.entities.user import UserRole
 from app.domain.interfaces.clinical_vector_store import ClinicalVectorStore
 from app.domain.interfaces.embedding_provider import EmbeddingProvider
 from app.domain.interfaces.patient_access_policy import PatientAccessPolicy
+from app.core.config import Settings
+from app.domain.interfaces.patient_consent_repository import PatientConsentRepository
 from app.domain.interfaces.patient_repository import PatientRepository
 
 
@@ -36,6 +38,9 @@ class ClinicalRetrievalService(BaseService):
         vector_store: ClinicalVectorStore,
         embedding_provider: EmbeddingProvider,
         access_policy: PatientAccessPolicy | None = None,
+        *,
+        settings: Settings | None = None,
+        consent_repository: PatientConsentRepository | None = None,
     ) -> None:
         self._patients = patient_repository
         self._evidence = clinical_evidence_service
@@ -43,6 +48,8 @@ class ClinicalRetrievalService(BaseService):
         self._store = vector_store
         self._embeddings = embedding_provider
         self._access_policy = access_policy
+        self._settings = settings
+        self._consent_repository = consent_repository
 
     async def search(
         self,
@@ -66,6 +73,8 @@ class ClinicalRetrievalService(BaseService):
             actor_id=actor_id,
             actor_role=actor_role,
             patient_id=patient_id,
+            settings=self._settings,
+            consent_repository=self._consent_repository,
         )
         resolved_from = _normalize_datetime(date_from) if date_from is not None else None
         resolved_to = _normalize_datetime(date_to) if date_to is not None else None

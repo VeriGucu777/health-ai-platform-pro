@@ -19,6 +19,7 @@ BLOCKED_DATABASE_NAMES = frozenset({"health_ai_platform"})
 EXPECTED_TABLES = frozenset(
     {
         "users",
+        "user_refresh_sessions",
         "email_verification_tokens",
         "organizations",
         "organization_memberships",
@@ -46,6 +47,7 @@ TRUNCATE_TABLES = (
     "patients",
     "organization_memberships",
     "organizations",
+    "user_refresh_sessions",
     "users",
 )
 
@@ -148,6 +150,15 @@ def run_alembic_downgrade(sync_url: str, revision: str = "base") -> None:
     """Downgrade Alembic migrations on the integration database."""
     cfg = build_alembic_config(sync_url)
     command.downgrade(cfg, revision)
+
+
+def run_alembic_current(sync_url: str) -> str | None:
+    """Return the current Alembic revision id for the integration database."""
+    assert_safe_integration_url(sync_url)
+    engine = create_engine(sync_url, poolclass=NullPool)
+    with engine.connect() as connection:
+        row = connection.execute(text("SELECT version_num FROM alembic_version")).one_or_none()
+        return row[0] if row else None
 
 
 async def truncate_application_tables(session: AsyncSession) -> None:

@@ -76,6 +76,9 @@ from app.infrastructure.repositories.organization_repository import SQLAlchemyOr
 from app.infrastructure.repositories.email_verification_token_repository import (
     SQLAlchemyEmailVerificationTokenRepository,
 )
+from app.infrastructure.repositories.user_refresh_session_repository import (
+    SQLAlchemyUserRefreshSessionRepository,
+)
 from app.infrastructure.repositories.user_repository import SQLAlchemyUserRepository
 from app.infrastructure.email.email_sender_factory import get_email_sender
 
@@ -128,6 +131,10 @@ def _patient_access_policy_bundle(
     return patient_repository, membership_repository, assignment_repository, access_policy
 
 
+def _patient_consent_repository(session: AsyncSession) -> SQLAlchemyPatientConsentRepository:
+    return SQLAlchemyPatientConsentRepository(session)
+
+
 def get_patient_service(
     session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
 ) -> PatientService:
@@ -166,6 +173,7 @@ def get_appointment_service(
 
 def get_medical_record_service(
     session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> MedicalRecordService:
     """Provide a MedicalRecordService bound to the current request session."""
     (
@@ -179,11 +187,14 @@ def get_medical_record_service(
         patient_repository,
         access_policy,
         membership_repository,
+        settings=settings,
+        consent_repository=_patient_consent_repository(session),
     )
 
 
 def get_health_measurement_service(
     session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> HealthMeasurementService:
     """Provide a HealthMeasurementService bound to the current request session."""
     (
@@ -197,11 +208,14 @@ def get_health_measurement_service(
         patient_repository,
         access_policy,
         membership_repository,
+        settings=settings,
+        consent_repository=_patient_consent_repository(session),
     )
 
 
 def get_stroke_risk_assessment_service(
     session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> StrokeRiskAssessmentService:
     """Provide a StrokeRiskAssessmentService bound to the current request session."""
     patient_repository, _, _, access_policy = _patient_access_policy_bundle(session)
@@ -212,11 +226,14 @@ def get_stroke_risk_assessment_service(
         SQLAlchemyMedicalRecordRepository(session),
         access_policy=access_policy,
         history_repository=history_repository,
+        settings=settings,
+        consent_repository=_patient_consent_repository(session),
     )
 
 
 def get_heart_disease_risk_assessment_service(
     session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> HeartDiseaseRiskAssessmentService:
     """Provide a HeartDiseaseRiskAssessmentService bound to the current request session."""
     patient_repository, _, _, access_policy = _patient_access_policy_bundle(session)
@@ -227,11 +244,14 @@ def get_heart_disease_risk_assessment_service(
         SQLAlchemyMedicalRecordRepository(session),
         access_policy=access_policy,
         history_repository=history_repository,
+        settings=settings,
+        consent_repository=_patient_consent_repository(session),
     )
 
 
 def get_diabetes_risk_assessment_service(
     session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> DiabetesRiskAssessmentService:
     """Provide a DiabetesRiskAssessmentService bound to the current request session."""
     patient_repository, _, _, access_policy = _patient_access_policy_bundle(session)
@@ -242,11 +262,14 @@ def get_diabetes_risk_assessment_service(
         SQLAlchemyMedicalRecordRepository(session),
         access_policy=access_policy,
         history_repository=history_repository,
+        settings=settings,
+        consent_repository=_patient_consent_repository(session),
     )
 
 
 def get_risk_assessment_history_service(
     session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> RiskAssessmentHistoryService:
     """Provide RiskAssessmentHistoryService bound to the current request session."""
     patient_repository, _, _, access_policy = _patient_access_policy_bundle(session)
@@ -254,11 +277,14 @@ def get_risk_assessment_history_service(
         SQLAlchemyRiskAssessmentHistoryRepository(session),
         patient_repository,
         access_policy,
+        settings=settings,
+        consent_repository=_patient_consent_repository(session),
     )
 
 
 def get_health_measurement_analytics_service(
     session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> HealthMeasurementAnalyticsService:
     """Provide a HealthMeasurementAnalyticsService bound to the current request session."""
     (
@@ -272,6 +298,8 @@ def get_health_measurement_analytics_service(
         patient_repository,
         access_policy,
         membership_repository,
+        settings=settings,
+        consent_repository=_patient_consent_repository(session),
     )
 
 
@@ -282,17 +310,22 @@ def get_patient_health_report_service(
         HealthMeasurementAnalyticsService,
         Depends(get_health_measurement_analytics_service),
     ],
+    session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> PatientHealthReportService:
     """Provide a PatientHealthReportService composed from existing read-only services."""
     return PatientHealthReportService(
         patient_service,
         medical_record_service,
         analytics_service,
+        settings=settings,
+        consent_repository=_patient_consent_repository(session),
     )
 
 
 def get_patient_clinical_timeline_service(
     session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> PatientClinicalTimelineService:
     """Provide a PatientClinicalTimelineService composed from existing read-only services."""
     (
@@ -301,6 +334,7 @@ def get_patient_clinical_timeline_service(
         _assignment_repository,
         access_policy,
     ) = _patient_access_policy_bundle(session)
+    consent_repository = _patient_consent_repository(session)
     health_measurement_repository = SQLAlchemyHealthMeasurementRepository(session)
     medical_record_repository = SQLAlchemyMedicalRecordRepository(session)
     appointment_repository = SQLAlchemyAppointmentRepository(session)
@@ -309,6 +343,8 @@ def get_patient_clinical_timeline_service(
         patient_repository,
         access_policy,
         membership_repository,
+        settings=settings,
+        consent_repository=consent_repository,
     )
     return PatientClinicalTimelineService(
         patient_repository,
@@ -320,25 +356,34 @@ def get_patient_clinical_timeline_service(
             health_measurement_repository,
             medical_record_repository,
             access_policy,
+            settings=settings,
+            consent_repository=consent_repository,
         ),
         HeartDiseaseRiskAssessmentService(
             patient_repository,
             health_measurement_repository,
             medical_record_repository,
             access_policy,
+            settings=settings,
+            consent_repository=consent_repository,
         ),
         StrokeRiskAssessmentService(
             patient_repository,
             health_measurement_repository,
             medical_record_repository,
             access_policy,
+            settings=settings,
+            consent_repository=consent_repository,
         ),
         access_policy,
+        settings=settings,
+        consent_repository=consent_repository,
     )
 
 
 def get_patient_clinical_summary_service(
     session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> PatientClinicalSummaryService:
     """Provide PatientClinicalSummaryService with bulk evidence loading."""
     (
@@ -357,6 +402,8 @@ def get_patient_clinical_summary_service(
         patient_repository,
         evidence_service,
         access_policy,
+        settings=settings,
+        consent_repository=_patient_consent_repository(session),
     )
 
 
@@ -396,6 +443,8 @@ def get_clinical_retrieval_service(
         vector_store,
         embedding_provider,
         access_policy,
+        settings=settings,
+        consent_repository=_patient_consent_repository(session),
     )
 
 
@@ -428,6 +477,7 @@ def get_clinical_narrative_service(
         embedding_provider,
         storage_vector_dimension=storage_dim,
     )
+    consent_repository = _patient_consent_repository(session)
     retrieval_service = ClinicalRetrievalService(
         patient_repository,
         evidence_service,
@@ -435,11 +485,15 @@ def get_clinical_narrative_service(
         vector_store,
         embedding_provider,
         access_policy,
+        settings=settings,
+        consent_repository=consent_repository,
     )
     summary_service = PatientClinicalSummaryService(
         patient_repository,
         evidence_service,
         access_policy,
+        settings=settings,
+        consent_repository=consent_repository,
     )
     narrative_generator = get_clinical_narrative_generator(settings)
     return ClinicalNarrativeService(
@@ -449,6 +503,7 @@ def get_clinical_narrative_service(
         narrative_generator,
         settings,
         access_policy,
+        consent_repository=consent_repository,
     )
 
 
@@ -487,6 +542,7 @@ def get_auth_service(
         settings,
         audit_service,
         email_verification_service=email_verification_service,
+        refresh_session_repository=SQLAlchemyUserRefreshSessionRepository(session),
     )
 
 

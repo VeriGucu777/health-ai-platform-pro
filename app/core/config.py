@@ -132,6 +132,10 @@ class Settings(BaseSettings):
         default="dev-email-verification-pepper-change-me",
         alias="EMAIL_VERIFICATION_PEPPER",
     )
+    clinical_consent_enforced: bool = Field(
+        default=False,
+        alias="CLINICAL_CONSENT_ENFORCED",
+    )
     frontend_public_url: str = Field(
         default="http://localhost:3000",
         alias="FRONTEND_PUBLIC_URL",
@@ -242,6 +246,9 @@ def get_settings() -> Settings:
     from app.core.jwt_settings import validate_settings_security
 
     validate_settings_security(settings)
+    from app.core.email_verification_settings import validate_email_verification_settings
+
+    validate_email_verification_settings(settings)
     from app.core.frontend_public_url import validate_and_normalize_frontend_public_url
 
     return validate_and_normalize_frontend_public_url(settings)

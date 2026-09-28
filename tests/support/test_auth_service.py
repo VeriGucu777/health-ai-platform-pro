@@ -22,12 +22,14 @@ class AuthServiceWithDoctorMembership(AuthService):
         audit_service,
         membership_repository: InMemoryOrganizationMembershipRepository,
         email_verification_service=None,
+        refresh_session_repository=None,
     ) -> None:
         super().__init__(
             user_repository,
             settings,
             audit_service,
             email_verification_service=email_verification_service,
+            refresh_session_repository=refresh_session_repository,
         )
         self._memberships = membership_repository
 

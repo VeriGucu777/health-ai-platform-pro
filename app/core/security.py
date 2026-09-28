@@ -56,18 +56,21 @@ def create_refresh_token(
     expires_delta: timedelta | None = None,
     *,
     token_version: int = 0,
+    jti: str | None = None,
 ) -> str:
     """Create a signed JWT refresh token."""
     settings = settings or get_settings()
     expire = datetime.now(UTC) + (
         expires_delta or timedelta(days=settings.jwt_refresh_token_expire_days)
     )
-    payload = {
+    payload: dict[str, Any] = {
         "sub": str(subject),
         "exp": expire,
         "type": "refresh",
         "token_version": token_version,
     }
+    if jti:
+        payload["jti"] = jti
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 

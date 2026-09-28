@@ -11,6 +11,8 @@ from app.domain.entities.user import UserRole
 from app.domain.interfaces.medical_record_repository import MedicalRecordRepository
 from app.domain.interfaces.organization_membership_repository import OrganizationMembershipRepository
 from app.domain.interfaces.patient_access_policy import PatientAccessAction, PatientAccessPolicy
+from app.core.config import Settings
+from app.domain.interfaces.patient_consent_repository import PatientConsentRepository
 from app.domain.interfaces.patient_repository import PatientRepository
 
 
@@ -23,8 +25,17 @@ class MedicalRecordService(ClinicalPatientChildService):
         patient_repository: PatientRepository,
         access_policy: PatientAccessPolicy | None = None,
         membership_repository: OrganizationMembershipRepository | None = None,
+        *,
+        settings: Settings | None = None,
+        consent_repository: PatientConsentRepository | None = None,
     ) -> None:
-        super().__init__(patient_repository, access_policy, membership_repository)
+        super().__init__(
+            patient_repository,
+            access_policy,
+            membership_repository,
+            settings=settings,
+            consent_repository=consent_repository,
+        )
         self._medical_records = medical_record_repository
 
     async def create_medical_record(

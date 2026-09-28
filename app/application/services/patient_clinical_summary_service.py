@@ -13,6 +13,8 @@ from app.application.services.patient_read_access import resolve_patient_read_ac
 from app.core.exceptions import ValidationError
 from app.domain.entities.user import UserRole
 from app.domain.interfaces.patient_access_policy import PatientAccessPolicy
+from app.core.config import Settings
+from app.domain.interfaces.patient_consent_repository import PatientConsentRepository
 from app.domain.interfaces.patient_repository import PatientRepository
 
 
@@ -24,10 +26,15 @@ class PatientClinicalSummaryService(BaseService):
         patient_repository: PatientRepository,
         clinical_evidence_service: ClinicalEvidenceService,
         access_policy: PatientAccessPolicy | None = None,
+        *,
+        settings: Settings | None = None,
+        consent_repository: PatientConsentRepository | None = None,
     ) -> None:
         self._patients = patient_repository
         self._evidence = clinical_evidence_service
         self._access_policy = access_policy
+        self._settings = settings
+        self._consent_repository = consent_repository
 
     async def get_clinical_summary(
         self,
@@ -44,6 +51,8 @@ class PatientClinicalSummaryService(BaseService):
             actor_id=actor_id,
             actor_role=actor_role,
             patient_id=patient_id,
+            settings=self._settings,
+            consent_repository=self._consent_repository,
         )
         resolved_from = _normalize_datetime(date_from) if date_from is not None else None
         resolved_to = _normalize_datetime(date_to) if date_to is not None else None

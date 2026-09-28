@@ -40,6 +40,7 @@ from app.domain.interfaces.clinical_narrative_generator import (
     ClinicalNarrativeGeneratorInput,
 )
 from app.domain.interfaces.patient_access_policy import PatientAccessPolicy
+from app.domain.interfaces.patient_consent_repository import PatientConsentRepository
 from app.domain.interfaces.patient_repository import PatientRepository
 
 logger = get_logger(__name__)
@@ -57,6 +58,7 @@ class ClinicalNarrativeService(BaseService):
         settings: Settings,
         access_policy: PatientAccessPolicy | None = None,
         validator: ClinicalNarrativeValidator | None = None,
+        consent_repository: PatientConsentRepository | None = None,
     ) -> None:
         self._patients = patient_repository
         self._retrieval = retrieval_service
@@ -65,6 +67,7 @@ class ClinicalNarrativeService(BaseService):
         self._settings = settings
         self._access_policy = access_policy
         self._validator = validator or ClinicalNarrativeValidator()
+        self._consent_repository = consent_repository
 
     def provider_info(self):
         return self._generator.provider_info()
@@ -88,6 +91,8 @@ class ClinicalNarrativeService(BaseService):
             actor_id=actor_id,
             actor_role=actor_role,
             patient_id=patient_id,
+            settings=self._settings,
+            consent_repository=self._consent_repository,
         )
         resolved_from = _normalize_datetime(date_from) if date_from is not None else None
         resolved_to = _normalize_datetime(date_to) if date_to is not None else None

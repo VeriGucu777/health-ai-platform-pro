@@ -20,8 +20,14 @@ from app.application.services.heart_disease_risk_assessment_service import (
     HeartDiseaseRiskAssessmentService,
 )
 from app.application.services.stroke_risk_assessment_service import StrokeRiskAssessmentService
+from app.core.config import Settings
 from app.infrastructure.repositories.risk_assessment_history_repository import (
     SQLAlchemyRiskAssessmentHistoryRepository,
+)
+
+_TEST_SETTINGS = Settings(
+    ENVIRONMENT="development",
+    JWT_SECRET_KEY="test-secret-key-for-unit-tests-only",
 )
 
 
@@ -31,7 +37,7 @@ def mock_db_session() -> MagicMock:
 
 
 def test_diabetes_risk_service_production_di_wiring(mock_db_session: MagicMock) -> None:
-    service = get_diabetes_risk_assessment_service(mock_db_session)
+    service = get_diabetes_risk_assessment_service(mock_db_session, _TEST_SETTINGS)
     assert isinstance(service, DiabetesRiskAssessmentService)
     assert isinstance(service._risk_model, RuleBasedDiabetesRiskModelV1)
     assert hasattr(service._risk_model, "assess")
@@ -40,7 +46,7 @@ def test_diabetes_risk_service_production_di_wiring(mock_db_session: MagicMock) 
 
 
 def test_heart_disease_risk_service_production_di_wiring(mock_db_session: MagicMock) -> None:
-    service = get_heart_disease_risk_assessment_service(mock_db_session)
+    service = get_heart_disease_risk_assessment_service(mock_db_session, _TEST_SETTINGS)
     assert isinstance(service, HeartDiseaseRiskAssessmentService)
     assert isinstance(service._risk_model, RuleBasedHeartDiseaseRiskModelV1)
     assert hasattr(service._risk_model, "assess")
@@ -49,7 +55,7 @@ def test_heart_disease_risk_service_production_di_wiring(mock_db_session: MagicM
 
 
 def test_stroke_risk_service_production_di_wiring(mock_db_session: MagicMock) -> None:
-    service = get_stroke_risk_assessment_service(mock_db_session)
+    service = get_stroke_risk_assessment_service(mock_db_session, _TEST_SETTINGS)
     assert isinstance(service, StrokeRiskAssessmentService)
     assert isinstance(service._risk_model, RuleBasedStrokeRiskModelV1)
     assert hasattr(service._risk_model, "assess")

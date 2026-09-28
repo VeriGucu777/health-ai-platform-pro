@@ -51,11 +51,20 @@ def rate_limited_settings() -> Settings:
 
 @pytest.fixture
 async def rate_limited_client(rate_limited_settings: Settings):
+    from tests.support.memory_user_refresh_session_repository import (
+        InMemoryUserRefreshSessionRepository,
+    )
+
     user_repository = InMemoryUserRepository()
+    refresh_session_repository = InMemoryUserRefreshSessionRepository()
     app = create_app(rate_limited_settings)
 
     def override_auth_service(request: Request) -> AuthService:
-        return AuthService(user_repository, request.app.state.settings)
+        return AuthService(
+            user_repository,
+            request.app.state.settings,
+            refresh_session_repository=refresh_session_repository,
+        )
 
     app.dependency_overrides[get_auth_service] = override_auth_service
     transport = ASGITransport(app=app)
@@ -94,9 +103,12 @@ async def test_refresh_rate_limit_returns_429(rate_limited_client) -> None:
     refresh_token = login.json()["refresh_token"]
 
     first = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
-    second = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     assert first.status_code == 200
+    refresh_token = first.json()["refresh_token"]
+
+    second = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     assert second.status_code == 200
+    refresh_token = second.json()["refresh_token"]
 
     blocked = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     assert blocked.status_code == 429

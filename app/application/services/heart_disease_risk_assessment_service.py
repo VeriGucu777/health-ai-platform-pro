@@ -15,6 +15,8 @@ from app.domain.interfaces.heart_disease_risk_model import HeartDiseaseRiskModel
 from app.domain.interfaces.health_measurement_repository import HealthMeasurementRepository
 from app.domain.interfaces.medical_record_repository import MedicalRecordRepository
 from app.domain.interfaces.patient_access_policy import PatientAccessPolicy
+from app.core.config import Settings
+from app.domain.interfaces.patient_consent_repository import PatientConsentRepository
 from app.domain.interfaces.patient_repository import PatientRepository
 from app.domain.interfaces.risk_assessment_history_repository import RiskAssessmentHistoryRepository
 from app.domain.risk.enums import RiskAssessmentType
@@ -31,6 +33,9 @@ class HeartDiseaseRiskAssessmentService(BaseService):
         access_policy: PatientAccessPolicy | None = None,
         risk_model: HeartDiseaseRiskModelPort | None = None,
         history_repository: RiskAssessmentHistoryRepository | None = None,
+        *,
+        settings: Settings | None = None,
+        consent_repository: PatientConsentRepository | None = None,
     ) -> None:
         self._patients = patient_repository
         self._health_measurements = health_measurement_repository
@@ -38,6 +43,8 @@ class HeartDiseaseRiskAssessmentService(BaseService):
         self._access_policy = access_policy
         self._risk_model = risk_model or RuleBasedHeartDiseaseRiskModelV1()
         self._history = history_repository
+        self._settings = settings
+        self._consent_repository = consent_repository
 
     async def assess_heart_disease_risk(
         self,
@@ -63,4 +70,6 @@ class HeartDiseaseRiskAssessmentService(BaseService):
             assessment_dto_class=HeartDiseaseRiskAssessmentDTO,
             history_repository=self._history,
             assessment_type=RiskAssessmentType.HEART_DISEASE,
+            settings=self._settings,
+            consent_repository=self._consent_repository,
         )

@@ -225,6 +225,7 @@ async def test_resend_throttled(
 async def test_refresh_blocked_when_unverified(
     client: AsyncClient,
     user_repository: InMemoryUserRepository,
+    refresh_session_repository,
     enforce_verification,
     app,
 ) -> None:
@@ -244,8 +245,9 @@ async def test_refresh_blocked_when_unverified(
         user_repository,
         app.state.settings,
         email_verification_service=None,
+        refresh_session_repository=refresh_session_repository,
     )
-    tokens = auth._build_token_pair(user)  # noqa: SLF001
+    tokens = await auth._issue_token_pair(user)  # noqa: SLF001
     response = await client.post(
         "/api/v1/auth/refresh",
         json={"refresh_token": tokens.refresh_token},
@@ -282,6 +284,7 @@ async def test_me_verified_user_success(
     client: AsyncClient,
     app,
     user_repository: InMemoryUserRepository,
+    refresh_session_repository,
 ) -> None:
     user = await user_repository.create(
         User(
@@ -296,8 +299,12 @@ async def test_me_verified_user_success(
     )
     from app.application.services.auth_service import AuthService
 
-    auth = AuthService(user_repository, app.state.settings)
-    tokens = auth._build_token_pair(user)  # noqa: SLF001
+    auth = AuthService(
+        user_repository,
+        app.state.settings,
+        refresh_session_repository=refresh_session_repository,
+    )
+    tokens = await auth._issue_token_pair(user)  # noqa: SLF001
     me = await client.get(
         "/api/v1/auth/me",
         headers={"Authorization": f"Bearer {tokens.access_token}"},
@@ -311,6 +318,7 @@ async def test_me_unverified_blocked_with_reason_when_enforced(
     app,
     enforce_verification,
     user_repository: InMemoryUserRepository,
+    refresh_session_repository,
 ) -> None:
     user = await user_repository.create(
         User(
@@ -324,8 +332,12 @@ async def test_me_unverified_blocked_with_reason_when_enforced(
     )
     from app.application.services.auth_service import AuthService
 
-    auth = AuthService(user_repository, app.state.settings)
-    tokens = auth._build_token_pair(user)  # noqa: SLF001
+    auth = AuthService(
+        user_repository,
+        app.state.settings,
+        refresh_session_repository=refresh_session_repository,
+    )
+    tokens = await auth._issue_token_pair(user)  # noqa: SLF001
     me = await client.get(
         "/api/v1/auth/me",
         headers={"Authorization": f"Bearer {tokens.access_token}"},
@@ -339,6 +351,7 @@ async def test_me_unverified_allowed_when_enforcement_off(
     client: AsyncClient,
     app,
     user_repository: InMemoryUserRepository,
+    refresh_session_repository,
 ) -> None:
     user = await user_repository.create(
         User(
@@ -352,8 +365,12 @@ async def test_me_unverified_allowed_when_enforcement_off(
     )
     from app.application.services.auth_service import AuthService
 
-    auth = AuthService(user_repository, app.state.settings)
-    tokens = auth._build_token_pair(user)  # noqa: SLF001
+    auth = AuthService(
+        user_repository,
+        app.state.settings,
+        refresh_session_repository=refresh_session_repository,
+    )
+    tokens = await auth._issue_token_pair(user)  # noqa: SLF001
     me = await client.get(
         "/api/v1/auth/me",
         headers={"Authorization": f"Bearer {tokens.access_token}"},
@@ -366,6 +383,7 @@ async def test_me_inactive_user_forbidden(
     client: AsyncClient,
     app,
     user_repository: InMemoryUserRepository,
+    refresh_session_repository,
 ) -> None:
     user = await user_repository.create(
         User(
@@ -380,8 +398,12 @@ async def test_me_inactive_user_forbidden(
     )
     from app.application.services.auth_service import AuthService
 
-    auth = AuthService(user_repository, app.state.settings)
-    tokens = auth._build_token_pair(user)  # noqa: SLF001
+    auth = AuthService(
+        user_repository,
+        app.state.settings,
+        refresh_session_repository=refresh_session_repository,
+    )
+    tokens = await auth._issue_token_pair(user)  # noqa: SLF001
     me = await client.get(
         "/api/v1/auth/me",
         headers={"Authorization": f"Bearer {tokens.access_token}"},

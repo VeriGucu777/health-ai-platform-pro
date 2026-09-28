@@ -12,6 +12,8 @@ from app.domain.entities.user import UserRole
 from app.domain.interfaces.health_measurement_repository import HealthMeasurementRepository
 from app.domain.interfaces.medical_record_repository import MedicalRecordRepository
 from app.domain.interfaces.patient_access_policy import PatientAccessPolicy
+from app.core.config import Settings
+from app.domain.interfaces.patient_consent_repository import PatientConsentRepository
 from app.domain.interfaces.patient_repository import PatientRepository
 from app.domain.interfaces.risk_assessment_history_repository import RiskAssessmentHistoryRepository
 from app.domain.risk.enums import RiskAssessmentType
@@ -29,6 +31,9 @@ class StrokeRiskAssessmentService(BaseService):
         access_policy: PatientAccessPolicy | None = None,
         risk_model: StrokeRiskModelPort | None = None,
         history_repository: RiskAssessmentHistoryRepository | None = None,
+        *,
+        settings: Settings | None = None,
+        consent_repository: PatientConsentRepository | None = None,
     ) -> None:
         self._patients = patient_repository
         self._health_measurements = health_measurement_repository
@@ -36,6 +41,8 @@ class StrokeRiskAssessmentService(BaseService):
         self._access_policy = access_policy
         self._risk_model = risk_model or RuleBasedStrokeRiskModelV1()
         self._history = history_repository
+        self._settings = settings
+        self._consent_repository = consent_repository
 
     async def assess_stroke_risk(
         self,
@@ -61,4 +68,6 @@ class StrokeRiskAssessmentService(BaseService):
             assessment_dto_class=StrokeRiskAssessmentDTO,
             history_repository=self._history,
             assessment_type=RiskAssessmentType.STROKE,
+            settings=self._settings,
+            consent_repository=self._consent_repository,
         )

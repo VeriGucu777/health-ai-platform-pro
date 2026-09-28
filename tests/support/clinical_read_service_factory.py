@@ -36,6 +36,7 @@ from tests.support.memory_organization_membership_repository import (
 )
 from tests.support.memory_patient_assignment_repository import InMemoryPatientAssignmentRepository
 from tests.support.memory_patient_repository import InMemoryPatientRepository
+from app.domain.interfaces.patient_consent_repository import PatientConsentRepository
 from tests.support.patient_service_factory import build_policy_patient_service
 
 
@@ -58,6 +59,9 @@ def build_diabetes_risk_service(
     membership_repository: InMemoryOrganizationMembershipRepository,
     assignment_repository: InMemoryPatientAssignmentRepository,
     history_repository=None,
+    *,
+    settings: Settings | None = None,
+    consent_repository: PatientConsentRepository | None = None,
 ) -> DiabetesRiskAssessmentService:
     return DiabetesRiskAssessmentService(
         patient_repository,
@@ -65,6 +69,8 @@ def build_diabetes_risk_service(
         medical_record_repository,
         build_access_policy(patient_repository, membership_repository, assignment_repository),
         history_repository=history_repository,
+        settings=settings,
+        consent_repository=consent_repository,
     )
 
 
@@ -75,6 +81,9 @@ def build_heart_risk_service(
     membership_repository: InMemoryOrganizationMembershipRepository,
     assignment_repository: InMemoryPatientAssignmentRepository,
     history_repository=None,
+    *,
+    settings: Settings | None = None,
+    consent_repository: PatientConsentRepository | None = None,
 ) -> HeartDiseaseRiskAssessmentService:
     return HeartDiseaseRiskAssessmentService(
         patient_repository,
@@ -82,6 +91,8 @@ def build_heart_risk_service(
         medical_record_repository,
         build_access_policy(patient_repository, membership_repository, assignment_repository),
         history_repository=history_repository,
+        settings=settings,
+        consent_repository=consent_repository,
     )
 
 
@@ -92,6 +103,9 @@ def build_stroke_risk_service(
     membership_repository: InMemoryOrganizationMembershipRepository,
     assignment_repository: InMemoryPatientAssignmentRepository,
     history_repository=None,
+    *,
+    settings: Settings | None = None,
+    consent_repository: PatientConsentRepository | None = None,
 ) -> StrokeRiskAssessmentService:
     return StrokeRiskAssessmentService(
         patient_repository,
@@ -99,6 +113,8 @@ def build_stroke_risk_service(
         medical_record_repository,
         build_access_policy(patient_repository, membership_repository, assignment_repository),
         history_repository=history_repository,
+        settings=settings,
+        consent_repository=consent_repository,
     )
 
 
@@ -107,6 +123,9 @@ def build_risk_assessment_history_service(
     history_repository,
     membership_repository: InMemoryOrganizationMembershipRepository,
     assignment_repository: InMemoryPatientAssignmentRepository,
+    *,
+    settings: Settings | None = None,
+    consent_repository: PatientConsentRepository | None = None,
 ):
     from app.application.services.risk_assessment_history_service import RiskAssessmentHistoryService
 
@@ -114,6 +133,8 @@ def build_risk_assessment_history_service(
         history_repository,
         patient_repository,
         build_access_policy(patient_repository, membership_repository, assignment_repository),
+        settings=settings,
+        consent_repository=consent_repository,
     )
 
 
@@ -126,6 +147,9 @@ def build_clinical_retrieval_service(
     membership_repository: InMemoryOrganizationMembershipRepository,
     assignment_repository: InMemoryPatientAssignmentRepository,
     vector_store: InMemoryClinicalVectorStore | None = None,
+    *,
+    settings: Settings | None = None,
+    consent_repository: PatientConsentRepository | None = None,
 ) -> ClinicalRetrievalService:
     access_policy = build_access_policy(
         patient_repository,
@@ -148,6 +172,8 @@ def build_clinical_retrieval_service(
         store,
         embedding,
         access_policy,
+        settings=settings,
+        consent_repository=consent_repository,
     )
 
 
@@ -162,6 +188,7 @@ def build_clinical_narrative_service(
     vector_store: InMemoryClinicalVectorStore | None = None,
     narrative_generator=None,
     settings: Settings | None = None,
+    consent_repository: PatientConsentRepository | None = None,
 ) -> ClinicalNarrativeService:
     access_policy = build_access_policy(
         patient_repository,
@@ -177,6 +204,8 @@ def build_clinical_narrative_service(
         membership_repository,
         assignment_repository,
         vector_store=vector_store,
+        settings=settings,
+        consent_repository=consent_repository,
     )
     summary = build_clinical_summary_service(
         patient_repository,
@@ -186,6 +215,8 @@ def build_clinical_narrative_service(
         risk_assessment_history_repository,
         membership_repository,
         assignment_repository,
+        settings=settings,
+        consent_repository=consent_repository,
     )
     generator = narrative_generator or DeterministicFakeNarrativeGenerator()
     app_settings = settings or Settings(
@@ -201,6 +232,7 @@ def build_clinical_narrative_service(
         generator,
         app_settings,
         access_policy,
+        consent_repository=consent_repository,
     )
 
 
@@ -212,6 +244,9 @@ def build_clinical_summary_service(
     risk_assessment_history_repository,
     membership_repository: InMemoryOrganizationMembershipRepository,
     assignment_repository: InMemoryPatientAssignmentRepository,
+    *,
+    settings: Settings | None = None,
+    consent_repository: PatientConsentRepository | None = None,
 ) -> PatientClinicalSummaryService:
     access_policy = build_access_policy(
         patient_repository,
@@ -228,6 +263,8 @@ def build_clinical_summary_service(
         patient_repository,
         evidence_service,
         access_policy,
+        settings=settings,
+        consent_repository=consent_repository,
     )
 
 
@@ -238,6 +275,9 @@ def build_clinical_timeline_service(
     appointment_repository,
     membership_repository: InMemoryOrganizationMembershipRepository,
     assignment_repository: InMemoryPatientAssignmentRepository,
+    *,
+    settings: Settings | None = None,
+    consent_repository: PatientConsentRepository | None = None,
 ) -> PatientClinicalTimelineService:
     access_policy = build_access_policy(
         patient_repository,
@@ -249,6 +289,8 @@ def build_clinical_timeline_service(
         patient_repository,
         access_policy,
         membership_repository,
+        settings=settings,
+        consent_repository=consent_repository,
     )
     return PatientClinicalTimelineService(
         patient_repository,
@@ -261,6 +303,8 @@ def build_clinical_timeline_service(
             medical_record_repository,
             membership_repository,
             assignment_repository,
+            settings=settings,
+            consent_repository=consent_repository,
         ),
         build_heart_risk_service(
             patient_repository,
@@ -268,6 +312,8 @@ def build_clinical_timeline_service(
             medical_record_repository,
             membership_repository,
             assignment_repository,
+            settings=settings,
+            consent_repository=consent_repository,
         ),
         build_stroke_risk_service(
             patient_repository,
@@ -275,8 +321,12 @@ def build_clinical_timeline_service(
             medical_record_repository,
             membership_repository,
             assignment_repository,
+            settings=settings,
+            consent_repository=consent_repository,
         ),
         access_policy,
+        settings=settings,
+        consent_repository=consent_repository,
     )
 
 
@@ -286,6 +336,9 @@ def build_patient_health_report_service(
     health_measurement_repository,
     membership_repository: InMemoryOrganizationMembershipRepository,
     assignment_repository: InMemoryPatientAssignmentRepository,
+    *,
+    settings: Settings | None = None,
+    consent_repository: PatientConsentRepository | None = None,
 ) -> PatientHealthReportService:
     patient_service = build_policy_patient_service(
         patient_repository,
@@ -299,11 +352,17 @@ def build_patient_health_report_service(
             patient_repository,
             membership_repository,
             assignment_repository,
+            settings=settings,
+            consent_repository=consent_repository,
         ),
         build_health_measurement_analytics_service(
             health_measurement_repository,
             patient_repository,
             membership_repository,
             assignment_repository,
+            settings=settings,
+            consent_repository=consent_repository,
         ),
+        settings=settings,
+        consent_repository=consent_repository,
     )

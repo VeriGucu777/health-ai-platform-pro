@@ -39,6 +39,8 @@ from app.domain.entities.clinical_timeline import ClinicalTimelineEvent
 from app.domain.entities.medical_record import MedicalRecord
 from app.domain.interfaces.appointment_repository import AppointmentRepository
 from app.domain.interfaces.health_measurement_repository import HealthMeasurementRepository
+from app.core.config import Settings
+from app.domain.interfaces.patient_consent_repository import PatientConsentRepository
 from app.domain.interfaces.patient_repository import PatientRepository
 
 DEFAULT_MAX_EVENTS = 100
@@ -58,6 +60,9 @@ class PatientClinicalTimelineService(BaseService):
         heart_risk_service: HeartDiseaseRiskAssessmentService,
         stroke_risk_service: StrokeRiskAssessmentService,
         access_policy: PatientAccessPolicy | None = None,
+        *,
+        settings: Settings | None = None,
+        consent_repository: PatientConsentRepository | None = None,
     ) -> None:
         self._patients = patient_repository
         self._health_measurements = health_measurement_repository
@@ -67,6 +72,8 @@ class PatientClinicalTimelineService(BaseService):
         self._heart_risk = heart_risk_service
         self._stroke_risk = stroke_risk_service
         self._access_policy = access_policy
+        self._settings = settings
+        self._consent_repository = consent_repository
 
     async def get_clinical_timeline(
         self,
@@ -85,6 +92,8 @@ class PatientClinicalTimelineService(BaseService):
             actor_id=actor_id,
             actor_role=actor_role,
             patient_id=patient_id,
+            settings=self._settings,
+            consent_repository=self._consent_repository,
         )
         resolved_to = _normalize_datetime(date_to or datetime.now(UTC))
         resolved_from = _normalize_datetime(date_from) if date_from is not None else None

@@ -17,7 +17,10 @@ from app.application.services.health_measurement_analytics_service import (
     HealthMeasurementAnalyticsService,
 )
 from app.application.services.medical_record_service import MedicalRecordService
+from app.application.services.clinical_consent_gate import enforce_clinical_consent_if_required
 from app.application.services.patient_service import PatientService
+from app.core.config import Settings
+from app.domain.interfaces.patient_consent_repository import PatientConsentRepository
 from app.core.reference_ranges import MAX_MEDICAL_RECORDS_IN_REPORT
 from app.domain.entities.user import UserRole
 
@@ -36,10 +39,15 @@ class PatientHealthReportService(BaseService):
         patient_service: PatientService,
         medical_record_service: MedicalRecordService,
         analytics_service: HealthMeasurementAnalyticsService,
+        *,
+        settings: Settings | None = None,
+        consent_repository: PatientConsentRepository | None = None,
     ) -> None:
         self._patients = patient_service
         self._medical_records = medical_record_service
         self._analytics = analytics_service
+        self._settings = settings
+        self._consent_repository = consent_repository
 
     async def generate_pdf(
         self,
@@ -60,6 +68,12 @@ class PatientHealthReportService(BaseService):
             actor_id,
             actor_role,
             patient_id,
+        )
+        await enforce_clinical_consent_if_required(
+            settings=self._settings,
+            consent_repository=self._consent_repository,
+            organization_id=organization_id,
+            patient_id=patient_id,
         )
         summary = await self._analytics.get_summary(
             actor_id,

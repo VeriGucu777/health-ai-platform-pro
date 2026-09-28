@@ -14,6 +14,8 @@ from app.application.analytics.risk_assessment_common import (
 from app.application.dtos.base import BaseSchema
 from app.application.dtos.risk_assessment_shared import build_assessment_dto
 from app.application.services.patient_read_access import resolve_patient_read_access
+from app.core.config import Settings
+from app.domain.interfaces.patient_consent_repository import PatientConsentRepository
 from app.application.services.risk_assessment_history_persistence import append_risk_assessment_history
 from app.application.validators.date_range import validate_analytics_date_range
 from app.domain.entities.health_measurement import HealthMeasurement
@@ -52,6 +54,8 @@ async def run_risk_assessment_for_user(
     assessment_dto_class: type[TAssessmentDTO],
     history_repository: RiskAssessmentHistoryRepository | None = None,
     assessment_type: RiskAssessmentType | None = None,
+    settings: Settings | None = None,
+    consent_repository: PatientConsentRepository | None = None,
 ) -> tuple[TAssessmentDTO, UUID | None]:
     """Enforce patient READ policy, then score using the patient's owner-scoped data."""
     resolved = await resolve_patient_read_access(
@@ -60,6 +64,8 @@ async def run_risk_assessment_for_user(
         actor_id=actor_id,
         actor_role=actor_role,
         patient_id=patient_id,
+        settings=settings,
+        consent_repository=consent_repository,
     )
     assessment = await run_risk_assessment_for_patient(
         health_measurements=health_measurements,

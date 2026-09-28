@@ -62,6 +62,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app_settings = settings or get_settings()
     if settings is not None:
         validate_settings_security(app_settings)
+        from app.core.email_verification_settings import validate_email_verification_settings
+
+        validate_email_verification_settings(app_settings)
     setup_logging(app_settings)
     configure_metrics(app_settings.metrics_enabled)
 
@@ -90,6 +93,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["*"],
     )
 
+    from app.middleware.security_headers import SecurityHeadersMiddleware
+
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
     register_exception_handlers(app)
     app.include_router(create_api_router(app_settings.api_v1_prefix))

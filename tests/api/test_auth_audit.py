@@ -166,6 +166,7 @@ class _FailingAuditLogRepository(AuditLogRepository):
 async def test_audit_append_failure_does_not_break_login(
     user_repository,
     test_settings,
+    refresh_session_repository,
 ) -> None:
     from app.application.dtos.auth_audit import AuthAuditContext
 
@@ -173,6 +174,7 @@ async def test_audit_append_failure_does_not_break_login(
         user_repository,
         test_settings,
         AuditService(_FailingAuditLogRepository()),
+        refresh_session_repository=refresh_session_repository,
     )
     await auth_service.register(
         email=REGISTER_PAYLOAD["email"],

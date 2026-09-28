@@ -83,10 +83,14 @@ async def login(
 )
 async def refresh_token(
     body: RefreshTokenRequest,
+    request: Request,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> TokenResponse:
     """Exchange a refresh token for a new token pair."""
-    tokens = await auth_service.refresh_tokens(body.refresh_token)
+    tokens = await auth_service.refresh_tokens(
+        body.refresh_token,
+        audit_context=build_auth_audit_context(request),
+    )
     return TokenResponse.model_validate(tokens.model_dump())
 
 

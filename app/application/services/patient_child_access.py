@@ -2,9 +2,12 @@
 
 from uuid import UUID
 
+from app.application.services.clinical_consent_gate import enforce_clinical_consent_if_required
 from app.application.services.patient_access_errors import raise_for_patient_access_decision
 from app.application.services.patient_access_types import ResolvedPatientRead
+from app.core.config import Settings
 from app.core.exceptions import NotFoundError
+from app.domain.interfaces.patient_consent_repository import PatientConsentRepository
 from app.domain.entities.patient import Patient
 from app.domain.entities.user import UserRole
 from app.domain.interfaces.organization_membership_repository import OrganizationMembershipRepository
@@ -41,13 +44,24 @@ async def resolve_patient_access_for_action(
     actor_role: UserRole,
     patient_id: UUID,
     action: PatientAccessAction,
+    settings: Settings | None = None,
+    consent_repository: PatientConsentRepository | None = None,
+    apply_clinical_consent: bool = False,
 ) -> ResolvedPatientRead:
     """Enforce patient policy for the given action (read/write/delete)."""
     if access_policy is None:
         patient = await patients.get_by_id_and_owner(patient_id, actor_id)
         if patient is None:
             raise NotFoundError("Patient not found")
-        return ResolvedPatientRead(patient=patient, organization_id=None)
+        resolved = ResolvedPatientRead(patient=patient, organization_id=None)
+        if apply_clinical_consent:
+            await enforce_clinical_consent_if_required(
+                settings=settings,
+                consent_repository=consent_repository,
+                organization_id=resolved.organization_id,
+                patient_id=patient_id,
+            )
+        return resolved
 
     decision = await access_policy.resolve_access(
         actor_id=actor_id,
@@ -61,10 +75,18 @@ async def resolve_patient_access_for_action(
     if patient is None or not patient.is_active:
         raise NotFoundError("Patient not found")
 
-    return ResolvedPatientRead(
+    resolved = ResolvedPatientRead(
         patient=patient,
         organization_id=decision.organization_id,
     )
+    if apply_clinical_consent:
+        await enforce_clinical_consent_if_required(
+            settings=settings,
+            consent_repository=consent_repository,
+            organization_id=resolved.organization_id,
+            patient_id=patient_id,
+        )
+    return resolved
 
 
 async def list_accessible_patient_ids(

@@ -12,6 +12,7 @@ from app.application.services.base import BaseService
 from app.application.services.email_verification_service import EmailVerificationService
 from app.core.config import Settings
 from app.core.exceptions import ConflictError, ForbiddenError, UnauthorizedError
+from app.core.refresh_token_rotation import hash_refresh_jti, new_refresh_jti
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -22,6 +23,7 @@ from app.core.security import (
 from app.core.token_validation import validate_token_claims, validate_token_version
 from app.domain.audit.taxonomy import AuditAction, AuditOutcome
 from app.domain.entities.user import User, UserRole
+from app.domain.interfaces.user_refresh_session_repository import UserRefreshSessionRepository
 from app.domain.interfaces.user_repository import UserRepository
 from app.infrastructure.repositories.user_repository import normalize_email
 
@@ -37,11 +39,13 @@ class AuthService(BaseService):
         settings: Settings,
         audit_service: AuditService | None = None,
         email_verification_service: EmailVerificationService | None = None,
+        refresh_session_repository: UserRefreshSessionRepository | None = None,
     ) -> None:
         self._users = user_repository
         self._settings = settings
         self._audit = audit_service
         self._email_verification = email_verification_service
+        self._refresh_sessions = refresh_session_repository
 
     async def register(
         self,
@@ -114,7 +118,7 @@ class AuthService(BaseService):
             audit_action=AuditAction.LOGIN_FAILURE,
         )
 
-        tokens = self._build_token_pair(user)
+        tokens = await self._issue_token_pair(user)
         await record_auth_audit_event(
             self._audit,
             action=AuditAction.LOGIN_SUCCESS,
@@ -125,10 +129,59 @@ class AuthService(BaseService):
         )
         return tokens
 
-    async def refresh_tokens(self, refresh_token: str) -> TokenPairDTO:
-        user = await self._validate_token_user(refresh_token, expected_type="refresh")
+    async def refresh_tokens(
+        self,
+        refresh_token: str,
+        *,
+        audit_context: AuthAuditContext | None = None,
+    ) -> TokenPairDTO:
+        try:
+            payload = decode_token(refresh_token, self._settings)
+            user_id_str = validate_token_claims(payload, expected_type="refresh")
+            user_id = UUID(user_id_str)
+        except (JWTError, ValueError) as exc:
+            raise UnauthorizedError("Invalid or expired token") from exc
+
+        user = await self._users.get_by_id(user_id)
+        if user is None:
+            raise UnauthorizedError("Invalid or expired token")
+
+        jti = payload.get("jti")
+        jti_str = str(jti) if jti else None
+        refresh_session = await self._resolve_refresh_session(user, jti_str)
+        if refresh_session is None:
+            await record_auth_audit_event(
+                self._audit,
+                action=AuditAction.TOKEN_REFRESH,
+                outcome=AuditOutcome.FAILURE,
+                http_status=401,
+                audit_context=audit_context,
+                actor=user,
+                metadata={"reason_code": "refresh_token_reuse"},
+            )
+            raise UnauthorizedError("Invalid or expired token")
+
+        try:
+            validate_token_version(payload, user.token_version)
+        except JWTError as exc:
+            raise UnauthorizedError("Invalid or expired token") from exc
+
+        if not user.is_active:
+            raise ForbiddenError("Account is deactivated")
+
         await self._ensure_email_verified_for_auth(user)
-        return self._build_token_pair(user)
+
+        session_id = getattr(refresh_session, "id", None)
+        tokens = await self._issue_token_pair(user, refresh_session_id=session_id)
+        await record_auth_audit_event(
+            self._audit,
+            action=AuditAction.TOKEN_REFRESH,
+            outcome=AuditOutcome.SUCCESS,
+            http_status=200,
+            audit_context=audit_context,
+            actor=user,
+        )
+        return tokens
 
     async def logout(
         self,
@@ -138,6 +191,7 @@ class AuthService(BaseService):
     ) -> None:
         """Invalidate all outstanding tokens for the user after validating refresh."""
         user = await self._validate_token_user(refresh_token, expected_type="refresh")
+        await self._revoke_all_refresh_sessions(user.id)
         await self._users.increment_token_version(user.id)
         await record_auth_audit_event(
             self._audit,
@@ -169,6 +223,7 @@ class AuthService(BaseService):
 
         user.hashed_password = hash_password(new_password)
         user.token_version += 1
+        await self._revoke_all_refresh_sessions(user.id)
         await self._users.update(user)
         await record_auth_audit_event(
             self._audit,
@@ -226,7 +281,19 @@ class AuthService(BaseService):
             details={"reason_code": "email_not_verified"},
         )
 
-    def _build_token_pair(self, user: User) -> TokenPairDTO:
+    async def _issue_token_pair(
+        self,
+        user: User,
+        *,
+        refresh_session_id: UUID | None = None,
+    ) -> TokenPairDTO:
+        jti = new_refresh_jti()
+        digest = hash_refresh_jti(jti=jti, settings=self._settings)
+        refresh_sessions = self._require_refresh_sessions()
+        if refresh_session_id is not None:
+            await refresh_sessions.rotate_hash(refresh_session_id, digest)
+        else:
+            await refresh_sessions.create_session(user.id, digest)
         extra_claims = {"role": user.role.value}
         return TokenPairDTO(
             access_token=create_access_token(
@@ -239,8 +306,27 @@ class AuthService(BaseService):
                 user.id,
                 settings=self._settings,
                 token_version=user.token_version,
+                jti=jti,
             ),
         )
+
+    async def _resolve_refresh_session(self, user: User, jti_str: str | None):
+        if not jti_str:
+            return None
+        digest = hash_refresh_jti(jti=jti_str, settings=self._settings)
+        session = await self._require_refresh_sessions().get_by_hash(digest)
+        if session is None or session.user_id != user.id:
+            return None
+        return session
+
+    async def _revoke_all_refresh_sessions(self, user_id: UUID) -> None:
+        await self._require_refresh_sessions().revoke_all_for_user(user_id)
+
+    def _require_refresh_sessions(self) -> UserRefreshSessionRepository:
+        if self._refresh_sessions is None:
+            msg = "Refresh session repository is not configured"
+            raise RuntimeError(msg)
+        return self._refresh_sessions
 
     async def _validate_token_subject(
         self,

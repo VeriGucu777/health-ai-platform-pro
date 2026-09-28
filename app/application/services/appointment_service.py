@@ -24,7 +24,12 @@ class AppointmentService(ClinicalPatientChildService):
         access_policy: PatientAccessPolicy | None = None,
         membership_repository: OrganizationMembershipRepository | None = None,
     ) -> None:
-        super().__init__(patient_repository, access_policy, membership_repository)
+        super().__init__(
+            patient_repository,
+            access_policy,
+            membership_repository,
+            enforce_clinical_consent=False,
+        )
         self._appointments = appointment_repository
 
     async def create_appointment(

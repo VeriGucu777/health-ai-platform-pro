@@ -14,6 +14,7 @@ from app.infrastructure.database.models.patient_assignment import PatientAssignm
 from app.infrastructure.database.models.patient_consent import PatientConsentModel
 from app.infrastructure.database.models.risk_assessment_history import RiskAssessmentHistoryModel
 from app.infrastructure.database.models.user import UserModel
+from app.infrastructure.database.models.user_refresh_session import UserRefreshSessionModel
 
 __all__ = [
     "Base",
@@ -30,4 +31,5 @@ __all__ = [
     "PatientModel",
     "RiskAssessmentHistoryModel",
     "UserModel",
+    "UserRefreshSessionModel",
 ]

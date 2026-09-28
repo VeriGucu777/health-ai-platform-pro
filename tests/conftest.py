@@ -125,6 +125,16 @@ def user_repository() -> InMemoryUserRepository:
 
 
 @pytest.fixture
+def refresh_session_repository():
+    """Fresh in-memory refresh session store for each test."""
+    from tests.support.memory_user_refresh_session_repository import (
+        InMemoryUserRefreshSessionRepository,
+    )
+
+    return InMemoryUserRefreshSessionRepository()
+
+
+@pytest.fixture
 def email_verification_token_repository() -> InMemoryEmailVerificationTokenRepository:
     """Fresh in-memory verification token store for each test."""
     return InMemoryEmailVerificationTokenRepository()
@@ -214,6 +224,7 @@ async def client(
     app,
     test_settings: Settings,
     user_repository: InMemoryUserRepository,
+    refresh_session_repository,
     email_verification_token_repository: InMemoryEmailVerificationTokenRepository,
     recording_email_sender: RecordingEmailSender,
     audit_log_repository: InMemoryAuditLogRepository,
@@ -229,6 +240,10 @@ async def client(
 ):
     """Async HTTP client with in-memory backends for all business modules."""
     clinical_vector_store = InMemoryClinicalVectorStore()
+    clinical_access = {
+        "settings": test_settings,
+        "consent_repository": consent_repository,
+    }
 
     def override_audit_service(_request: Request) -> AuditService:
         return AuditService(audit_log_repository)
@@ -251,6 +266,7 @@ async def client(
             AuditService(audit_log_repository),
             membership_repository,
             email_verification_service=build_email_verification_service(request),
+            refresh_session_repository=refresh_session_repository,
         )
 
     def override_patient_service(_request: Request) -> PatientService:
@@ -292,6 +308,7 @@ async def client(
             patient_repository,
             membership_repository,
             assignment_repository,
+            **clinical_access,
         )
 
     def override_health_measurement_service(_request: Request) -> HealthMeasurementService:
@@ -300,6 +317,7 @@ async def client(
             patient_repository,
             membership_repository,
             assignment_repository,
+            **clinical_access,
         )
 
     def override_health_measurement_analytics_service(
@@ -310,6 +328,7 @@ async def client(
             patient_repository,
             membership_repository,
             assignment_repository,
+            **clinical_access,
         )
 
     def override_patient_health_report_service(_request: Request) -> PatientHealthReportService:
@@ -319,6 +338,7 @@ async def client(
             health_measurement_repository,
             membership_repository,
             assignment_repository,
+            **clinical_access,
         )
 
     def override_patient_clinical_timeline_service(
@@ -331,6 +351,7 @@ async def client(
             appointment_repository,
             membership_repository,
             assignment_repository,
+            **clinical_access,
         )
 
     def override_patient_clinical_summary_service(
@@ -344,6 +365,7 @@ async def client(
             risk_assessment_history_repository,
             membership_repository,
             assignment_repository,
+            **clinical_access,
         )
 
     def override_clinical_retrieval_service(_request: Request):
@@ -358,6 +380,7 @@ async def client(
             membership_repository,
             assignment_repository,
             clinical_vector_store,
+            **clinical_access,
         )
 
     def override_clinical_narrative_service(_request: Request) -> ClinicalNarrativeService:
@@ -371,6 +394,7 @@ async def client(
             assignment_repository,
             clinical_vector_store,
             settings=test_settings,
+            consent_repository=consent_repository,
         )
 
     def override_diabetes_risk_assessment_service(_request: Request) -> DiabetesRiskAssessmentService:
@@ -381,6 +405,7 @@ async def client(
             membership_repository,
             assignment_repository,
             risk_assessment_history_repository,
+            **clinical_access,
         )
 
     def override_heart_disease_risk_assessment_service(
@@ -393,6 +418,7 @@ async def client(
             membership_repository,
             assignment_repository,
             risk_assessment_history_repository,
+            **clinical_access,
         )
 
     def override_stroke_risk_assessment_service(_request: Request) -> StrokeRiskAssessmentService:
@@ -403,6 +429,7 @@ async def client(
             membership_repository,
             assignment_repository,
             risk_assessment_history_repository,
+            **clinical_access,
         )
 
     def override_risk_assessment_history_service(_request: Request):
@@ -411,6 +438,7 @@ async def client(
             risk_assessment_history_repository,
             membership_repository,
             assignment_repository,
+            **clinical_access,
         )
 
     app.dependency_overrides[get_audit_service] = override_audit_service

@@ -14,6 +14,8 @@ from tests.support.memory_organization_membership_repository import (
     InMemoryOrganizationMembershipRepository,
 )
 from tests.support.memory_patient_assignment_repository import InMemoryPatientAssignmentRepository
+from app.core.config import Settings
+from app.domain.interfaces.patient_consent_repository import PatientConsentRepository
 from tests.support.memory_patient_repository import InMemoryPatientRepository
 
 
@@ -48,12 +50,17 @@ def build_medical_record_service(
     patient_repository: InMemoryPatientRepository,
     membership_repository: InMemoryOrganizationMembershipRepository,
     assignment_repository: InMemoryPatientAssignmentRepository,
+    *,
+    settings: Settings | None = None,
+    consent_repository: PatientConsentRepository | None = None,
 ) -> MedicalRecordService:
     return MedicalRecordService(
         medical_record_repository,
         patient_repository,
         _policy(patient_repository, membership_repository, assignment_repository),
         membership_repository,
+        settings=settings,
+        consent_repository=consent_repository,
     )
 
 
@@ -62,12 +69,17 @@ def build_health_measurement_service(
     patient_repository: InMemoryPatientRepository,
     membership_repository: InMemoryOrganizationMembershipRepository,
     assignment_repository: InMemoryPatientAssignmentRepository,
+    *,
+    settings: Settings | None = None,
+    consent_repository: PatientConsentRepository | None = None,
 ) -> HealthMeasurementService:
     return HealthMeasurementService(
         health_measurement_repository,
         patient_repository,
         _policy(patient_repository, membership_repository, assignment_repository),
         membership_repository,
+        settings=settings,
+        consent_repository=consent_repository,
     )
 
 
@@ -76,10 +88,15 @@ def build_health_measurement_analytics_service(
     patient_repository: InMemoryPatientRepository,
     membership_repository: InMemoryOrganizationMembershipRepository,
     assignment_repository: InMemoryPatientAssignmentRepository,
+    *,
+    settings: Settings | None = None,
+    consent_repository: PatientConsentRepository | None = None,
 ) -> HealthMeasurementAnalyticsService:
     return HealthMeasurementAnalyticsService(
         health_measurement_repository,
         patient_repository,
         _policy(patient_repository, membership_repository, assignment_repository),
         membership_repository,
+        settings=settings,
+        consent_repository=consent_repository,
     )

@@ -9,7 +9,9 @@ from app.application.services.patient_child_access import (
     resolve_patient_access_for_action,
 )
 from app.application.services.patient_access_types import ResolvedPatientRead
+from app.core.config import Settings
 from app.core.exceptions import NotFoundError
+from app.domain.interfaces.patient_consent_repository import PatientConsentRepository
 from app.domain.entities.user import UserRole
 from app.domain.interfaces.organization_membership_repository import OrganizationMembershipRepository
 from app.domain.interfaces.patient_access_policy import PatientAccessAction, PatientAccessPolicy
@@ -27,10 +29,17 @@ class ClinicalPatientChildService(BaseService):
         patient_repository: PatientRepository,
         access_policy: PatientAccessPolicy | None = None,
         membership_repository: OrganizationMembershipRepository | None = None,
+        *,
+        settings: Settings | None = None,
+        consent_repository: PatientConsentRepository | None = None,
+        enforce_clinical_consent: bool = True,
     ) -> None:
         self._patients = patient_repository
         self._access_policy = access_policy
         self._memberships = membership_repository
+        self._settings = settings
+        self._consent_repository = consent_repository
+        self._enforce_clinical_consent = enforce_clinical_consent
 
     async def _require_patient_access(
         self,
@@ -46,6 +55,9 @@ class ClinicalPatientChildService(BaseService):
             actor_role=actor_role,
             patient_id=patient_id,
             action=action,
+            settings=self._settings,
+            consent_repository=self._consent_repository,
+            apply_clinical_consent=self._enforce_clinical_consent,
         )
 
     async def read_organization_id_for_patient(
