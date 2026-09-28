@@ -256,6 +256,7 @@ async def test_delete_same_rules_as_update(
     user_repository,
     patient_repository,
     membership_repository,
+    assignment_repository,
 ) -> None:
     org_id = uuid4()
     owner = await _seed_doctor(user_repository, "write-del-owner@example.com")
@@ -270,6 +271,14 @@ async def test_delete_same_rules_as_update(
                 status=MembershipStatus.ACTIVE,
             ),
         )
+    await assignment_repository.create(
+        PatientAssignment(
+            organization_id=org_id,
+            patient_id=patient.id,
+            assignee_user_id=owner.id,
+            status=AssignmentStatus.ACTIVE,
+        ),
+    )
     owner_headers = await _login(client, "write-del-owner@example.com")
     unassigned_headers = await _login(client, "write-del-unassigned@example.com")
 
