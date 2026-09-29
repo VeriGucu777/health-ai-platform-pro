@@ -62,14 +62,15 @@ async def clinical_child_setup(
         user_id=clinic_admin.id,
         role=OrganizationMembershipRole.CLINIC_ADMIN,
     )
-    await assignment_repository.create(
-        PatientAssignment(
-            organization_id=org_a,
-            patient_id=patient.id,
-            assignee_user_id=assigned.id,
-            status=AssignmentStatus.ACTIVE,
-        ),
-    )
+    for assignee_id in (owner.id, assigned.id):
+        await assignment_repository.create(
+            PatientAssignment(
+                organization_id=org_a,
+                patient_id=patient.id,
+                assignee_user_id=assignee_id,
+                status=AssignmentStatus.ACTIVE,
+            ),
+        )
 
     return {
         "org_a": org_a,
@@ -236,6 +237,8 @@ async def test_analytics_views_audit_success_once_each(
 @pytest.mark.asyncio
 async def test_public_patient_delete_soft_delete_and_hard_delete_forbidden(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     patient_repository,
 ) -> None:
     email = "soft-read-audit-del@example.com"
@@ -251,18 +254,23 @@ async def test_public_patient_delete_soft_delete_and_hard_delete_forbidden(
             },
         )
     ).status_code == 201
+    from tests.support.org_assigned_patient_harness import create_assigned_patient_for_doctor_email
+
     headers = await _login(client, email)
-    created = await client.post(
-        "/api/v1/patients",
-        json={
-            "first_name": "Keep",
-            "last_name": "Row",
-            "date_of_birth": "1990-01-01",
-            "gender": "male",
-        },
-        headers=headers,
+    patient_id = UUID(
+        await create_assigned_patient_for_doctor_email(
+            client,
+            user_repository,
+            membership_repository,
+            doctor_email=email,
+            patient_payload={
+                "first_name": "Keep",
+                "last_name": "Row",
+                "date_of_birth": "1990-01-01",
+                "gender": "male",
+            },
+        ),
     )
-    patient_id = UUID(created.json()["id"])
     assert (await client.delete(f"/api/v1/patients/{patient_id}", headers=headers)).status_code == 204
     stored = await patient_repository.get_by_id(patient_id)
     assert stored is not None and stored.is_active is False

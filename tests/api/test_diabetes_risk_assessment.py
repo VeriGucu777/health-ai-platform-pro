@@ -5,41 +5,20 @@ from uuid import uuid4
 import pytest
 from httpx import AsyncClient
 
+from tests.support.org_assigned_patient_harness import (
+    PATIENT_PAYLOAD,
+    create_assigned_patient_for_doctor_headers as _create_patient,
+    register_and_login_doctor as _register_and_login,
+)
+
+
 from app.core.reference_ranges import DIABETES_RISK_DISCLAIMER
 
 ASSESSMENT_DATE_RANGE = "date_from=2026-08-01T00:00:00Z&date_to=2026-08-31T23:59:59Z"
 
-PATIENT_PAYLOAD = {
-    "first_name": "John",
-    "last_name": "Doe",
-    "date_of_birth": "1990-05-15",
-    "gender": "male",
-}
 
 
-async def _register_and_login(client: AsyncClient, *, email: str) -> dict[str, str]:
-    await client.post(
-        "/api/v1/auth/register",
-        json={
-            "email": email,
-            "password": "securepass123",
-            "first_name": "Test",
-            "last_name": "User",
-            "role": "doctor",
-        },
-    )
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": "securepass123"},
-    )
-    token = login_response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
 
-
-async def _create_patient(client: AsyncClient, headers: dict[str, str]) -> str:
-    response = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    assert response.status_code == 201
-    return response.json()["id"]
 
 
 async def _create_measurement(
@@ -75,9 +54,9 @@ def _assessment_url(patient_id: str, *, date_range: str = ASSESSMENT_DATE_RANGE)
 
 
 @pytest.mark.asyncio
-async def test_assessment_returns_structured_response(client: AsyncClient) -> None:
+async def test_assessment_returns_structured_response(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="dra-structure@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     await _create_measurement(
         client,
@@ -107,9 +86,9 @@ async def test_assessment_returns_structured_response(client: AsyncClient) -> No
 
 
 @pytest.mark.asyncio
-async def test_assessment_low_risk(client: AsyncClient) -> None:
+async def test_assessment_low_risk(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="dra-low@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     await _create_measurement(
         client,
@@ -129,9 +108,9 @@ async def test_assessment_low_risk(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_assessment_moderate_risk(client: AsyncClient) -> None:
+async def test_assessment_moderate_risk(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="dra-moderate@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     await _create_measurement(
         client,
@@ -151,10 +130,12 @@ async def test_assessment_moderate_risk(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_assessment_elevated_risk(client: AsyncClient) -> None:
+async def test_assessment_elevated_risk(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="dra-elevated@example.com")
     patient_id = await _create_patient(
         client,
+        user_repository,
+        membership_repository,
         headers,
     )
     await client.patch(
@@ -181,9 +162,9 @@ async def test_assessment_elevated_risk(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_assessment_insufficient_data_without_glucose(client: AsyncClient) -> None:
+async def test_assessment_insufficient_data_without_glucose(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="dra-insufficient@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     response = await client.get(_assessment_url(patient_id), headers=headers)
     assert response.status_code == 200
@@ -197,9 +178,9 @@ async def test_assessment_insufficient_data_without_glucose(client: AsyncClient)
 
 
 @pytest.mark.asyncio
-async def test_assessment_includes_structured_medical_record_factor(client: AsyncClient) -> None:
+async def test_assessment_includes_structured_medical_record_factor(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="dra-record@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     await _create_measurement(
         client,
@@ -235,19 +216,27 @@ async def test_assessment_includes_structured_medical_record_factor(client: Asyn
 
 
 @pytest.mark.asyncio
-async def test_assessment_requires_authentication(client: AsyncClient) -> None:
+async def test_assessment_requires_authentication(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="dra-auth@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     response = await client.get(_assessment_url(patient_id))
     assert response.status_code == 401
 
 
 @pytest.mark.asyncio
-async def test_assessment_foreign_patient_not_found(client: AsyncClient) -> None:
-    owner_headers = await _register_and_login(client, email="dra-owner@example.com")
-    other_headers = await _register_and_login(client, email="dra-other@example.com")
-    patient_id = await _create_patient(client, owner_headers)
+async def test_assessment_foreign_patient_not_found(client: AsyncClient, user_repository, membership_repository,) -> None:
+    owner_email = "dra-owner@example.com"
+    other_email = "dra-other@example.com"
+    owner_headers = await _register_and_login(client, email=owner_email)
+    other_headers = await _register_and_login(client, email=other_email)
+    patient_id = await _create_patient(
+        client,
+        user_repository,
+        membership_repository,
+        owner_headers,
+        extra_org_doctor_emails=(other_email,),
+    )
 
     response = await client.get(_assessment_url(patient_id), headers=other_headers)
     assert response.status_code == 404
@@ -255,7 +244,7 @@ async def test_assessment_foreign_patient_not_found(client: AsyncClient) -> None
 
 
 @pytest.mark.asyncio
-async def test_assessment_nonexistent_patient_not_found(client: AsyncClient) -> None:
+async def test_assessment_nonexistent_patient_not_found(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="dra-missing@example.com")
 
     response = await client.get(
@@ -267,9 +256,9 @@ async def test_assessment_nonexistent_patient_not_found(client: AsyncClient) -> 
 
 
 @pytest.mark.asyncio
-async def test_assessment_invalid_date_range(client: AsyncClient) -> None:
+async def test_assessment_invalid_date_range(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="dra-invalid-range@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     response = await client.get(
         _assessment_url(

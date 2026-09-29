@@ -14,6 +14,7 @@ from app.domain.entities.user import User, UserRole
 from app.domain.organization.entities import OrganizationMembership, PatientAssignment
 from app.domain.organization.enums import AssignmentStatus, MembershipStatus, OrganizationMembershipRole
 from app.domain.risk.enums import RULE_BASED_MODEL_KIND, RiskAssessmentType
+from tests.support.clinical_api_test_helpers import assigned_patient_for_doctor, register_and_login
 
 PATIENT_PAYLOAD = {
     "first_name": "Summary",
@@ -32,6 +33,8 @@ async def _register_and_login(
     password: str = "securepass123",
     role: str = "doctor",
 ) -> dict[str, str]:
+    if role == "doctor" and password == "securepass123":
+        return await register_and_login(client, email=email, password=password)
     await client.post(
         "/api/v1/auth/register",
         json={
@@ -112,14 +115,20 @@ async def _append_risk_row(
 async def test_clinical_summary_content_and_provenance(
     client: AsyncClient,
     user_repository,
+    membership_repository,
     risk_assessment_history_repository,
 ) -> None:
     headers = await _register_and_login(client, email="summary-content@example.com")
-    patient_resp = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    patient_id = patient_resp.json()["id"]
-    owner_id = UUID(
-        (await client.get(f"/api/v1/patients/{patient_id}", headers=headers)).json()["owner_id"]
+    patient_id = await assigned_patient_for_doctor(
+        client,
+        user_repository,
+        membership_repository,
+        headers,
+        patient_payload=PATIENT_PAYLOAD,
     )
+    me = await client.get("/api/v1/auth/me", headers=headers)
+    assert me.status_code == 200
+    owner_id = UUID(me.json()["id"])
 
     record_date = datetime(2026, 5, 1, 12, 0, tzinfo=UTC).isoformat()
     record = await client.post(
@@ -226,11 +235,17 @@ async def test_clinical_summary_content_and_provenance(
 @pytest.mark.asyncio
 async def test_clinical_summary_empty_data_quality_not_normal(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
 ) -> None:
     headers = await _register_and_login(client, email="summary-empty@example.com")
-    patient_id = (
-        await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    ).json()["id"]
+    patient_id = await assigned_patient_for_doctor(
+        client,
+        user_repository,
+        membership_repository,
+        headers,
+        patient_payload=PATIENT_PAYLOAD,
+    )
 
     response = await client.get(SUMMARY_PATH.format(patient_id=patient_id), headers=headers)
     assert response.status_code == 200
@@ -243,12 +258,18 @@ async def test_clinical_summary_empty_data_quality_not_normal(
 @pytest.mark.asyncio
 async def test_clinical_summary_deterministic_excluding_generated_at(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     risk_assessment_history_repository,
 ) -> None:
     headers = await _register_and_login(client, email="summary-determ@example.com")
-    patient_id = (
-        await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    ).json()["id"]
+    patient_id = await assigned_patient_for_doctor(
+        client,
+        user_repository,
+        membership_repository,
+        headers,
+        patient_payload=PATIENT_PAYLOAD,
+    )
 
     await client.post(
         "/api/v1/medical-records",
@@ -274,11 +295,19 @@ async def test_clinical_summary_deterministic_excluding_generated_at(
 
 
 @pytest.mark.asyncio
-async def test_clinical_summary_invalid_date_range_422(client: AsyncClient) -> None:
+async def test_clinical_summary_invalid_date_range_422(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
     headers = await _register_and_login(client, email="summary-range@example.com")
-    patient_id = (
-        await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    ).json()["id"]
+    patient_id = await assigned_patient_for_doctor(
+        client,
+        user_repository,
+        membership_repository,
+        headers,
+        patient_payload=PATIENT_PAYLOAD,
+    )
     date_from = datetime.now(UTC).isoformat()
     date_to = (datetime.now(UTC) - timedelta(days=1)).isoformat()
     response = await client.get(

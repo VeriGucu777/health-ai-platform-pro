@@ -13,7 +13,7 @@ from app.domain.entities.user import User, UserRole
 from tests.api.test_patient_health_reports import REPORT_DATE_RANGE, _create_patient, _register_and_login
 from tests.support.memory_audit_log_repository import InMemoryAuditLogRepository
 from tests.support.memory_user_repository import InMemoryUserRepository
-from tests.support.risk_assessment_test_helpers import ASSESSMENT_DATE_RANGE, create_patient
+from tests.support.risk_assessment_test_helpers import ASSESSMENT_DATE_RANGE
 
 REGISTER_PATIENT = {
     "email": "rbac-patient-user@example.com",
@@ -60,10 +60,15 @@ async def test_patient_role_patients_list_writes_denied_audit(
 @pytest.mark.asyncio
 async def test_patient_role_timeline_denied_audit_mapping(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
-    doctor_headers = await _register_and_login(client, email="rbac-doc-timeline@example.com")
-    patient_id = await _create_patient(client, doctor_headers)
+    doctor_email = "rbac-doc-timeline@example.com"
+    await _register_and_login(client, email=doctor_email)
+    patient_id = await _create_patient(
+        client, user_repository, membership_repository, doctor_email=doctor_email
+    )
     patient_headers = await _patient_login_headers(client, email="rbac-pat-timeline@example.com")
     audit_log_repository.records.clear()
 
@@ -82,10 +87,15 @@ async def test_patient_role_timeline_denied_audit_mapping(
 @pytest.mark.asyncio
 async def test_patient_role_risk_denied_audit_execute(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
-    doctor_headers = await _register_and_login(client, email="rbac-doc-risk@example.com")
-    patient_id = await create_patient(client, doctor_headers)
+    doctor_email = "rbac-doc-risk@example.com"
+    await _register_and_login(client, email=doctor_email)
+    patient_id = await _create_patient(
+        client, user_repository, membership_repository, doctor_email=doctor_email
+    )
     patient_headers = await _patient_login_headers(client, email="rbac-pat-risk@example.com")
     audit_log_repository.records.clear()
 
@@ -101,10 +111,15 @@ async def test_patient_role_risk_denied_audit_execute(
 @pytest.mark.asyncio
 async def test_patient_role_pdf_denied_audit_export(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
-    doctor_headers = await _register_and_login(client, email="rbac-doc-pdf@example.com")
-    patient_id = await _create_patient(client, doctor_headers)
+    doctor_email = "rbac-doc-pdf@example.com"
+    await _register_and_login(client, email=doctor_email)
+    patient_id = await _create_patient(
+        client, user_repository, membership_repository, doctor_email=doctor_email
+    )
     patient_headers = await _patient_login_headers(client, email="rbac-pat-pdf@example.com")
     audit_log_repository.records.clear()
 

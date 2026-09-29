@@ -9,7 +9,13 @@ from starlette.requests import Request
 from app.api.deps import get_clinical_narrative_service
 from app.core.config import Settings
 from app.domain.entities.medical_record import MedicalRecord
-from tests.api.test_patient_clinical_narrative import NARRATIVE_URL, PATIENT_PAYLOAD, _register_and_login
+from tests.api.test_patient_clinical_narrative import (
+    NARRATIVE_URL,
+    PATIENT_PAYLOAD,
+    _doctor_id_from_headers,
+    _register_and_login,
+)
+from tests.support.clinical_api_test_helpers import assigned_patient_for_doctor
 from tests.support.clinical_read_service_factory import build_clinical_narrative_service
 from tests.support.controllable_narrative_generator import ControllableNarrativeGenerator
 from tests.support.memory_clinical_vector_store import InMemoryClinicalVectorStore
@@ -71,14 +77,23 @@ async def _seed_record(medical_record_repository, *, patient_id: UUID, owner_id:
 @pytest.mark.asyncio
 async def test_hallucinated_evidence_id_triggers_fallback(
     controllable_narrative_client,
-    patient_repository,
+    user_repository,
+    membership_repository,
     medical_record_repository,
 ) -> None:
     client, generator = controllable_narrative_client
     generator.mode = "hallucinated_id"
     headers = await _register_and_login(client, email="narr-halluc-id@example.com")
-    patient_id = UUID((await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)).json()["id"])
-    doctor_id = (await patient_repository.get_by_id(patient_id)).owner_id
+    patient_id = UUID(
+        await assigned_patient_for_doctor(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+            patient_payload=PATIENT_PAYLOAD,
+        )
+    )
+    doctor_id = await _doctor_id_from_headers(client, headers)
     await _seed_record(
         medical_record_repository,
         patient_id=patient_id,
@@ -99,14 +114,23 @@ async def test_hallucinated_evidence_id_triggers_fallback(
 @pytest.mark.asyncio
 async def test_provider_timeout_triggers_fallback(
     controllable_narrative_client,
-    patient_repository,
+    user_repository,
+    membership_repository,
     medical_record_repository,
 ) -> None:
     client, generator = controllable_narrative_client
     generator.mode = "timeout"
     headers = await _register_and_login(client, email="narr-timeout@example.com")
-    patient_id = UUID((await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)).json()["id"])
-    doctor_id = (await patient_repository.get_by_id(patient_id)).owner_id
+    patient_id = UUID(
+        await assigned_patient_for_doctor(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+            patient_payload=PATIENT_PAYLOAD,
+        )
+    )
+    doctor_id = await _doctor_id_from_headers(client, headers)
     await _seed_record(
         medical_record_repository,
         patient_id=patient_id,
@@ -125,14 +149,23 @@ async def test_provider_timeout_triggers_fallback(
 @pytest.mark.asyncio
 async def test_evidence_prompt_injection_does_not_break_response(
     controllable_narrative_client,
-    patient_repository,
+    user_repository,
+    membership_repository,
     medical_record_repository,
 ) -> None:
     client, generator = controllable_narrative_client
     generator.mode = "valid"
     headers = await _register_and_login(client, email="narr-inject@example.com")
-    patient_id = UUID((await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)).json()["id"])
-    doctor_id = (await patient_repository.get_by_id(patient_id)).owner_id
+    patient_id = UUID(
+        await assigned_patient_for_doctor(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+            patient_payload=PATIENT_PAYLOAD,
+        )
+    )
+    doctor_id = await _doctor_id_from_headers(client, headers)
     await _seed_record(
         medical_record_repository,
         patient_id=patient_id,

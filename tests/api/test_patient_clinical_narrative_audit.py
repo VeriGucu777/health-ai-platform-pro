@@ -7,6 +7,7 @@ from httpx import AsyncClient
 
 from app.domain.audit.taxonomy import AuditAction, AuditOutcome, AuditResourceType
 from tests.api.test_patient_clinical_narrative import NARRATIVE_URL, PATIENT_PAYLOAD, _register_and_login
+from tests.support.clinical_api_test_helpers import assigned_patient_for_doctor
 
 
 def _events(repo):
@@ -16,10 +17,18 @@ def _events(repo):
 @pytest.mark.asyncio
 async def test_narrative_success_audit_phi_safe(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository,
 ) -> None:
     headers = await _register_and_login(client, email="narr-audit@example.com")
-    patient_id = (await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)).json()["id"]
+    patient_id = await assigned_patient_for_doctor(
+        client,
+        user_repository,
+        membership_repository,
+        headers,
+        patient_payload=PATIENT_PAYLOAD,
+    )
     audit_log_repository.records.clear()
     response = await client.post(
         NARRATIVE_URL.format(patient_id=patient_id),

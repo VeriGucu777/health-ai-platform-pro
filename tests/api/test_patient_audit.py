@@ -10,6 +10,10 @@ from app.domain.audit.taxonomy import AuditAction, AuditOutcome, AuditResourceTy
 from app.domain.entities.audit_log import AuditLog
 from tests.api.test_patients import PATIENT_PAYLOAD, _register_and_login
 from tests.support.memory_audit_log_repository import InMemoryAuditLogRepository
+from tests.support.org_assigned_patient_harness import (
+    create_assigned_patient_for_doctor_headers,
+    register_clinic_admin_and_login,
+)
 
 
 def _patient_events(repo: InMemoryAuditLogRepository) -> list[AuditLog]:
@@ -40,11 +44,19 @@ async def test_patient_list_success_writes_one_audit_row(
 @pytest.mark.asyncio
 async def test_patient_view_success_writes_one_audit_row(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
     headers = await _register_and_login(client, email="pa-view@example.com")
-    created = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    patient_id = UUID(created.json()["id"])
+    patient_id = UUID(
+        await create_assigned_patient_for_doctor_headers(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+        ),
+    )
     audit_log_repository.records.clear()
 
     response = await client.get(f"/api/v1/patients/{patient_id}", headers=headers)
@@ -59,12 +71,19 @@ async def test_patient_view_success_writes_one_audit_row(
 @pytest.mark.asyncio
 async def test_patient_create_success_audits_new_resource_id(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
-    headers = await _register_and_login(client, email="pa-create@example.com")
+    admin_headers, _, _ = await register_clinic_admin_and_login(
+        client,
+        user_repository,
+        membership_repository,
+        email="pa-create-ca@example.com",
+    )
     audit_log_repository.records.clear()
 
-    response = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
+    response = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=admin_headers)
     assert response.status_code == 201
     patient_id = UUID(response.json()["id"])
 
@@ -77,11 +96,19 @@ async def test_patient_create_success_audits_new_resource_id(
 @pytest.mark.asyncio
 async def test_patient_update_success_writes_audit(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
     headers = await _register_and_login(client, email="pa-update@example.com")
-    created = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    patient_id = UUID(created.json()["id"])
+    patient_id = UUID(
+        await create_assigned_patient_for_doctor_headers(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+        ),
+    )
     audit_log_repository.records.clear()
 
     response = await client.patch(
@@ -100,11 +127,19 @@ async def test_patient_update_success_writes_audit(
 @pytest.mark.asyncio
 async def test_patient_delete_success_writes_audit(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
     headers = await _register_and_login(client, email="pa-delete@example.com")
-    created = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    patient_id = UUID(created.json()["id"])
+    patient_id = UUID(
+        await create_assigned_patient_for_doctor_headers(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+        ),
+    )
     audit_log_repository.records.clear()
 
     response = await client.delete(f"/api/v1/patients/{patient_id}", headers=headers)
@@ -119,12 +154,23 @@ async def test_patient_delete_success_writes_audit(
 @pytest.mark.asyncio
 async def test_cross_owner_get_writes_failure_audit(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
-    owner_headers = await _register_and_login(client, email="pa-owner@example.com")
-    other_headers = await _register_and_login(client, email="pa-other@example.com")
-    created = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=owner_headers)
-    patient_id = UUID(created.json()["id"])
+    owner_email = "pa-owner@example.com"
+    other_email = "pa-other@example.com"
+    owner_headers = await _register_and_login(client, email=owner_email)
+    other_headers = await _register_and_login(client, email=other_email)
+    patient_id = UUID(
+        await create_assigned_patient_for_doctor_headers(
+            client,
+            user_repository,
+            membership_repository,
+            owner_headers,
+            extra_org_doctor_emails=(other_email,),
+        ),
+    )
     audit_log_repository.records.clear()
 
     response = await client.get(f"/api/v1/patients/{patient_id}", headers=other_headers)
@@ -141,6 +187,8 @@ async def test_cross_owner_get_writes_failure_audit(
 @pytest.mark.asyncio
 async def test_patient_audit_metadata_contains_no_phi(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
     payload = {
@@ -150,10 +198,15 @@ async def test_patient_audit_metadata_contains_no_phi(
         "phone": "+15559998888",
         "notes": "Secret clinical note",
     }
-    headers = await _register_and_login(client, email="pa-phi@example.com")
+    admin_headers, _, _ = await register_clinic_admin_and_login(
+        client,
+        user_repository,
+        membership_repository,
+        email="pa-phi-ca@example.com",
+    )
     audit_log_repository.records.clear()
 
-    await client.post("/api/v1/patients", json=payload, headers=headers)
+    await client.post("/api/v1/patients", json=payload, headers=admin_headers)
 
     serialized = json.dumps(
         [record.metadata for record in _patient_events(audit_log_repository)],
@@ -168,11 +221,19 @@ async def test_patient_audit_metadata_contains_no_phi(
 @pytest.mark.asyncio
 async def test_patient_view_does_not_create_duplicate_audit_rows(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
     headers = await _register_and_login(client, email="pa-dup@example.com")
-    created = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    patient_id = UUID(created.json()["id"])
+    patient_id = UUID(
+        await create_assigned_patient_for_doctor_headers(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+        ),
+    )
     audit_log_repository.records.clear()
 
     response = await client.get(f"/api/v1/patients/{patient_id}", headers=headers)
@@ -183,6 +244,8 @@ async def test_patient_view_does_not_create_duplicate_audit_rows(
 @pytest.mark.asyncio
 async def test_audit_append_failure_does_not_break_patient_create(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -191,9 +254,11 @@ async def test_audit_append_failure_does_not_break_patient_create(
 
     monkeypatch.setattr(audit_log_repository, "append", failing_append)
 
-    headers = await _register_and_login(
+    admin_headers, _, _ = await register_clinic_admin_and_login(
         client,
+        user_repository,
+        membership_repository,
         email=f"pa-fail-open-{uuid4().hex[:8]}@example.com",
     )
-    response = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
+    response = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=admin_headers)
     assert response.status_code == 201

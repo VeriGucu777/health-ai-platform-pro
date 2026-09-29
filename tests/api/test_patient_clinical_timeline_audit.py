@@ -9,6 +9,8 @@ from httpx import AsyncClient
 from app.domain.audit.taxonomy import AuditAction, AuditOutcome, AuditResourceType
 from app.domain.entities.audit_log import AuditLog
 from tests.api.test_patient_clinical_timeline import PATIENT_PAYLOAD, _register_and_login
+from tests.support.clinical_api_test_helpers import assigned_patient_for_doctor
+from tests.support.org_assigned_patient_harness import create_assigned_patient_for_doctor_email
 from tests.support.memory_audit_log_repository import InMemoryAuditLogRepository
 
 
@@ -23,13 +25,19 @@ def _timeline_events(repo: InMemoryAuditLogRepository) -> list[AuditLog]:
 @pytest.mark.asyncio
 async def test_timeline_success_writes_one_audit_row(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
     headers = await _register_and_login(client, email="tl-audit-ok@example.com")
     patient_id = UUID(
-        (
-            await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-        ).json()["id"]
+        await assigned_patient_for_doctor(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+            patient_payload=PATIENT_PAYLOAD,
+        )
     )
     audit_log_repository.records.clear()
 
@@ -51,13 +59,19 @@ async def test_timeline_success_writes_one_audit_row(
 @pytest.mark.asyncio
 async def test_timeline_audit_metadata_fields(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
     headers = await _register_and_login(client, email="tl-audit-meta@example.com")
     patient_id = UUID(
-        (
-            await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-        ).json()["id"]
+        await assigned_patient_for_doctor(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+            patient_payload=PATIENT_PAYLOAD,
+        )
     )
     audit_log_repository.records.clear()
 
@@ -82,15 +96,21 @@ async def test_timeline_audit_metadata_fields(
 @pytest.mark.asyncio
 async def test_timeline_audit_contains_no_phi_from_response(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
     from datetime import UTC, datetime, timedelta
 
     headers = await _register_and_login(client, email="tl-audit-phi@example.com")
     patient_id = UUID(
-        (
-            await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-        ).json()["id"]
+        await assigned_patient_for_doctor(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+            patient_payload=PATIENT_PAYLOAD,
+        )
     )
     record_date = (datetime.now(UTC) - timedelta(days=5)).isoformat()
     await client.post(
@@ -125,14 +145,23 @@ async def test_timeline_audit_contains_no_phi_from_response(
 @pytest.mark.asyncio
 async def test_cross_owner_timeline_writes_failure_audit(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
-    owner_headers = await _register_and_login(client, email="tl-audit-owner@example.com")
-    other_headers = await _register_and_login(client, email="tl-audit-other@example.com")
+    owner_email = "tl-audit-owner@example.com"
+    other_email = "tl-audit-other@example.com"
+    owner_headers = await _register_and_login(client, email=owner_email)
+    other_headers = await _register_and_login(client, email=other_email)
     patient_id = UUID(
-        (
-            await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=owner_headers)
-        ).json()["id"]
+        await create_assigned_patient_for_doctor_email(
+            client,
+            user_repository,
+            membership_repository,
+            doctor_email=owner_email,
+            patient_payload=PATIENT_PAYLOAD,
+            extra_org_doctor_emails=(other_email,),
+        )
     )
     audit_log_repository.records.clear()
 
@@ -152,13 +181,19 @@ async def test_cross_owner_timeline_writes_failure_audit(
 @pytest.mark.asyncio
 async def test_timeline_view_does_not_create_duplicate_audit_rows(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
     headers = await _register_and_login(client, email="tl-audit-dup@example.com")
     patient_id = UUID(
-        (
-            await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-        ).json()["id"]
+        await assigned_patient_for_doctor(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+            patient_payload=PATIENT_PAYLOAD,
+        )
     )
     audit_log_repository.records.clear()
 
@@ -173,6 +208,8 @@ async def test_timeline_view_does_not_create_duplicate_audit_rows(
 @pytest.mark.asyncio
 async def test_audit_append_failure_does_not_break_timeline_response(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -186,9 +223,13 @@ async def test_audit_append_failure_does_not_break_timeline_response(
         email=f"tl-fail-open-{uuid4().hex[:8]}@example.com",
     )
     patient_id = UUID(
-        (
-            await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-        ).json()["id"]
+        await assigned_patient_for_doctor(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+            patient_payload=PATIENT_PAYLOAD,
+        )
     )
 
     response = await client.get(

@@ -27,10 +27,15 @@ def _health_report_events(repo: InMemoryAuditLogRepository) -> list[AuditLog]:
 @pytest.mark.asyncio
 async def test_pdf_export_success_writes_one_audit_row(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
-    headers = await _register_and_login(client, email="phr-audit-ok@example.com")
-    patient_id = await _create_patient(client, headers)
+    email = "phr-audit-ok@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _create_patient(
+        client, user_repository, membership_repository, doctor_email=email
+    )
     audit_log_repository.records.clear()
 
     response = await client.get(_report_url(patient_id), headers=headers)
@@ -50,17 +55,22 @@ async def test_pdf_export_success_writes_one_audit_row(
 @pytest.mark.asyncio
 async def test_pdf_audit_metadata_excludes_phi_and_pdf_bytes(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
+    email = "phr-audit-phi@example.com"
     headers = await _register_and_login(
         client,
-        email="phr-audit-phi@example.com",
+        email=email,
         first_name="Sensitive",
         last_name="PatientName",
     )
     patient_id = await _create_patient(
         client,
-        headers,
+        user_repository,
+        membership_repository,
+        doctor_email=email,
         first_name="HiddenFirst",
         last_name="HiddenLast",
     )
@@ -81,11 +91,21 @@ async def test_pdf_audit_metadata_excludes_phi_and_pdf_bytes(
 @pytest.mark.asyncio
 async def test_cross_owner_pdf_export_writes_failure_audit(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
-    owner_headers = await _register_and_login(client, email="phr-audit-owner@example.com")
-    other_headers = await _register_and_login(client, email="phr-audit-other@example.com")
-    patient_id = await _create_patient(client, owner_headers)
+    owner_email = "phr-audit-owner@example.com"
+    other_email = "phr-audit-other@example.com"
+    owner_headers = await _register_and_login(client, email=owner_email)
+    other_headers = await _register_and_login(client, email=other_email)
+    patient_id = await _create_patient(
+        client,
+        user_repository,
+        membership_repository,
+        doctor_email=owner_email,
+        extra_org_doctor_emails=(other_email,),
+    )
     audit_log_repository.records.clear()
 
     response = await client.get(_report_url(patient_id), headers=other_headers)
@@ -102,10 +122,15 @@ async def test_cross_owner_pdf_export_writes_failure_audit(
 @pytest.mark.asyncio
 async def test_pdf_export_does_not_create_duplicate_audit_rows(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
-    headers = await _register_and_login(client, email="phr-audit-dup@example.com")
-    patient_id = await _create_patient(client, headers)
+    email = "phr-audit-dup@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _create_patient(
+        client, user_repository, membership_repository, doctor_email=email
+    )
     audit_log_repository.records.clear()
 
     response = await client.get(_report_url(patient_id), headers=headers)
@@ -116,6 +141,8 @@ async def test_pdf_export_does_not_create_duplicate_audit_rows(
 @pytest.mark.asyncio
 async def test_audit_append_failure_does_not_break_pdf_response(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -124,11 +151,11 @@ async def test_audit_append_failure_does_not_break_pdf_response(
 
     monkeypatch.setattr(audit_log_repository, "append", failing_append)
 
-    headers = await _register_and_login(
-        client,
-        email=f"phr-fail-open-{uuid4().hex[:8]}@example.com",
+    email = f"phr-fail-open-{uuid4().hex[:8]}@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _create_patient(
+        client, user_repository, membership_repository, doctor_email=email
     )
-    patient_id = await _create_patient(client, headers)
 
     response = await client.get(_report_url(patient_id), headers=headers)
     assert response.status_code == 200

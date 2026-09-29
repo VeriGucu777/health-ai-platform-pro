@@ -57,14 +57,15 @@ async def history_setup(
         user_id=cross_org.id,
         role=OrganizationMembershipRole.DOCTOR,
     )
-    await assignment_repository.create(
-        PatientAssignment(
-            organization_id=org_a,
-            patient_id=patient.id,
-            assignee_user_id=assigned.id,
-            status=AssignmentStatus.ACTIVE,
-        ),
-    )
+    for assignee_id in (owner.id, assigned.id):
+        await assignment_repository.create(
+            PatientAssignment(
+                organization_id=org_a,
+                patient_id=patient.id,
+                assignee_user_id=assignee_id,
+                status=AssignmentStatus.ACTIVE,
+            ),
+        )
     return {
         "org_a": org_a,
         "patient_id": str(patient.id),

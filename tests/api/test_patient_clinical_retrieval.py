@@ -12,6 +12,7 @@ from app.domain.entities.patient import Patient
 from app.domain.entities.user import User, UserRole
 from app.domain.organization.entities import OrganizationMembership, PatientAssignment
 from app.domain.organization.enums import AssignmentStatus, MembershipStatus, OrganizationMembershipRole
+from tests.support.clinical_api_test_helpers import assigned_patient_for_doctor, register_and_login
 
 RETRIEVAL_URL = "/api/v1/patients/{patient_id}/clinical-retrieval"
 PATIENT_PAYLOAD = {
@@ -23,6 +24,8 @@ PATIENT_PAYLOAD = {
 
 
 async def _register_and_login(client: AsyncClient, email: str, role: str = "doctor") -> dict[str, str]:
+    if role == "doctor":
+        return await register_and_login(client, email=email)
     await client.post(
         "/api/v1/auth/register",
         json={
@@ -63,9 +66,19 @@ async def _seed_doctor(user_repository, email: str) -> User:
 
 
 @pytest.mark.asyncio
-async def test_retrieval_returns_provenance_and_version(client: AsyncClient) -> None:
+async def test_retrieval_returns_provenance_and_version(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
     headers = await _register_and_login(client, email="retr-happy@example.com")
-    patient_id = (await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)).json()["id"]
+    patient_id = await assigned_patient_for_doctor(
+        client,
+        user_repository,
+        membership_repository,
+        headers,
+        patient_payload=PATIENT_PAYLOAD,
+    )
     record_date = datetime(2026, 5, 1, tzinfo=UTC).isoformat()
     await client.post(
         "/api/v1/medical-records",
@@ -95,9 +108,19 @@ async def test_retrieval_returns_provenance_and_version(client: AsyncClient) -> 
 
 
 @pytest.mark.asyncio
-async def test_retrieval_empty_query_422(client: AsyncClient) -> None:
+async def test_retrieval_empty_query_422(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
     headers = await _register_and_login(client, email="retr-empty@example.com")
-    patient_id = (await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)).json()["id"]
+    patient_id = await assigned_patient_for_doctor(
+        client,
+        user_repository,
+        membership_repository,
+        headers,
+        patient_payload=PATIENT_PAYLOAD,
+    )
     response = await client.post(
         RETRIEVAL_URL.format(patient_id=patient_id),
         headers=headers,
@@ -107,9 +130,19 @@ async def test_retrieval_empty_query_422(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_retrieval_deterministic_ordering(client: AsyncClient) -> None:
+async def test_retrieval_deterministic_ordering(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
     headers = await _register_and_login(client, email="retr-order@example.com")
-    patient_id = (await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)).json()["id"]
+    patient_id = await assigned_patient_for_doctor(
+        client,
+        user_repository,
+        membership_repository,
+        headers,
+        patient_payload=PATIENT_PAYLOAD,
+    )
     await client.post(
         "/api/v1/medical-records",
         json={

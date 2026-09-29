@@ -1,10 +1,13 @@
 """Patient health PDF report endpoint integration tests."""
 
 from datetime import date, timedelta
+from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
 
+from app.domain.organization.enums import OrganizationMembershipRole
+from tests.api.test_child_resource_policy import _login, _membership, _seed_clinic_admin
 from tests.support.pdf_report_helpers import (
     assert_disclaimers_present,
     assert_english_content_present,
@@ -43,23 +46,66 @@ async def _register_and_login(
 
 async def _create_patient(
     client: AsyncClient,
-    headers: dict[str, str],
+    user_repository,
+    membership_repository,
     *,
+    doctor_email: str,
     first_name: str = "John",
     last_name: str = "Doe",
+    date_of_birth: str = "1990-05-15",
+    gender: str = "male",
+    notes: str | None = None,
+    extra_org_doctor_emails: tuple[str, ...] = (),
 ) -> str:
-    response = await client.post(
-        "/api/v1/patients",
-        json={
-            "first_name": first_name,
-            "last_name": last_name,
-            "date_of_birth": "1990-05-15",
-            "gender": "male",
-        },
-        headers=headers,
+    """Clinic admin creates org patient and assigns the doctor (doctors cannot POST /patients)."""
+    doctor = await user_repository.get_by_email(doctor_email)
+    assert doctor is not None
+    org_id = uuid4()
+    admin = await _seed_clinic_admin(user_repository, f"phr-ca-{doctor_email}")
+    await _membership(
+        membership_repository,
+        org_id=org_id,
+        user_id=admin.id,
+        role=OrganizationMembershipRole.CLINIC_ADMIN,
     )
-    assert response.status_code == 201
-    return response.json()["id"]
+    await _membership(
+        membership_repository,
+        org_id=org_id,
+        user_id=doctor.id,
+        role=OrganizationMembershipRole.DOCTOR,
+    )
+    for peer_email in extra_org_doctor_emails:
+        peer = await user_repository.get_by_email(peer_email)
+        assert peer is not None
+        await _membership(
+            membership_repository,
+            org_id=org_id,
+            user_id=peer.id,
+            role=OrganizationMembershipRole.DOCTOR,
+        )
+    admin_headers = await _login(client, admin.email)
+    patient_payload: dict[str, str] = {
+        "first_name": first_name,
+        "last_name": last_name,
+        "date_of_birth": date_of_birth,
+        "gender": gender,
+    }
+    if notes is not None:
+        patient_payload["notes"] = notes
+    create = await client.post(
+        "/api/v1/patients",
+        json=patient_payload,
+        headers=admin_headers,
+    )
+    assert create.status_code == 201
+    patient_id = create.json()["id"]
+    assign = await client.post(
+        f"/api/v1/patients/{patient_id}/assignments",
+        headers=admin_headers,
+        json={"assignee_user_id": str(doctor.id), "is_primary": False},
+    )
+    assert assign.status_code == 201
+    return patient_id
 
 
 def _pdf_text(content: bytes) -> str:
@@ -79,11 +125,18 @@ def _report_url(
 
 
 @pytest.mark.asyncio
-async def test_generate_report_returns_valid_pdf(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-valid@example.com")
+async def test_generate_report_returns_valid_pdf(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-valid@example.com"
+    headers = await _register_and_login(client, email=email)
     patient_id = await _create_patient(
         client,
-        headers,
+        user_repository,
+        membership_repository,
+        doctor_email=email,
         first_name="Şahin",
         last_name="Öğüt",
     )
@@ -107,9 +160,16 @@ async def test_generate_report_returns_valid_pdf(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_generate_report_empty_history(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-empty@example.com")
-    patient_id = await _create_patient(client, headers)
+async def test_generate_report_empty_history(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-empty@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _create_patient(
+        client, user_repository, membership_repository, doctor_email=email
+    )
 
     response = await client.get(_report_url(patient_id, locale="tr"), headers=headers)
     assert response.status_code == 200
@@ -120,9 +180,16 @@ async def test_generate_report_empty_history(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_generate_report_date_filter(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-date-filter@example.com")
-    patient_id = await _create_patient(client, headers)
+async def test_generate_report_date_filter(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-date-filter@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _create_patient(
+        client, user_repository, membership_repository, doctor_email=email
+    )
 
     in_range = {
         "patient_id": patient_id,
@@ -153,9 +220,16 @@ async def test_generate_report_date_filter(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_generate_report_medical_record_limit_notice(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-record-limit@example.com")
-    patient_id = await _create_patient(client, headers)
+async def test_generate_report_medical_record_limit_notice(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-record-limit@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _create_patient(
+        client, user_repository, membership_repository, doctor_email=email
+    )
 
     for index in range(101):
         record_date = date(2026, 6, 1) + timedelta(days=index)
@@ -183,19 +257,38 @@ async def test_generate_report_medical_record_limit_notice(client: AsyncClient) 
 
 
 @pytest.mark.asyncio
-async def test_generate_report_requires_authentication(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-auth@example.com")
-    patient_id = await _create_patient(client, headers)
+async def test_generate_report_requires_authentication(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-auth@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _create_patient(
+        client, user_repository, membership_repository, doctor_email=email
+    )
 
     response = await client.get(_report_url(patient_id))
     assert response.status_code == 401
 
 
 @pytest.mark.asyncio
-async def test_generate_report_foreign_patient_not_found(client: AsyncClient) -> None:
-    owner_headers = await _register_and_login(client, email="phr-owner@example.com")
-    other_headers = await _register_and_login(client, email="phr-other@example.com")
-    patient_id = await _create_patient(client, owner_headers)
+async def test_generate_report_foreign_patient_not_found(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    owner_email = "phr-owner@example.com"
+    other_email = "phr-other@example.com"
+    owner_headers = await _register_and_login(client, email=owner_email)
+    other_headers = await _register_and_login(client, email=other_email)
+    patient_id = await _create_patient(
+        client,
+        user_repository,
+        membership_repository,
+        doctor_email=owner_email,
+        extra_org_doctor_emails=(other_email,),
+    )
 
     response = await client.get(_report_url(patient_id), headers=other_headers)
     assert response.status_code == 404
@@ -215,9 +308,16 @@ async def test_generate_report_nonexistent_patient_not_found(client: AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_generate_report_invalid_date_range(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-invalid-range@example.com")
-    patient_id = await _create_patient(client, headers)
+async def test_generate_report_invalid_date_range(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-invalid-range@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _create_patient(
+        client, user_repository, membership_repository, doctor_email=email
+    )
 
     response = await client.get(
         _report_url(
@@ -230,9 +330,16 @@ async def test_generate_report_invalid_date_range(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_generate_report_includes_alerts_and_recommendations(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-alerts@example.com")
-    patient_id = await _create_patient(client, headers)
+async def test_generate_report_includes_alerts_and_recommendations(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-alerts@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _create_patient(
+        client, user_repository, membership_repository, doctor_email=email
+    )
 
     await client.post(
         "/api/v1/health-measurements",

@@ -15,49 +15,38 @@ from tests.support.pdf_locale_acceptance import (
     verify_english_pdf_output,
     verify_turkish_pdf_output,
 )
+from tests.api.test_patient_health_reports import (
+    REPORT_DATE_RANGE,
+    _create_patient,
+    _register_and_login,
+)
 from tests.support.pdf_report_helpers import extract_pdf_text
 
 SAMPLE_OUTPUT_DIR = Path(__file__).resolve().parents[2] / "tmp" / "pdf_locale_samples"
 
-REPORT_DATE_RANGE = "date_from=2026-08-01T00:00:00Z&date_to=2026-08-31T23:59:59Z"
+_LOCALE_PATIENT = {
+    "first_name": "Locale",
+    "last_name": "Patient",
+    "gender": "female",
+}
 
 
-async def _register_and_login(client: AsyncClient, *, email: str) -> dict[str, str]:
-    await client.post(
-        "/api/v1/auth/register",
-        json={
-            "email": email,
-            "password": "securepass123",
-            "first_name": "Test",
-            "last_name": "User",
-            "role": "doctor",
-        },
-    )
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": "securepass123"},
-    )
-    token = login_response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
-
-
-async def _create_patient(
+async def _locale_patient_id(
     client: AsyncClient,
-    headers: dict[str, str],
+    user_repository,
+    membership_repository,
     *,
+    doctor_email: str,
     notes: str | None = None,
 ) -> str:
-    payload = {
-        "first_name": "Locale",
-        "last_name": "Patient",
-        "date_of_birth": "1990-05-15",
-        "gender": "female",
-    }
-    if notes is not None:
-        payload["notes"] = notes
-    response = await client.post("/api/v1/patients", json=payload, headers=headers)
-    assert response.status_code == 201
-    return response.json()["id"]
+    return await _create_patient(
+        client,
+        user_repository,
+        membership_repository,
+        doctor_email=doctor_email,
+        notes=notes,
+        **_LOCALE_PATIENT,
+    )
 
 
 def _report_url(patient_id: str, *, locale: str | None = None) -> str:
@@ -68,9 +57,16 @@ def _report_url(patient_id: str, *, locale: str | None = None) -> str:
 
 
 @pytest.mark.asyncio
-async def test_pdf_without_locale_defaults_to_english_acceptance(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-locale-default@example.com")
-    patient_id = await _create_patient(client, headers)
+async def test_pdf_without_locale_defaults_to_english_acceptance(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-locale-default@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _locale_patient_id(
+        client, user_repository, membership_repository, doctor_email=email
+    )
 
     response = await client.get(_report_url(patient_id), headers=headers)
     assert response.status_code == 200
@@ -80,9 +76,16 @@ async def test_pdf_without_locale_defaults_to_english_acceptance(client: AsyncCl
 
 
 @pytest.mark.asyncio
-async def test_pdf_locale_tr_meets_turkish_acceptance(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-locale-tr@example.com")
-    patient_id = await _create_patient(client, headers)
+async def test_pdf_locale_tr_meets_turkish_acceptance(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-locale-tr@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _locale_patient_id(
+        client, user_repository, membership_repository, doctor_email=email
+    )
 
     response = await client.get(_report_url(patient_id, locale="tr"), headers=headers)
     assert response.status_code == 200
@@ -92,9 +95,16 @@ async def test_pdf_locale_tr_meets_turkish_acceptance(client: AsyncClient) -> No
 
 
 @pytest.mark.asyncio
-async def test_pdf_locale_en_meets_english_acceptance(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-locale-en@example.com")
-    patient_id = await _create_patient(client, headers)
+async def test_pdf_locale_en_meets_english_acceptance(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-locale-en@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _locale_patient_id(
+        client, user_repository, membership_repository, doctor_email=email
+    )
 
     response = await client.get(_report_url(patient_id, locale="en"), headers=headers)
     assert response.status_code == 200
@@ -103,9 +113,16 @@ async def test_pdf_locale_en_meets_english_acceptance(client: AsyncClient) -> No
 
 
 @pytest.mark.asyncio
-async def test_pdf_locale_tr_and_en_produce_different_content(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-locale-diff@example.com")
-    patient_id = await _create_patient(client, headers)
+async def test_pdf_locale_tr_and_en_produce_different_content(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-locale-diff@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _locale_patient_id(
+        client, user_repository, membership_repository, doctor_email=email
+    )
 
     tr_response = await client.get(_report_url(patient_id, locale="tr"), headers=headers)
     en_response = await client.get(_report_url(patient_id, locale="en"), headers=headers)
@@ -121,13 +138,15 @@ async def test_pdf_locale_tr_and_en_produce_different_content(client: AsyncClien
 @pytest.mark.parametrize("invalid_locale", ["de", "fr", "tr-TR", ""])
 async def test_pdf_unsupported_locale_falls_back_to_english(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     invalid_locale: str,
 ) -> None:
-    headers = await _register_and_login(
-        client,
-        email=f"phr-locale-invalid-{invalid_locale or 'empty'}@example.com",
+    email = f"phr-locale-invalid-{invalid_locale or 'empty'}@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _locale_patient_id(
+        client, user_repository, membership_repository, doctor_email=email
     )
-    patient_id = await _create_patient(client, headers)
 
     response = await client.get(_report_url(patient_id, locale=invalid_locale), headers=headers)
     assert response.status_code == 200
@@ -135,9 +154,16 @@ async def test_pdf_unsupported_locale_falls_back_to_english(
 
 
 @pytest.mark.asyncio
-async def test_pdf_locale_tr_case_insensitive(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-locale-tr-case@example.com")
-    patient_id = await _create_patient(client, headers)
+async def test_pdf_locale_tr_case_insensitive(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-locale-tr-case@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _locale_patient_id(
+        client, user_repository, membership_repository, doctor_email=email
+    )
 
     response = await client.get(_report_url(patient_id, locale="TR"), headers=headers)
     assert response.status_code == 200
@@ -145,9 +171,20 @@ async def test_pdf_locale_tr_case_insensitive(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_pdf_seed_prefixed_notes_never_appear_in_output(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-locale-seed@example.com")
-    patient_id = await _create_patient(client, headers, notes="seed:demo-live-policy-patient-v1")
+async def test_pdf_seed_prefixed_notes_never_appear_in_output(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-locale-seed@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _locale_patient_id(
+        client,
+        user_repository,
+        membership_repository,
+        doctor_email=email,
+        notes="seed:demo-live-policy-patient-v1",
+    )
 
     response = await client.get(_report_url(patient_id, locale="tr"), headers=headers)
     assert response.status_code == 200
@@ -157,9 +194,20 @@ async def test_pdf_seed_prefixed_notes_never_appear_in_output(client: AsyncClien
 
 
 @pytest.mark.asyncio
-async def test_pdf_shows_clinical_notes_but_not_seed_prefix(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-locale-clinical-note@example.com")
-    patient_id = await _create_patient(client, headers, notes="Alerji: penisilin")
+async def test_pdf_shows_clinical_notes_but_not_seed_prefix(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-locale-clinical-note@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _locale_patient_id(
+        client,
+        user_repository,
+        membership_repository,
+        doctor_email=email,
+        notes="Alerji: penisilin",
+    )
 
     response = await client.get(_report_url(patient_id, locale="tr"), headers=headers)
     assert response.status_code == 200
@@ -168,18 +216,32 @@ async def test_pdf_shows_clinical_notes_but_not_seed_prefix(client: AsyncClient)
 
 
 @pytest.mark.asyncio
-async def test_pdf_locale_does_not_bypass_authentication(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-locale-auth@example.com")
-    patient_id = await _create_patient(client, headers)
+async def test_pdf_locale_does_not_bypass_authentication(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-locale-auth@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _locale_patient_id(
+        client, user_repository, membership_repository, doctor_email=email
+    )
 
     response = await client.get(_report_url(patient_id, locale="tr"))
     assert response.status_code == 401
 
 
 @pytest.mark.asyncio
-async def test_pdf_locale_does_not_bypass_invalid_token(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-locale-bad-token@example.com")
-    patient_id = await _create_patient(client, headers)
+async def test_pdf_locale_does_not_bypass_invalid_token(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-locale-bad-token@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _locale_patient_id(
+        client, user_repository, membership_repository, doctor_email=email
+    )
 
     response = await client.get(
         _report_url(patient_id, locale="tr"),
@@ -189,10 +251,23 @@ async def test_pdf_locale_does_not_bypass_invalid_token(client: AsyncClient) -> 
 
 
 @pytest.mark.asyncio
-async def test_pdf_locale_does_not_bypass_cross_user_access(client: AsyncClient) -> None:
-    owner_headers = await _register_and_login(client, email="phr-locale-owner@example.com")
-    other_headers = await _register_and_login(client, email="phr-locale-other@example.com")
-    patient_id = await _create_patient(client, owner_headers)
+async def test_pdf_locale_does_not_bypass_cross_user_access(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    owner_email = "phr-locale-owner@example.com"
+    other_email = "phr-locale-other@example.com"
+    owner_headers = await _register_and_login(client, email=owner_email)
+    other_headers = await _register_and_login(client, email=other_email)
+    patient_id = await _create_patient(
+        client,
+        user_repository,
+        membership_repository,
+        doctor_email=owner_email,
+        extra_org_doctor_emails=(other_email,),
+        **_LOCALE_PATIENT,
+    )
 
     response = await client.get(_report_url(patient_id, locale="tr"), headers=other_headers)
     assert response.status_code == 404
@@ -200,9 +275,20 @@ async def test_pdf_locale_does_not_bypass_cross_user_access(client: AsyncClient)
 
 
 @pytest.mark.asyncio
-async def test_pdf_locale_tr_localizes_patient_enums(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-locale-enums@example.com")
-    patient_id = await _create_patient(client, headers, notes="Alerji: yok")
+async def test_pdf_locale_tr_localizes_patient_enums(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-locale-enums@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _locale_patient_id(
+        client,
+        user_repository,
+        membership_repository,
+        doctor_email=email,
+        notes="Alerji: yok",
+    )
 
     response = await client.get(_report_url(patient_id, locale="tr"), headers=headers)
     assert response.status_code == 200
@@ -214,12 +300,19 @@ async def test_pdf_locale_tr_localizes_patient_enums(client: AsyncClient) -> Non
 
 
 @pytest.mark.asyncio
-async def test_end_to_end_locale_pdf_verification_samples(client: AsyncClient) -> None:
+async def test_end_to_end_locale_pdf_verification_samples(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
     """Same demo patient: TR/EN PDF bytes + product verification flags (acceptance gate)."""
-    headers = await _register_and_login(client, email="phr-locale-e2e-sample@example.com")
-    patient_id = await _create_patient(
+    email = "phr-locale-e2e-sample@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _locale_patient_id(
         client,
-        headers,
+        user_repository,
+        membership_repository,
+        doctor_email=email,
         notes="seed:demo-live-policy-patient-v1",
     )
     await client.post(
@@ -280,9 +373,14 @@ async def test_end_to_end_locale_pdf_verification_samples(client: AsyncClient) -
 @pytest.mark.asyncio
 async def test_pdf_turkish_via_accept_language_when_locale_query_omitted(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
 ) -> None:
-    headers = await _register_and_login(client, email="phr-locale-accept@example.com")
-    patient_id = await _create_patient(client, headers)
+    email = "phr-locale-accept@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _locale_patient_id(
+        client, user_repository, membership_repository, doctor_email=email
+    )
     headers_with_lang = {
         **headers,
         "Accept-Language": "tr-TR,tr;q=0.9",
@@ -298,9 +396,16 @@ async def test_pdf_turkish_via_accept_language_when_locale_query_omitted(
 
 
 @pytest.mark.asyncio
-async def test_pdf_empty_history_tr_has_no_english_empty_state_leak(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="phr-locale-empty-tr@example.com")
-    patient_id = await _create_patient(client, headers)
+async def test_pdf_empty_history_tr_has_no_english_empty_state_leak(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "phr-locale-empty-tr@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await _locale_patient_id(
+        client, user_repository, membership_repository, doctor_email=email
+    )
 
     response = await client.get(_report_url(patient_id, locale="tr"), headers=headers)
     assert response.status_code == 200

@@ -1,40 +1,38 @@
 """Shared helpers for cardiovascular risk assessment API tests."""
 
+from typing import Any
+
 from httpx import AsyncClient
+
+from tests.support.org_assigned_patient_harness import (
+    PATIENT_PAYLOAD,
+    create_assigned_patient_for_doctor_email,
+    create_assigned_patient_for_doctor_headers,
+    register_and_login_doctor,
+)
 
 ASSESSMENT_DATE_RANGE = "date_from=2026-08-01T00:00:00Z&date_to=2026-08-31T23:59:59Z"
 
-PATIENT_PAYLOAD = {
-    "first_name": "John",
-    "last_name": "Doe",
-    "date_of_birth": "1990-05-15",
-    "gender": "male",
-}
+register_and_login = register_and_login_doctor
 
 
-async def register_and_login(client: AsyncClient, *, email: str) -> dict[str, str]:
-    await client.post(
-        "/api/v1/auth/register",
-        json={
-            "email": email,
-            "password": "securepass123",
-            "first_name": "Test",
-            "last_name": "User",
-            "role": "doctor",
-        },
+async def create_patient(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+    doctor_headers: dict[str, str],
+    *,
+    patient_payload: dict[str, Any] | None = None,
+    extra_org_doctor_emails: tuple[str, ...] = (),
+) -> str:
+    return await create_assigned_patient_for_doctor_headers(
+        client,
+        user_repository,
+        membership_repository,
+        doctor_headers,
+        patient_payload=patient_payload or PATIENT_PAYLOAD,
+        extra_org_doctor_emails=extra_org_doctor_emails,
     )
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": "securepass123"},
-    )
-    token = login_response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
-
-
-async def create_patient(client: AsyncClient, headers: dict[str, str]) -> str:
-    response = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    assert response.status_code == 201
-    return response.json()["id"]
 
 
 async def create_measurement(

@@ -104,14 +104,23 @@ async def test_invalid_role_denied_clinical_route(
 
 
 @pytest.mark.asyncio
-async def test_patient_denied_clinical_timeline_route(client: AsyncClient) -> None:
-    doctor_headers = await _register_login(client, email="rbac-doc-tl@example.com", role="doctor")
-    created = await client.post(
-        "/api/v1/patients",
-        json=PATIENT_PAYLOAD,
-        headers=doctor_headers,
+async def test_patient_denied_clinical_timeline_route(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    from tests.support.org_assigned_patient_harness import (
+        create_assigned_patient_for_doctor_headers,
     )
-    patient_id = created.json()["id"]
+
+    doctor_headers = await _register_login(client, email="rbac-doc-tl@example.com", role="doctor")
+    patient_id = await create_assigned_patient_for_doctor_headers(
+        client,
+        user_repository,
+        membership_repository,
+        doctor_headers,
+        patient_payload=PATIENT_PAYLOAD,
+    )
 
     patient_headers = await _register_login(
         client,

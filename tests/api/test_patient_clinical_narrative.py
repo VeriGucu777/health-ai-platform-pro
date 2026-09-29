@@ -14,13 +14,11 @@ from app.domain.entities.patient import Patient
 from app.domain.entities.user import User, UserRole
 from app.domain.organization.entities import OrganizationMembership, PatientAssignment
 from app.domain.organization.enums import AssignmentStatus, MembershipStatus, OrganizationMembershipRole
-
-PATIENT_PAYLOAD = {
-    "first_name": "Narrative",
-    "last_name": "Patient",
-    "date_of_birth": "1985-03-10",
-    "gender": "female",
-}
+from tests.support.clinical_api_test_helpers import (
+    NARRATIVE_PATIENT_PAYLOAD as PATIENT_PAYLOAD,
+    assigned_patient_for_doctor,
+    register_and_login as _register_and_login_doctor,
+)
 
 NARRATIVE_URL = "/api/v1/patients/{patient_id}/clinical-narrative"
 
@@ -31,6 +29,8 @@ async def _register_and_login(
     email: str,
     role: str = "doctor",
 ) -> dict[str, str]:
+    if role == "doctor":
+        return await _register_and_login_doctor(client, email=email)
     await client.post(
         "/api/v1/auth/register",
         json={
@@ -46,6 +46,12 @@ async def _register_and_login(
         json={"email": email, "password": "securepass123"},
     )
     return {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+
+async def _doctor_id_from_headers(client: AsyncClient, headers: dict[str, str]) -> UUID:
+    me = await client.get("/api/v1/auth/me", headers=headers)
+    assert me.status_code == 200
+    return UUID(me.json()["id"])
 
 
 async def _seed_doctor(user_repository, email: str) -> User:
@@ -74,12 +80,21 @@ def _patient(*, owner_id, organization_id=None) -> Patient:
 @pytest.mark.asyncio
 async def test_narrative_success_with_provenance(
     client: AsyncClient,
-    patient_repository,
+    user_repository,
+    membership_repository,
     medical_record_repository,
 ) -> None:
     headers = await _register_and_login(client, email="narr-success@example.com")
-    patient_id = UUID((await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)).json()["id"])
-    doctor_id = (await patient_repository.get_by_id(patient_id)).owner_id
+    patient_id = UUID(
+        await assigned_patient_for_doctor(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+            patient_payload=PATIENT_PAYLOAD,
+        )
+    )
+    doctor_id = await _doctor_id_from_headers(client, headers)
     await medical_record_repository.create(
         MedicalRecord(
             patient_id=patient_id,
@@ -108,9 +123,19 @@ async def test_narrative_success_with_provenance(
 
 
 @pytest.mark.asyncio
-async def test_narrative_default_overview_without_query(client: AsyncClient) -> None:
+async def test_narrative_default_overview_without_query(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
     headers = await _register_and_login(client, email="narr-default@example.com")
-    patient_id = (await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)).json()["id"]
+    patient_id = await assigned_patient_for_doctor(
+        client,
+        user_repository,
+        membership_repository,
+        headers,
+        patient_payload=PATIENT_PAYLOAD,
+    )
     response = await client.post(NARRATIVE_URL.format(patient_id=patient_id), headers=headers, json={})
     assert response.status_code == 200
 
@@ -118,12 +143,21 @@ async def test_narrative_default_overview_without_query(client: AsyncClient) -> 
 @pytest.mark.asyncio
 async def test_narrative_turkish_language(
     client: AsyncClient,
-    patient_repository,
+    user_repository,
+    membership_repository,
     medical_record_repository,
 ) -> None:
     headers = await _register_and_login(client, email="narr-tr@example.com")
-    patient_id = UUID((await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)).json()["id"])
-    doctor_id = (await patient_repository.get_by_id(patient_id)).owner_id
+    patient_id = UUID(
+        await assigned_patient_for_doctor(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+            patient_payload=PATIENT_PAYLOAD,
+        )
+    )
+    doctor_id = await _doctor_id_from_headers(client, headers)
     await medical_record_repository.create(
         MedicalRecord(
             patient_id=patient_id,

@@ -14,6 +14,7 @@ from app.domain.entities.user import User, UserRole
 from app.domain.organization.entities import OrganizationMembership, PatientAssignment
 from app.domain.organization.enums import AssignmentStatus, MembershipStatus, OrganizationMembershipRole
 from tests.api.test_patients import PATIENT_PAYLOAD, _register_and_login
+from tests.support.org_assigned_patient_harness import create_assigned_patient_for_doctor_headers
 
 
 async def _login(client: AsyncClient, email: str) -> dict[str, str]:
@@ -232,45 +233,68 @@ async def test_inactive_patient_hidden_and_clinical_endpoints_404(
 @pytest.mark.asyncio
 async def test_soft_deleted_patient_second_delete_returns_404(
     client: AsyncClient,
+    user_repository,
     membership_repository,
 ) -> None:
     headers = await _register_and_login(client, email="soft-second-del@example.com")
-    created = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    patient_id = created.json()["id"]
+    patient_id = await create_assigned_patient_for_doctor_headers(
+        client,
+        user_repository,
+        membership_repository,
+        headers,
+    )
     assert (await client.delete(f"/api/v1/patients/{patient_id}", headers=headers)).status_code == 204
     assert (await client.delete(f"/api/v1/patients/{patient_id}", headers=headers)).status_code == 404
 
 
 @pytest.mark.asyncio
-async def test_patient_request_schema_rejects_injected_fields(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="strict-schema@example.com")
+async def test_patient_request_schema_rejects_injected_fields(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    from tests.support.org_assigned_patient_harness import register_clinic_admin_and_login
+
+    admin_headers, _, _ = await register_clinic_admin_and_login(
+        client,
+        user_repository,
+        membership_repository,
+        email="strict-schema-ca@example.com",
+    )
+    doctor_headers = await _register_and_login(client, email="strict-schema@example.com")
     for payload in (
         {**PATIENT_PAYLOAD, "owner_id": str(uuid4())},
         {**PATIENT_PAYLOAD, "organization_id": str(uuid4())},
         {**PATIENT_PAYLOAD, "extra_field": "nope"},
     ):
-        assert (await client.post("/api/v1/patients", json=payload, headers=headers)).status_code == 422
+        assert (
+            await client.post("/api/v1/patients", json=payload, headers=admin_headers)
+        ).status_code == 422
 
-    created = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    patient_id = created.json()["id"]
+    patient_id = await create_assigned_patient_for_doctor_headers(
+        client,
+        user_repository,
+        membership_repository,
+        doctor_headers,
+    )
     assert (
         await client.patch(
             f"/api/v1/patients/{patient_id}",
-            headers=headers,
+            headers=doctor_headers,
             json={"owner_id": str(uuid4())},
         )
     ).status_code == 422
     assert (
         await client.patch(
             f"/api/v1/patients/{patient_id}",
-            headers=headers,
+            headers=doctor_headers,
             json={"organization_id": str(uuid4())},
         )
     ).status_code == 422
     assert (
         await client.patch(
             f"/api/v1/patients/{patient_id}",
-            headers=headers,
+            headers=doctor_headers,
             json={"is_active": False},
         )
     ).status_code == 422

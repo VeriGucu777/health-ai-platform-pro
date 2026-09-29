@@ -5,14 +5,13 @@ from decimal import Decimal
 import pytest
 from httpx import AsyncClient
 
-PATIENT_PAYLOAD = {
-    "first_name": "John",
-    "last_name": "Doe",
-    "date_of_birth": "1990-05-15",
-    "gender": "male",
-    "phone": "+15551234567",
-    "notes": "Initial consultation scheduled",
-}
+from tests.support.org_assigned_patient_harness import (
+    PATIENT_PAYLOAD,
+    create_assigned_patient_for_doctor_headers as _create_patient,
+    create_assigned_patients_for_doctor_email,
+    register_and_login_doctor as _register_and_login,
+)
+
 
 MEASUREMENT_PAYLOAD = {
     "measured_at": "2026-08-15T08:30:00Z",
@@ -29,45 +28,14 @@ MEASUREMENT_PAYLOAD = {
 }
 
 
-async def _register_and_login(
-    client: AsyncClient,
-    *,
-    email: str,
-    password: str = "securepass123",
-    first_name: str = "Test",
-    last_name: str = "User",
-) -> dict[str, str]:
-    register_response = await client.post(
-        "/api/v1/auth/register",
-        json={
-            "email": email,
-            "password": password,
-            "first_name": first_name,
-            "last_name": last_name,
-            "role": "doctor",
-        },
-    )
-    assert register_response.status_code == 201
-
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": password},
-    )
-    assert login_response.status_code == 200
-    token = login_response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
 
 
-async def _create_patient(client: AsyncClient, headers: dict[str, str]) -> str:
-    response = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    assert response.status_code == 201
-    return response.json()["id"]
 
 
 @pytest.mark.asyncio
-async def test_create_health_measurement(client: AsyncClient) -> None:
+async def test_create_health_measurement(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="hm-owner@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     payload = {**MEASUREMENT_PAYLOAD, "patient_id": patient_id}
     response = await client.post("/api/v1/health-measurements", json=payload, headers=headers)
@@ -79,9 +47,9 @@ async def test_create_health_measurement(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_create_requires_at_least_one_trackable_value(client: AsyncClient) -> None:
+async def test_create_requires_at_least_one_trackable_value(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="hm-no-value@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     payload = {
         "patient_id": patient_id,
@@ -97,9 +65,11 @@ async def test_create_requires_at_least_one_trackable_value(client: AsyncClient)
 @pytest.mark.asyncio
 async def test_create_rejects_context_or_notes_without_trackable_value(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
 ) -> None:
     headers = await _register_and_login(client, email="hm-context-only@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     for payload in (
         {
@@ -123,9 +93,9 @@ async def test_create_rejects_context_or_notes_without_trackable_value(
 
 
 @pytest.mark.asyncio
-async def test_create_numeric_validation_rejects_invalid_values(client: AsyncClient) -> None:
+async def test_create_numeric_validation_rejects_invalid_values(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="hm-invalid-num@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     invalid_payloads = [
         {"blood_glucose": 0},
@@ -145,9 +115,9 @@ async def test_create_numeric_validation_rejects_invalid_values(client: AsyncCli
 
 
 @pytest.mark.asyncio
-async def test_create_requires_blood_pressure_pair(client: AsyncClient) -> None:
+async def test_create_requires_blood_pressure_pair(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="hm-bp-pair@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     for payload in (
         {"systolic_pressure": 120},
@@ -166,9 +136,9 @@ async def test_create_requires_blood_pressure_pair(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_list_health_measurements(client: AsyncClient) -> None:
+async def test_list_health_measurements(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="hm-lister@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     payload = {**MEASUREMENT_PAYLOAD, "patient_id": patient_id}
     create_response = await client.post("/api/v1/health-measurements", json=payload, headers=headers)
@@ -182,16 +152,16 @@ async def test_list_health_measurements(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_list_health_measurements_filter_by_patient_id(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="hm-filter-patient@example.com")
-    patient_a = await _create_patient(client, headers)
-    patient_b_response = await client.post(
-        "/api/v1/patients",
-        json={**PATIENT_PAYLOAD, "first_name": "Jane"},
-        headers=headers,
+async def test_list_health_measurements_filter_by_patient_id(client: AsyncClient, user_repository, membership_repository,) -> None:
+    email = "hm-filter-patient@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_a, patient_b = await create_assigned_patients_for_doctor_email(
+        client,
+        user_repository,
+        membership_repository,
+        doctor_email=email,
+        patient_payloads=[PATIENT_PAYLOAD, {**PATIENT_PAYLOAD, "first_name": "Jane"}],
     )
-    assert patient_b_response.status_code == 201
-    patient_b = patient_b_response.json()["id"]
 
     for patient_id in (patient_a, patient_b):
         payload = {**MEASUREMENT_PAYLOAD, "patient_id": patient_id, "blood_glucose": 110}
@@ -209,9 +179,9 @@ async def test_list_health_measurements_filter_by_patient_id(client: AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_list_health_measurements_filter_by_date_range(client: AsyncClient) -> None:
+async def test_list_health_measurements_filter_by_date_range(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="hm-filter-date@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     measurements = [
         ("2026-08-15T08:00:00Z", 120),
@@ -239,9 +209,9 @@ async def test_list_health_measurements_filter_by_date_range(client: AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_list_health_measurements_filter_by_glucose_context(client: AsyncClient) -> None:
+async def test_list_health_measurements_filter_by_glucose_context(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="hm-filter-glucose@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     for glucose_context in ("fasting", "post_meal"):
         payload = {
@@ -264,7 +234,7 @@ async def test_list_health_measurements_filter_by_glucose_context(client: AsyncC
 
 
 @pytest.mark.asyncio
-async def test_list_health_measurements_invalid_date_range(client: AsyncClient) -> None:
+async def test_list_health_measurements_invalid_date_range(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="hm-invalid-date@example.com")
 
     response = await client.get(
@@ -278,9 +248,9 @@ async def test_list_health_measurements_invalid_date_range(client: AsyncClient) 
 
 
 @pytest.mark.asyncio
-async def test_list_health_measurements_pagination(client: AsyncClient) -> None:
+async def test_list_health_measurements_pagination(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="hm-pagination@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     for index in range(5):
         payload = {
@@ -303,9 +273,9 @@ async def test_list_health_measurements_pagination(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_list_health_measurements_default_newest_first(client: AsyncClient) -> None:
+async def test_list_health_measurements_default_newest_first(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="hm-order-desc@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     for measured_at, glucose in (
         ("2026-08-10T08:00:00Z", 100),
@@ -323,9 +293,9 @@ async def test_list_health_measurements_default_newest_first(client: AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_list_health_measurements_sort_ascending(client: AsyncClient) -> None:
+async def test_list_health_measurements_sort_ascending(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="hm-order-asc@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     for measured_at, glucose in (
         ("2026-08-12T08:00:00Z", 120),
@@ -346,9 +316,9 @@ async def test_list_health_measurements_sort_ascending(client: AsyncClient) -> N
 
 
 @pytest.mark.asyncio
-async def test_retrieve_health_measurement(client: AsyncClient) -> None:
+async def test_retrieve_health_measurement(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="hm-reader@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     payload = {**MEASUREMENT_PAYLOAD, "patient_id": patient_id}
     created = await client.post("/api/v1/health-measurements", json=payload, headers=headers)
@@ -363,9 +333,9 @@ async def test_retrieve_health_measurement(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_update_health_measurement(client: AsyncClient) -> None:
+async def test_update_health_measurement(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="hm-updater@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     payload = {**MEASUREMENT_PAYLOAD, "patient_id": patient_id}
     created = await client.post("/api/v1/health-measurements", json=payload, headers=headers)
@@ -383,9 +353,9 @@ async def test_update_health_measurement(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_update_cannot_clear_all_trackable_values(client: AsyncClient) -> None:
+async def test_update_cannot_clear_all_trackable_values(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="hm-clear-values@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     payload = {
         "patient_id": patient_id,
@@ -405,16 +375,16 @@ async def test_update_cannot_clear_all_trackable_values(client: AsyncClient) -> 
 
 
 @pytest.mark.asyncio
-async def test_patch_ignores_patient_id(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="hm-patch-patient@example.com")
-    patient_a = await _create_patient(client, headers)
-    patient_b_response = await client.post(
-        "/api/v1/patients",
-        json={**PATIENT_PAYLOAD, "first_name": "Jane"},
-        headers=headers,
+async def test_patch_ignores_patient_id(client: AsyncClient, user_repository, membership_repository,) -> None:
+    email = "hm-patch-patient@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_a, patient_b = await create_assigned_patients_for_doctor_email(
+        client,
+        user_repository,
+        membership_repository,
+        doctor_email=email,
+        patient_payloads=[PATIENT_PAYLOAD, {**PATIENT_PAYLOAD, "first_name": "Jane"}],
     )
-    assert patient_b_response.status_code == 201
-    patient_b = patient_b_response.json()["id"]
 
     created = await client.post(
         "/api/v1/health-measurements",
@@ -447,9 +417,9 @@ async def test_patch_ignores_patient_id(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_delete_health_measurement(client: AsyncClient) -> None:
+async def test_delete_health_measurement(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="hm-deleter@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     payload = {**MEASUREMENT_PAYLOAD, "patient_id": patient_id}
     created = await client.post("/api/v1/health-measurements", json=payload, headers=headers)
@@ -469,17 +439,25 @@ async def test_delete_health_measurement(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_unauthenticated_access_rejected(client: AsyncClient) -> None:
+async def test_unauthenticated_access_rejected(client: AsyncClient, user_repository, membership_repository,) -> None:
     response = await client.get("/api/v1/health-measurements")
     assert response.status_code == 401
 
 
 @pytest.mark.asyncio
-async def test_cross_user_access_returns_not_found(client: AsyncClient) -> None:
-    owner_headers = await _register_and_login(client, email="hm-owner2@example.com")
-    other_headers = await _register_and_login(client, email="hm-other@example.com")
+async def test_cross_user_access_returns_not_found(client: AsyncClient, user_repository, membership_repository,) -> None:
+    owner_email = "hm-owner2@example.com"
+    other_email = "hm-other@example.com"
+    owner_headers = await _register_and_login(client, email=owner_email)
+    other_headers = await _register_and_login(client, email=other_email)
 
-    patient_id = await _create_patient(client, owner_headers)
+    patient_id = await _create_patient(
+        client,
+        user_repository,
+        membership_repository,
+        owner_headers,
+        extra_org_doctor_emails=(other_email,),
+    )
     payload = {
         "patient_id": patient_id,
         "measured_at": "2026-08-15T08:30:00Z",
@@ -510,11 +488,19 @@ async def test_cross_user_access_returns_not_found(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_create_with_foreign_patient_returns_not_found(client: AsyncClient) -> None:
-    owner_headers = await _register_and_login(client, email="hm-patient-owner@example.com")
-    other_headers = await _register_and_login(client, email="hm-patient-other@example.com")
+async def test_create_with_foreign_patient_returns_not_found(client: AsyncClient, user_repository, membership_repository,) -> None:
+    owner_email = "hm-patient-owner@example.com"
+    other_email = "hm-patient-other@example.com"
+    owner_headers = await _register_and_login(client, email=owner_email)
+    other_headers = await _register_and_login(client, email=other_email)
 
-    patient_id = await _create_patient(client, owner_headers)
+    patient_id = await _create_patient(
+        client,
+        user_repository,
+        membership_repository,
+        owner_headers,
+        extra_org_doctor_emails=(other_email,),
+    )
     payload = {
         "patient_id": patient_id,
         "measured_at": "2026-08-15T08:30:00Z",
@@ -528,7 +514,7 @@ async def test_create_with_foreign_patient_returns_not_found(client: AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_create_with_nonexistent_patient_returns_not_found(client: AsyncClient) -> None:
+async def test_create_with_nonexistent_patient_returns_not_found(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="hm-no-patient@example.com")
 
     payload = {
@@ -542,11 +528,19 @@ async def test_create_with_nonexistent_patient_returns_not_found(client: AsyncCl
 
 
 @pytest.mark.asyncio
-async def test_list_with_foreign_patient_id_returns_not_found(client: AsyncClient) -> None:
-    owner_headers = await _register_and_login(client, email="hm-list-owner@example.com")
-    other_headers = await _register_and_login(client, email="hm-list-other@example.com")
+async def test_list_with_foreign_patient_id_returns_not_found(client: AsyncClient, user_repository, membership_repository,) -> None:
+    owner_email = "hm-list-owner@example.com"
+    other_email = "hm-list-other@example.com"
+    owner_headers = await _register_and_login(client, email=owner_email)
+    other_headers = await _register_and_login(client, email=other_email)
 
-    patient_id = await _create_patient(client, owner_headers)
+    patient_id = await _create_patient(
+        client,
+        user_repository,
+        membership_repository,
+        owner_headers,
+        extra_org_doctor_emails=(other_email,),
+    )
 
     response = await client.get(
         f"/api/v1/health-measurements?patient_id={patient_id}",

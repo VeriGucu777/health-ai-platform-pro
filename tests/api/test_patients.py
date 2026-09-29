@@ -1,18 +1,16 @@
-"""Patient CRUD endpoint integration tests."""
+"""Patient CRUD endpoint integration tests (org RBAC: clinic admin create, assigned doctor access)."""
 
 from uuid import UUID
 
 import pytest
 from httpx import AsyncClient
 
-PATIENT_PAYLOAD = {
-    "first_name": "John",
-    "last_name": "Doe",
-    "date_of_birth": "1990-05-15",
-    "gender": "male",
-    "phone": "+15551234567",
-    "notes": "Initial consultation scheduled",
-}
+from tests.support.org_assigned_patient_harness import (
+    PATIENT_PAYLOAD,
+    create_assigned_patient_for_doctor_headers,
+    register_and_login_doctor,
+    register_clinic_admin_and_login,
+)
 
 
 async def _register_and_login(
@@ -23,32 +21,29 @@ async def _register_and_login(
     first_name: str = "Test",
     last_name: str = "User",
 ) -> dict[str, str]:
-    register_response = await client.post(
-        "/api/v1/auth/register",
-        json={
-            "email": email,
-            "password": password,
-            "first_name": first_name,
-            "last_name": last_name,
-            "role": "doctor",
-        },
+    return await register_and_login_doctor(
+        client,
+        email=email,
+        password=password,
+        first_name=first_name,
+        last_name=last_name,
     )
-    assert register_response.status_code == 201
-
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": password},
-    )
-    assert login_response.status_code == 200
-    token = login_response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.mark.asyncio
-async def test_create_patient(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="owner@example.com")
+async def test_create_patient(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    admin_headers, _, _ = await register_clinic_admin_and_login(
+        client,
+        user_repository,
+        membership_repository,
+        email="owner@example.com",
+    )
 
-    response = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
+    response = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=admin_headers)
     assert response.status_code == 201
     data = response.json()
     assert data["first_name"] == "John"
@@ -59,11 +54,19 @@ async def test_create_patient(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_list_patients(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="lister@example.com")
-
-    create_response = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    assert create_response.status_code == 201
+async def test_list_patients(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "lister@example.com"
+    headers = await _register_and_login(client, email=email)
+    await create_assigned_patient_for_doctor_headers(
+        client,
+        user_repository,
+        membership_repository,
+        headers,
+    )
 
     response = await client.get("/api/v1/patients", headers=headers)
     assert response.status_code == 200
@@ -74,11 +77,19 @@ async def test_list_patients(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_retrieve_patient(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="reader@example.com")
-
-    created = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    patient_id = created.json()["id"]
+async def test_retrieve_patient(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "reader@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await create_assigned_patient_for_doctor_headers(
+        client,
+        user_repository,
+        membership_repository,
+        headers,
+    )
 
     response = await client.get(f"/api/v1/patients/{patient_id}", headers=headers)
     assert response.status_code == 200
@@ -86,11 +97,19 @@ async def test_retrieve_patient(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_update_patient(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="updater@example.com")
-
-    created = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    patient_id = created.json()["id"]
+async def test_update_patient(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    email = "updater@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await create_assigned_patient_for_doctor_headers(
+        client,
+        user_repository,
+        membership_repository,
+        headers,
+    )
 
     response = await client.patch(
         f"/api/v1/patients/{patient_id}",
@@ -104,11 +123,20 @@ async def test_update_patient(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_delete_patient(client: AsyncClient, patient_repository) -> None:
-    headers = await _register_and_login(client, email="deleter@example.com")
-
-    created = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    patient_id = created.json()["id"]
+async def test_delete_patient(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+    patient_repository,
+) -> None:
+    email = "deleter@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_id = await create_assigned_patient_for_doctor_headers(
+        client,
+        user_repository,
+        membership_repository,
+        headers,
+    )
 
     delete_response = await client.delete(f"/api/v1/patients/{patient_id}", headers=headers)
     assert delete_response.status_code == 204
@@ -128,12 +156,22 @@ async def test_unauthenticated_access_rejected(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_cross_user_access_returns_not_found(client: AsyncClient) -> None:
-    owner_headers = await _register_and_login(client, email="owner2@example.com")
-    other_headers = await _register_and_login(client, email="other@example.com")
-
-    created = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=owner_headers)
-    patient_id = created.json()["id"]
+async def test_cross_user_access_returns_not_found(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    owner_email = "owner2@example.com"
+    other_email = "other@example.com"
+    owner_headers = await _register_and_login(client, email=owner_email)
+    other_headers = await _register_and_login(client, email=other_email)
+    patient_id = await create_assigned_patient_for_doctor_headers(
+        client,
+        user_repository,
+        membership_repository,
+        owner_headers,
+        extra_org_doctor_emails=(other_email,),
+    )
 
     response = await client.get(f"/api/v1/patients/{patient_id}", headers=other_headers)
     assert response.status_code == 404

@@ -3,14 +3,13 @@
 import pytest
 from httpx import AsyncClient
 
-PATIENT_PAYLOAD = {
-    "first_name": "John",
-    "last_name": "Doe",
-    "date_of_birth": "1990-05-15",
-    "gender": "male",
-    "phone": "+15551234567",
-    "notes": "Initial consultation scheduled",
-}
+from tests.support.org_assigned_patient_harness import (
+    PATIENT_PAYLOAD,
+    create_assigned_patient_for_doctor_headers as _create_patient,
+    create_assigned_patients_for_doctor_email,
+    register_and_login_doctor as _register_and_login,
+)
+
 
 APPOINTMENT_PAYLOAD = {
     "appointment_date": "2026-08-15T10:30:00Z",
@@ -20,45 +19,14 @@ APPOINTMENT_PAYLOAD = {
 }
 
 
-async def _register_and_login(
-    client: AsyncClient,
-    *,
-    email: str,
-    password: str = "securepass123",
-    first_name: str = "Test",
-    last_name: str = "User",
-) -> dict[str, str]:
-    register_response = await client.post(
-        "/api/v1/auth/register",
-        json={
-            "email": email,
-            "password": password,
-            "first_name": first_name,
-            "last_name": last_name,
-            "role": "doctor",
-        },
-    )
-    assert register_response.status_code == 201
-
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": password},
-    )
-    assert login_response.status_code == 200
-    token = login_response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
 
 
-async def _create_patient(client: AsyncClient, headers: dict[str, str]) -> str:
-    response = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    assert response.status_code == 201
-    return response.json()["id"]
 
 
 @pytest.mark.asyncio
-async def test_create_appointment(client: AsyncClient) -> None:
+async def test_create_appointment(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="appt-owner@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     payload = {**APPOINTMENT_PAYLOAD, "patient_id": patient_id}
     response = await client.post("/api/v1/appointments", json=payload, headers=headers)
@@ -71,9 +39,9 @@ async def test_create_appointment(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_list_appointments(client: AsyncClient) -> None:
+async def test_list_appointments(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="appt-lister@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     payload = {**APPOINTMENT_PAYLOAD, "patient_id": patient_id}
     create_response = await client.post("/api/v1/appointments", json=payload, headers=headers)
@@ -88,17 +56,16 @@ async def test_list_appointments(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_list_appointments_filter_by_patient_id(client: AsyncClient) -> None:
-    headers = await _register_and_login(client, email="appt-filter@example.com")
-    patient_a = await _create_patient(client, headers)
-
-    patient_b_response = await client.post(
-        "/api/v1/patients",
-        json={**PATIENT_PAYLOAD, "first_name": "Jane"},
-        headers=headers,
+async def test_list_appointments_filter_by_patient_id(client: AsyncClient, user_repository, membership_repository,) -> None:
+    email = "appt-filter@example.com"
+    headers = await _register_and_login(client, email=email)
+    patient_a, patient_b = await create_assigned_patients_for_doctor_email(
+        client,
+        user_repository,
+        membership_repository,
+        doctor_email=email,
+        patient_payloads=[PATIENT_PAYLOAD, {**PATIENT_PAYLOAD, "first_name": "Jane"}],
     )
-    assert patient_b_response.status_code == 201
-    patient_b = patient_b_response.json()["id"]
 
     for patient_id in (patient_a, patient_b):
         payload = {**APPOINTMENT_PAYLOAD, "patient_id": patient_id}
@@ -116,9 +83,9 @@ async def test_list_appointments_filter_by_patient_id(client: AsyncClient) -> No
 
 
 @pytest.mark.asyncio
-async def test_retrieve_appointment(client: AsyncClient) -> None:
+async def test_retrieve_appointment(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="appt-reader@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     payload = {**APPOINTMENT_PAYLOAD, "patient_id": patient_id}
     created = await client.post("/api/v1/appointments", json=payload, headers=headers)
@@ -130,9 +97,9 @@ async def test_retrieve_appointment(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_update_appointment(client: AsyncClient) -> None:
+async def test_update_appointment(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="appt-updater@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     payload = {**APPOINTMENT_PAYLOAD, "patient_id": patient_id}
     created = await client.post("/api/v1/appointments", json=payload, headers=headers)
@@ -150,9 +117,9 @@ async def test_update_appointment(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_delete_appointment(client: AsyncClient) -> None:
+async def test_delete_appointment(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="appt-deleter@example.com")
-    patient_id = await _create_patient(client, headers)
+    patient_id = await _create_patient(client, user_repository, membership_repository, headers)
 
     payload = {**APPOINTMENT_PAYLOAD, "patient_id": patient_id}
     created = await client.post("/api/v1/appointments", json=payload, headers=headers)
@@ -169,17 +136,25 @@ async def test_delete_appointment(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_unauthenticated_access_rejected(client: AsyncClient) -> None:
+async def test_unauthenticated_access_rejected(client: AsyncClient, user_repository, membership_repository,) -> None:
     response = await client.get("/api/v1/appointments")
     assert response.status_code == 401
 
 
 @pytest.mark.asyncio
-async def test_cross_user_access_returns_not_found(client: AsyncClient) -> None:
-    owner_headers = await _register_and_login(client, email="appt-owner2@example.com")
-    other_headers = await _register_and_login(client, email="appt-other@example.com")
+async def test_cross_user_access_returns_not_found(client: AsyncClient, user_repository, membership_repository,) -> None:
+    owner_email = "appt-owner2@example.com"
+    other_email = "appt-other@example.com"
+    owner_headers = await _register_and_login(client, email=owner_email)
+    other_headers = await _register_and_login(client, email=other_email)
 
-    patient_id = await _create_patient(client, owner_headers)
+    patient_id = await _create_patient(
+        client,
+        user_repository,
+        membership_repository,
+        owner_headers,
+        extra_org_doctor_emails=(other_email,),
+    )
     payload = {**APPOINTMENT_PAYLOAD, "patient_id": patient_id}
     created = await client.post("/api/v1/appointments", json=payload, headers=owner_headers)
     appointment_id = created.json()["id"]
@@ -203,11 +178,19 @@ async def test_cross_user_access_returns_not_found(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_create_with_foreign_patient_returns_not_found(client: AsyncClient) -> None:
-    owner_headers = await _register_and_login(client, email="appt-patient-owner@example.com")
-    other_headers = await _register_and_login(client, email="appt-patient-other@example.com")
+async def test_create_with_foreign_patient_returns_not_found(client: AsyncClient, user_repository, membership_repository,) -> None:
+    owner_email = "appt-patient-owner@example.com"
+    other_email = "appt-patient-other@example.com"
+    owner_headers = await _register_and_login(client, email=owner_email)
+    other_headers = await _register_and_login(client, email=other_email)
 
-    patient_id = await _create_patient(client, owner_headers)
+    patient_id = await _create_patient(
+        client,
+        user_repository,
+        membership_repository,
+        owner_headers,
+        extra_org_doctor_emails=(other_email,),
+    )
     payload = {**APPOINTMENT_PAYLOAD, "patient_id": patient_id}
 
     response = await client.post("/api/v1/appointments", json=payload, headers=other_headers)
@@ -217,7 +200,7 @@ async def test_create_with_foreign_patient_returns_not_found(client: AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_create_with_nonexistent_patient_returns_not_found(client: AsyncClient) -> None:
+async def test_create_with_nonexistent_patient_returns_not_found(client: AsyncClient, user_repository, membership_repository,) -> None:
     headers = await _register_and_login(client, email="appt-no-patient@example.com")
 
     payload = {

@@ -13,7 +13,13 @@ from app.api.deps import get_clinical_narrative_service
 from app.core.config import Settings
 from app.domain.entities.medical_record import MedicalRecord
 from app.infrastructure.llm.external_narrative_generator import ExternalClinicalNarrativeGenerator
-from tests.api.test_patient_clinical_narrative import NARRATIVE_URL, PATIENT_PAYLOAD, _register_and_login
+from tests.api.test_patient_clinical_narrative import (
+    NARRATIVE_URL,
+    PATIENT_PAYLOAD,
+    _doctor_id_from_headers,
+    _register_and_login,
+)
+from tests.support.clinical_api_test_helpers import assigned_patient_for_doctor
 from tests.support.clinical_read_service_factory import build_clinical_narrative_service
 from tests.support.external_narrative_mock_transport import (
     transport_dynamic_valid,
@@ -109,13 +115,22 @@ async def _seed_clinical_data(medical_record_repository, *, patient_id: UUID, ow
 @pytest.mark.asyncio
 async def test_external_mock_http_success_with_fallback_on_hallucination(
     external_narrative_client,
-    patient_repository,
+    user_repository,
+    membership_repository,
     medical_record_repository,
 ) -> None:
     client, holder, set_transport = external_narrative_client
     headers = await _register_and_login(client, email="ext-mock-ok@example.com")
-    patient_id = UUID((await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)).json()["id"])
-    doctor_id = (await patient_repository.get_by_id(patient_id)).owner_id
+    patient_id = UUID(
+        await assigned_patient_for_doctor(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+            patient_payload=PATIENT_PAYLOAD,
+        )
+    )
+    doctor_id = await _doctor_id_from_headers(client, headers)
     eid = await _seed_clinical_data(
         medical_record_repository,
         patient_id=patient_id,
@@ -147,14 +162,23 @@ async def test_external_mock_http_success_with_fallback_on_hallucination(
 @pytest.mark.asyncio
 async def test_external_mock_timeout_fallback_and_audit(
     external_narrative_client,
-    patient_repository,
+    user_repository,
+    membership_repository,
     medical_record_repository,
     audit_log_repository,
 ) -> None:
     client, holder, set_transport = external_narrative_client
     headers = await _register_and_login(client, email="ext-mock-fb@example.com")
-    patient_id = UUID((await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)).json()["id"])
-    doctor_id = (await patient_repository.get_by_id(patient_id)).owner_id
+    patient_id = UUID(
+        await assigned_patient_for_doctor(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+            patient_payload=PATIENT_PAYLOAD,
+        )
+    )
+    doctor_id = await _doctor_id_from_headers(client, headers)
     eid = await _seed_clinical_data(
         medical_record_repository,
         patient_id=patient_id,
@@ -256,16 +280,33 @@ async def test_denied_roles_do_not_call_external_provider(
 @pytest.mark.asyncio
 async def test_clinical_narrative_concurrent_requests_isolated(
     external_narrative_client,
-    patient_repository,
+    user_repository,
+    membership_repository,
     medical_record_repository,
 ) -> None:
     client, holder, set_transport = external_narrative_client
     headers_a = await _register_and_login(client, email="ext-conc-a@example.com")
     headers_b = await _register_and_login(client, email="ext-conc-b@example.com")
-    patient_a = UUID((await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers_a)).json()["id"])
-    patient_b = UUID((await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers_b)).json()["id"])
-    doc_a = (await patient_repository.get_by_id(patient_a)).owner_id
-    doc_b = (await patient_repository.get_by_id(patient_b)).owner_id
+    patient_a = UUID(
+        await assigned_patient_for_doctor(
+            client,
+            user_repository,
+            membership_repository,
+            headers_a,
+            patient_payload=PATIENT_PAYLOAD,
+        )
+    )
+    patient_b = UUID(
+        await assigned_patient_for_doctor(
+            client,
+            user_repository,
+            membership_repository,
+            headers_b,
+            patient_payload=PATIENT_PAYLOAD,
+        )
+    )
+    doc_a = await _doctor_id_from_headers(client, headers_a)
+    doc_b = await _doctor_id_from_headers(client, headers_b)
     eid_a = await _seed_clinical_data(medical_record_repository, patient_id=patient_a, owner_id=doc_a)
     eid_b = await _seed_clinical_data(medical_record_repository, patient_id=patient_b, owner_id=doc_b)
     set_transport(transport_dynamic_valid("Concurrent patient narrative"))

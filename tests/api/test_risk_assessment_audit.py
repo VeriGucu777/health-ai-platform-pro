@@ -40,13 +40,15 @@ def _risk_events(repo: InMemoryAuditLogRepository) -> list[AuditLog]:
 )
 async def test_risk_assessment_success_writes_one_audit_row(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
     url_template: str,
     risk_kind: str,
     email: str,
 ) -> None:
     headers = await register_and_login(client, email=email)
-    patient_id = await create_patient(client, headers)
+    patient_id = await create_patient(client, user_repository, membership_repository, headers)
     await create_measurement(
         client,
         headers,
@@ -76,10 +78,12 @@ async def test_risk_assessment_success_writes_one_audit_row(
 @pytest.mark.asyncio
 async def test_risk_audit_metadata_excludes_clinical_scores(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
     headers = await register_and_login(client, email="ra-audit-phi@example.com")
-    patient_id = await create_patient(client, headers)
+    patient_id = await create_patient(client, user_repository, membership_repository, headers)
     await create_measurement(
         client,
         headers,
@@ -110,11 +114,21 @@ async def test_risk_audit_metadata_excludes_clinical_scores(
 @pytest.mark.asyncio
 async def test_cross_owner_risk_assessment_writes_failure_audit(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
-    owner_headers = await register_and_login(client, email="ra-audit-owner@example.com")
-    other_headers = await register_and_login(client, email="ra-audit-other@example.com")
-    patient_id = await create_patient(client, owner_headers)
+    owner_email = "ra-audit-owner@example.com"
+    other_email = "ra-audit-other@example.com"
+    owner_headers = await register_and_login(client, email=owner_email)
+    other_headers = await register_and_login(client, email=other_email)
+    patient_id = await create_patient(
+        client,
+        user_repository,
+        membership_repository,
+        owner_headers,
+        extra_org_doctor_emails=(other_email,),
+    )
     audit_log_repository.records.clear()
 
     url = DIABETES_URL.format(patient_id=patient_id, date_range=ASSESSMENT_DATE_RANGE)
@@ -132,10 +146,12 @@ async def test_cross_owner_risk_assessment_writes_failure_audit(
 @pytest.mark.asyncio
 async def test_risk_assessment_does_not_create_duplicate_audit_rows(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
     headers = await register_and_login(client, email="ra-audit-dup@example.com")
-    patient_id = await create_patient(client, headers)
+    patient_id = await create_patient(client, user_repository, membership_repository, headers)
     audit_log_repository.records.clear()
 
     url = STROKE_URL.format(patient_id=patient_id, date_range=ASSESSMENT_DATE_RANGE)
@@ -147,6 +163,8 @@ async def test_risk_assessment_does_not_create_duplicate_audit_rows(
 @pytest.mark.asyncio
 async def test_audit_append_failure_does_not_break_risk_response(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -156,7 +174,7 @@ async def test_audit_append_failure_does_not_break_risk_response(
     monkeypatch.setattr(audit_log_repository, "append", failing_append)
 
     headers = await register_and_login(client, email=f"ra-fail-open-{uuid4().hex[:8]}@example.com")
-    patient_id = await create_patient(client, headers)
+    patient_id = await create_patient(client, user_repository, membership_repository, headers)
     url = HEART_URL.format(patient_id=patient_id, date_range=ASSESSMENT_DATE_RANGE)
 
     response = await client.get(url, headers=headers)

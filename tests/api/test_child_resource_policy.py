@@ -141,14 +141,15 @@ async def clinical_child_setup(
         user_id=clinic_admin.id,
         role=OrganizationMembershipRole.CLINIC_ADMIN,
     )
-    await assignment_repository.create(
-        PatientAssignment(
-            organization_id=org_a,
-            patient_id=patient.id,
-            assignee_user_id=assigned.id,
-            status=AssignmentStatus.ACTIVE,
-        ),
-    )
+    for assignee_id in (owner.id, assigned.id):
+        await assignment_repository.create(
+            PatientAssignment(
+                organization_id=org_a,
+                patient_id=patient.id,
+                assignee_user_id=assignee_id,
+                status=AssignmentStatus.ACTIVE,
+            ),
+        )
 
     owner_headers = await _login(client, owner.email)
     assigned_headers = await _login(client, assigned.email)

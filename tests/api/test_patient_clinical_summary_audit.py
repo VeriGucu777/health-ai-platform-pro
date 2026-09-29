@@ -11,6 +11,7 @@ from app.application.clinical_summary.constants import SUMMARY_VERSION
 from app.domain.audit.taxonomy import AuditAction, AuditOutcome, AuditResourceType
 from app.domain.entities.audit_log import AuditLog
 from tests.api.test_patient_clinical_summary import PATIENT_PAYLOAD, _register_and_login
+from tests.support.clinical_api_test_helpers import assigned_patient_for_doctor
 from tests.support.memory_audit_log_repository import InMemoryAuditLogRepository
 
 
@@ -25,13 +26,19 @@ def _summary_events(repo: InMemoryAuditLogRepository) -> list[AuditLog]:
 @pytest.mark.asyncio
 async def test_summary_success_writes_one_audit_row(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
     headers = await _register_and_login(client, email="sum-audit-ok@example.com")
     patient_id = UUID(
-        (
-            await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-        ).json()["id"]
+        await assigned_patient_for_doctor(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+            patient_payload=PATIENT_PAYLOAD,
+        )
     )
     audit_log_repository.records.clear()
 
@@ -53,13 +60,19 @@ async def test_summary_success_writes_one_audit_row(
 @pytest.mark.asyncio
 async def test_summary_audit_metadata_phi_safe(
     client: AsyncClient,
+    user_repository,
+    membership_repository,
     audit_log_repository: InMemoryAuditLogRepository,
 ) -> None:
     headers = await _register_and_login(client, email="sum-audit-meta@example.com")
     patient_id = UUID(
-        (
-            await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-        ).json()["id"]
+        await assigned_patient_for_doctor(
+            client,
+            user_repository,
+            membership_repository,
+            headers,
+            patient_payload=PATIENT_PAYLOAD,
+        )
     )
     record_date = (datetime.now(UTC) - timedelta(days=3)).isoformat()
     await client.post(

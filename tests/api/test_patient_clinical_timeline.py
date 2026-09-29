@@ -5,43 +5,29 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from httpx import AsyncClient
 
-PATIENT_PAYLOAD = {
-    "first_name": "Jane",
-    "last_name": "Timeline",
-    "date_of_birth": "1985-03-10",
-    "gender": "female",
-}
+from tests.support.clinical_api_test_helpers import (
+    TIMELINE_PATIENT_PAYLOAD as PATIENT_PAYLOAD,
+    assigned_patient_for_doctor,
+    register_and_login,
+)
 
-
-async def _register_and_login(
-    client: AsyncClient,
-    *,
-    email: str,
-    password: str = "securepass123",
-) -> dict[str, str]:
-    await client.post(
-        "/api/v1/auth/register",
-        json={
-            "email": email,
-            "password": password,
-            "first_name": "Test",
-            "last_name": "User",
-            "role": "doctor",
-        },
-    )
-    login_response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": password},
-    )
-    token = login_response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+_register_and_login = register_and_login
 
 
 @pytest.mark.asyncio
-async def test_clinical_timeline_happy_path(client: AsyncClient) -> None:
+async def test_clinical_timeline_happy_path(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
     headers = await _register_and_login(client, email="timeline-owner@example.com")
-    patient = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    patient_id = patient.json()["id"]
+    patient_id = await assigned_patient_for_doctor(
+        client,
+        user_repository,
+        membership_repository,
+        headers,
+        patient_payload=PATIENT_PAYLOAD,
+    )
 
     record_date = (datetime.now(UTC) - timedelta(days=10)).isoformat()
     await client.post(
@@ -79,12 +65,24 @@ async def test_clinical_timeline_unauthenticated(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_clinical_timeline_cross_user_not_found(client: AsyncClient) -> None:
-    owner_headers = await _register_and_login(client, email="timeline-owner2@example.com")
-    other_headers = await _register_and_login(client, email="timeline-other@example.com")
+async def test_clinical_timeline_cross_user_not_found(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
+    owner_email = "timeline-owner2@example.com"
+    other_email = "timeline-other@example.com"
+    owner_headers = await _register_and_login(client, email=owner_email)
+    other_headers = await _register_and_login(client, email=other_email)
 
-    patient = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=owner_headers)
-    patient_id = patient.json()["id"]
+    patient_id = await assigned_patient_for_doctor(
+        client,
+        user_repository,
+        membership_repository,
+        owner_headers,
+        patient_payload=PATIENT_PAYLOAD,
+        extra_org_doctor_emails=(other_email,),
+    )
 
     response = await client.get(
         f"/api/v1/patients/{patient_id}/clinical-timeline",
@@ -94,10 +92,19 @@ async def test_clinical_timeline_cross_user_not_found(client: AsyncClient) -> No
 
 
 @pytest.mark.asyncio
-async def test_clinical_timeline_empty(client: AsyncClient) -> None:
+async def test_clinical_timeline_empty(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
     headers = await _register_and_login(client, email="timeline-empty@example.com")
-    patient = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    patient_id = patient.json()["id"]
+    patient_id = await assigned_patient_for_doctor(
+        client,
+        user_repository,
+        membership_repository,
+        headers,
+        patient_payload=PATIENT_PAYLOAD,
+    )
 
     response = await client.get(
         f"/api/v1/patients/{patient_id}/clinical-timeline",
@@ -108,10 +115,19 @@ async def test_clinical_timeline_empty(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_clinical_timeline_invalid_date_range(client: AsyncClient) -> None:
+async def test_clinical_timeline_invalid_date_range(
+    client: AsyncClient,
+    user_repository,
+    membership_repository,
+) -> None:
     headers = await _register_and_login(client, email="timeline-range@example.com")
-    patient = await client.post("/api/v1/patients", json=PATIENT_PAYLOAD, headers=headers)
-    patient_id = patient.json()["id"]
+    patient_id = await assigned_patient_for_doctor(
+        client,
+        user_repository,
+        membership_repository,
+        headers,
+        patient_payload=PATIENT_PAYLOAD,
+    )
 
     date_from = datetime.now(UTC).isoformat()
     date_to = (datetime.now(UTC) - timedelta(days=5)).isoformat()
