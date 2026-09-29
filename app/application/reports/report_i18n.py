@@ -11,12 +11,13 @@ ReportLocale = Literal["en", "tr"]
 
 SUPPORTED_REPORT_LOCALES: frozenset[str] = frozenset({"en", "tr"})
 
-# Patient notes excluded from PDF (technical/demo markers only — not clinical content).
-INTERNAL_PATIENT_NOTE_PREFIXES: tuple[str, ...] = (
-    "seed:",
-    "demo-fixture:",
-    "internal-test:",
+from app.application.clinical_display_text import (
+    INTERNAL_OPERATIONAL_NOTE_PREFIXES,
+    text_for_clinical_display,
 )
+
+# Backward-compatible alias for PDF tests and callers.
+INTERNAL_PATIENT_NOTE_PREFIXES = INTERNAL_OPERATIONAL_NOTE_PREFIXES
 
 
 def parse_report_locale(value: str | None) -> ReportLocale:
@@ -58,15 +59,7 @@ REPORT_LOCALE_RESPONSE_HEADER = "X-Report-Locale"
 
 def patient_notes_for_report(notes: str | None) -> str | None:
     """Return notes for PDF, or None when the value is an internal/demo marker only."""
-    if notes is None:
-        return None
-    stripped = notes.strip()
-    if not stripped:
-        return None
-    lowered = stripped.lower()
-    if any(lowered.startswith(prefix) for prefix in INTERNAL_PATIENT_NOTE_PREFIXES):
-        return None
-    return stripped
+    return text_for_clinical_display(notes)
 
 
 @dataclass(frozen=True)

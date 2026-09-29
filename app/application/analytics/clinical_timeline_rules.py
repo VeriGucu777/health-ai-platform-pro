@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from app.application.analytics.follow_up_status import is_follow_up_overdue
+from app.application.clinical_display_text import text_for_clinical_display
 from app.application.analytics.health_measurement_analytics import compute_metric_statistics
 from app.domain.entities.appointment import Appointment
 from app.domain.entities.clinical_timeline import ClinicalTimelineEvent, ClinicalTimelineSource
@@ -124,7 +125,8 @@ def events_from_health_measurement(measurement: HealthMeasurement) -> list[Clini
         parts.append(f"exercise {measurement.exercise_minutes} min")
 
     if not parts:
-        detail = (measurement.notes or "").strip() or "Health measurement recorded"
+        display_notes = text_for_clinical_display(measurement.notes)
+        detail = display_notes or "Health measurement recorded"
     else:
         detail = "; ".join(parts)
 
@@ -152,8 +154,9 @@ def events_from_appointment(
     event_type = APPOINTMENT_STATUS_EVENT_TYPES.get(status_key, "appointment_status")
     headline = f"Appointment {appointment.status.strip()}"
     detail_parts = [appointment.appointment_type.strip()]
-    if appointment.notes:
-        detail_parts.append(appointment.notes.strip())
+    display_notes = text_for_clinical_display(appointment.notes)
+    if display_notes:
+        detail_parts.append(display_notes)
     detail = " — ".join(part for part in detail_parts if part)
 
     events = [

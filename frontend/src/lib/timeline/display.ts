@@ -41,8 +41,25 @@ function roundEmbeddedFloats(text: string): string {
   });
 }
 
+const INTERNAL_NOTE_PREFIXES = ["seed:", "demo-fixture:", "internal-test:"];
+
+function isInternalOperationalSegment(segment: string): boolean {
+  const normalized = segment.trim().toLowerCase();
+  return INTERNAL_NOTE_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+}
+
+function stripInternalOperationalNotes(text: string): string {
+  const segments = text.split(" — ");
+  const kept = segments.filter((segment) => !isInternalOperationalSegment(segment));
+  if (kept.length === 0) {
+    return segments.find((segment) => !isInternalOperationalSegment(segment)) ?? "";
+  }
+  return kept.join(" — ");
+}
+
 function sanitizeTimelineDetail(detail: string): string {
-  let text = detail.replace(/\s*Related measurement IDs:.*$/i, "");
+  let text = stripInternalOperationalNotes(detail);
+  text = text.replace(/\s*Related measurement IDs:.*$/i, "");
   text = text.replace(UUID_PATTERN, "");
   text = roundEmbeddedFloats(text);
   text = text.replace(/\(\s*,/g, "(").replace(/,\s*\)/g, ")").replace(/\s{2,}/g, " ");

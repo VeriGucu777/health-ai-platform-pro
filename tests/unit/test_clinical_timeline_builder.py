@@ -84,3 +84,20 @@ def test_appointment_overdue_derived_event() -> None:
     assert any(event.event_type == "appointment_overdue" for event in events)
     overdue = next(event for event in events if event.event_type == "appointment_overdue")
     assert overdue.source.kind == "derived"
+
+
+def test_appointment_timeline_hides_seed_notes_in_detail() -> None:
+    from app.domain.entities.appointment import Appointment
+
+    appointment = Appointment(
+        owner_id=uuid4(),
+        patient_id=uuid4(),
+        appointment_date=datetime(2026, 8, 10, 14, 0, tzinfo=UTC),
+        appointment_type="follow_up",
+        status="scheduled",
+        notes="seed:demo-enrich-a1/appt/01",
+    )
+    events = events_from_appointment(appointment, as_of=datetime(2026, 8, 1, tzinfo=UTC))
+    status_event = next(event for event in events if event.event_type == "appointment_scheduled")
+    assert "seed:" not in status_event.detail.lower()
+    assert status_event.detail == "follow_up"
