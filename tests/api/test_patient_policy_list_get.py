@@ -1,6 +1,6 @@
 """Patient list/get access via PatientAccessPolicy."""
 
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -319,6 +319,79 @@ async def test_clinic_admin_list_returns_org_patients(
     data = response.json()
     assert data["total"] == 1
     assert data["items"][0]["id"] == str(in_org.id)
+
+
+@pytest.mark.asyncio
+async def test_clinic_admin_old_fixture_may_be_off_default_page_but_get_still_allowed(
+    client: AsyncClient,
+    user_repository,
+    patient_repository,
+    membership_repository,
+) -> None:
+    """Pagination is not RBAC: org-scoped patients can be off page 1 while direct GET works."""
+    org_id = uuid4()
+    admin = await _seed_clinic_admin(user_repository, "admin-pagination@example.com")
+    owner = await _seed_doctor(user_repository, "admin-pagination-owner@example.com")
+    await membership_repository.create(
+        OrganizationMembership(
+            organization_id=org_id,
+            user_id=admin.id,
+            membership_role=OrganizationMembershipRole.CLINIC_ADMIN,
+            status=MembershipStatus.ACTIVE,
+        ),
+    )
+
+    policy_fixture = await patient_repository.create(
+        Patient(
+            owner_id=owner.id,
+            organization_id=org_id,
+            first_name="Demo",
+            last_name="Policy Patient",
+            date_of_birth=date(1990, 6, 12),
+            gender="female",
+            notes="seed:demo-live-policy-patient-v1",
+            is_active=True,
+            created_at=datetime(2020, 1, 1, tzinfo=UTC),
+            updated_at=datetime(2020, 1, 1, tzinfo=UTC),
+        ),
+    )
+    base = datetime(2026, 6, 1, tzinfo=UTC)
+    for index in range(24):
+        stamp = base + timedelta(hours=index)
+        await patient_repository.create(
+            Patient(
+                owner_id=owner.id,
+                organization_id=org_id,
+                first_name=f"Newer{index}",
+                last_name="Patient",
+                date_of_birth=date(1992, 1, 1),
+                gender="female",
+                created_at=stamp,
+                updated_at=stamp,
+            ),
+        )
+
+    headers = await _login(client, "admin-pagination@example.com")
+
+    page1 = await client.get("/api/v1/patients?page=1&page_size=20", headers=headers)
+    assert page1.status_code == 200
+    page1_data = page1.json()
+    assert page1_data["total"] > 20
+    page1_ids = {row["id"] for row in page1_data["items"]}
+    assert str(policy_fixture.id) not in page1_ids
+
+    direct = await client.get(f"/api/v1/patients/{policy_fixture.id}", headers=headers)
+    assert direct.status_code == 200
+
+    page2 = await client.get("/api/v1/patients?page=2&page_size=20", headers=headers)
+    assert page2.status_code == 200
+    page2_ids = {row["id"] for row in page2.json()["items"]}
+    assert str(policy_fixture.id) in page2_ids
+
+    wide = await client.get("/api/v1/patients?page=1&page_size=100", headers=headers)
+    assert wide.status_code == 200
+    wide_ids = {row["id"] for row in wide.json()["items"]}
+    assert str(policy_fixture.id) in wide_ids
 
 
 @pytest.mark.asyncio

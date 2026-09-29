@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Analyze/repair/verify demo-live-policy assignment fixtures via HTTP API (ops only)."""
+"""Analyze/repair/verify demo-live-policy assignment fixtures via HTTP API (ops only).
+
+Clinic admin patient list uses default pagination (page=1, page_size=20) and orders by
+created_at descending. Demo orgs with 20+ patients may omit older policy fixtures from
+page 1 without an RBAC failure — verify uses direct GET and page_size=100 for fixture
+existence, and reports default-page visibility separately.
+"""
 
 from __future__ import annotations
 
@@ -40,6 +46,8 @@ RANGE_Q = "date_from=2026-08-01T00:00:00Z&date_to=2026-08-31T23:59:59Z"
 
 ADMIN_EMAIL = os.getenv("DEMO_CLINIC_ADMIN_EMAIL", DEMO_CLINIC_ADMIN_EMAIL)
 DOCTOR_EMAIL = os.getenv("DEMO_DOCTOR_EMAIL", DEMO_DOCTOR_EMAIL)
+DEMO_POLICY_PATIENT_ID = os.getenv("DEMO_ASSIGNED_PATIENT_ID", "").strip()
+DEMO_UNASSIGNED_PATIENT_ID = os.getenv("DEMO_UNASSIGNED_PATIENT_ID", "").strip()
 
 
 def _require_env(name: str) -> str:
@@ -135,6 +143,22 @@ def _doctor_assignment(items: list[dict], doctor_id: str) -> dict | None:
         if row.get("assignee_user_id") == doctor_id:
             return row
     return None
+
+
+def _list_patients(token: str, *, page: int, page_size: int) -> tuple[int, dict[str, Any] | None]:
+    status, data = _req("GET", f"/patients?page={page}&page_size={page_size}", token=token)
+    if status != 200 or not isinstance(data, dict):
+        return status, None
+    return status, data
+
+
+def _patient_ids_on_page(data: dict[str, Any] | None) -> set[str]:
+    if not isinstance(data, dict):
+        return set()
+    items = data.get("items")
+    if not isinstance(items, list):
+        return set()
+    return {str(row["id"]) for row in items if isinstance(row, dict) and row.get("id")}
 
 
 def _count_list(token: str, path: str) -> int:
@@ -377,6 +401,25 @@ def verify(doctor_token: str, admin_token: str, doctor_id: str) -> dict[str, Any
         date_of_birth_iso=DEMO_UNASSIGNED_PATIENT_DATE_OF_BIRTH.isoformat(),
     )
 
+    _, listed_admin_default = _list_patients(admin_token, page=1, page_size=20)
+    default_ids = _patient_ids_on_page(listed_admin_default)
+    admin_total = (
+        int(listed_admin_default.get("total"))
+        if isinstance(listed_admin_default, dict) and listed_admin_default.get("total") is not None
+        else None
+    )
+
+    policy_id = (
+        (admin_policy or {}).get("id")
+        or DEMO_POLICY_PATIENT_ID
+        or None
+    )
+    unassigned_id = (
+        (admin_unassigned or {}).get("id")
+        or DEMO_UNASSIGNED_PATIENT_ID
+        or None
+    )
+
     out: dict[str, Any] = {
         "doctor_login": 200,
         "doctor_list_has_policy": policy is not None,
@@ -393,9 +436,30 @@ def verify(doctor_token: str, admin_token: str, doctor_id: str) -> dict[str, Any
             },
         )[0],
         "doctor_management_api": _req("GET", "/organizations/me/membership", doctor_token)[0],
+        "admin_sees_policy_in_wide_list": admin_policy is not None,
+        "admin_sees_unassigned_in_wide_list": admin_unassigned is not None,
         "admin_sees_policy": admin_policy is not None,
         "admin_sees_unassigned": admin_unassigned is not None,
+        "admin_list_total": admin_total,
+        "admin_policy_on_default_page1": (
+            str(policy_id) in default_ids if policy_id else None
+        ),
+        "admin_unassigned_on_default_page1": (
+            str(unassigned_id) in default_ids if unassigned_id else None
+        ),
+        "admin_default_page1_missing_fixture_is_expected_when_total_gt_20": (
+            admin_total is not None and admin_total > 20
+        ),
     }
+
+    if policy_id:
+        out["admin_policy_direct_get"] = _req("GET", f"/patients/{policy_id}", admin_token)[0]
+    if unassigned_id:
+        out["admin_unassigned_direct_get"] = _req(
+            "GET",
+            f"/patients/{unassigned_id}",
+            admin_token,
+        )[0]
 
     if policy:
         pid = policy["id"]
