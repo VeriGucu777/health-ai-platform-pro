@@ -550,3 +550,129 @@ async def test_risk_types_match_scenarios() -> None:
     for key, assessment_type in expected.items():
         rows = await risk.list_by_patient(result.patient_ids[key], limit=10)
         assert any(row.assessment_type == assessment_type for row in rows)
+
+
+@pytest.mark.asyncio
+async def test_enrichment_v2_expected_clinical_counts() -> None:
+    users, orgs, memberships, assignments, patients, consents, measurements, records, appointments, risk = (
+        await _base_repos()
+    )
+    org, admin, doctor_a = await _seed_org_admin_doctor_a(users, orgs, memberships)
+    kwargs = _enrichment_kwargs(
+        users,
+        orgs,
+        memberships,
+        patients,
+        assignments,
+        consents,
+        measurements,
+        records,
+        appointments,
+        risk,
+        admin_email=admin.email,
+        doctor_a_email=doctor_a.email,
+        doctor_b_email="enrich-doctor-b@example.com",
+        doctor_b_password="DoctorBPass12345!",
+    )
+    result = await seed_demo_clinical_enrichment(**kwargs, mutate=True)
+    expected = {
+        "a1": {"measurements": 7, "medical_records": 4},
+        "a2": {"measurements": 5, "medical_records": 5},
+        "b1": {"measurements": 3, "medical_records": 2},
+        "b2": {"measurements": 4, "medical_records": 5},
+    }
+    for key, counts in expected.items():
+        assert result.counts[key].measurements == counts["measurements"]
+        assert result.counts[key].medical_records == counts["medical_records"]
+
+
+@pytest.mark.asyncio
+async def test_enrichment_v2_medical_records_include_lab_imaging_and_medications() -> None:
+    users, orgs, memberships, assignments, patients, consents, measurements, records, appointments, risk = (
+        await _base_repos()
+    )
+    org, admin, doctor_a = await _seed_org_admin_doctor_a(users, orgs, memberships)
+    kwargs = _enrichment_kwargs(
+        users,
+        orgs,
+        memberships,
+        patients,
+        assignments,
+        consents,
+        measurements,
+        records,
+        appointments,
+        risk,
+        admin_email=admin.email,
+        doctor_a_email=doctor_a.email,
+        doctor_b_email="enrich-doctor-b@example.com",
+        doctor_b_password="DoctorBPass12345!",
+    )
+    result = await seed_demo_clinical_enrichment(**kwargs, mutate=True)
+    for key in ("a1", "a2", "b1", "b2"):
+        pid = result.patient_ids[key]
+        rows = await records.list_by_owner(admin.id, patient_id=pid, limit=50)
+        assert any(row.record_type == "lab_result" for row in rows)
+        assert any((row.diagnosis or "").strip() for row in rows)
+    assert any(
+        row.medications
+        for row in await records.list_by_owner(
+            admin.id,
+            patient_id=result.patient_ids["a1"],
+            limit=50,
+        )
+    )
+    assert any(
+        row.record_type == "imaging"
+        for row in await records.list_by_owner(
+            admin.id,
+            patient_id=result.patient_ids["a2"],
+            limit=50,
+        )
+    )
+
+
+@pytest.mark.asyncio
+async def test_timeline_event_types_diverse_for_a2() -> None:
+    users, orgs, memberships, assignments, patients, consents, measurements, records, appointments, risk = (
+        await _base_repos()
+    )
+    org, admin, doctor_a = await _seed_org_admin_doctor_a(users, orgs, memberships)
+    kwargs = _enrichment_kwargs(
+        users,
+        orgs,
+        memberships,
+        patients,
+        assignments,
+        consents,
+        measurements,
+        records,
+        appointments,
+        risk,
+        admin_email=admin.email,
+        doctor_a_email=doctor_a.email,
+        doctor_b_email="enrich-doctor-b@example.com",
+        doctor_b_password="DoctorBPass12345!",
+    )
+    result = await seed_demo_clinical_enrichment(**kwargs, mutate=True)
+    timeline_service = build_clinical_timeline_service(
+        patients,
+        measurements,
+        records,
+        appointments,
+        memberships,
+        assignments,
+    )
+    timeline, _ = await timeline_service.get_clinical_timeline(
+        doctor_a.id,
+        UserRole.DOCTOR,
+        patient_id=result.patient_ids["a2"],
+    )
+    event_types = {event.event_type for event in timeline.events}
+    assert "health_measurement" in event_types
+    assert "medical_record_diagnosis" in event_types
+    assert "medical_record_medication" in event_types
+    assert "medical_record_treatment" in event_types
+    assert "appointment_completed" in event_types or "appointment_scheduled" in event_types
+    detail_blob = " ".join(event.detail for event in timeline.events)
+    assert "seed:demo-enrich" not in detail_blob

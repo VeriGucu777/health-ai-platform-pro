@@ -53,6 +53,10 @@ MARKER_B2 = "seed:demo-enrich-b2"
 
 ENRICHMENT_MARKERS = (MARKER_A1, MARKER_A2, MARKER_B1, MARKER_B2)
 
+# Bump when measurement/record templates change. Older rows use /meas/00 and /record/00
+# (pre-v2); re-seed adds v2 rows idempotently. Production may need soft-deactivate of
+# legacy repetitive measurements (notes matching .../meas/0[0-4] without /v2/).
+ENRICHMENT_CLINICAL_DATA_VERSION = "v2"
 
 class OrganizationSeedRepository(Protocol):
     async def get_by_slug(self, slug: str): ...
@@ -150,6 +154,10 @@ PATIENT_SPECS: tuple[EnrichmentPatientSpec, ...] = (
 
 def _notes_has_marker(notes: str | None, sub_marker: str) -> bool:
     return sub_marker in (notes or "")
+
+
+def _enrichment_sub_marker(spec: EnrichmentPatientSpec, kind: str, index: int) -> str:
+    return f"{spec.marker}/{kind}/{ENRICHMENT_CLINICAL_DATA_VERSION}/{index:02d}"
 
 
 def _validate_doctor_b_email_distinct_from_a(config: DemoClinicalEnrichmentConfig) -> None:
@@ -377,7 +385,7 @@ async def _seed_measurements_for_spec(
     created = 0
     existing = await measurement_repository.list_by_owner(owner_id, patient_id=patient.id, limit=500)
     for idx, template in enumerate(templates):
-        sub_marker = f"{spec.marker}/meas/{idx:02d}"
+        sub_marker = _enrichment_sub_marker(spec, "meas", idx)
         if any(_notes_has_marker(row.notes, sub_marker) for row in existing):
             continue
         if not mutate:
@@ -405,32 +413,118 @@ def _measurement_templates(spec: EnrichmentPatientSpec) -> list[dict[str, Any]]:
     base = datetime(2026, 6, 1, 9, 0, tzinfo=UTC)
     if spec.key == "a1":
         return [
-            {"measured_at": base - timedelta(days=90), "blood_glucose": Decimal("118"), "glucose_context": "fasting", "weight_kg": Decimal("78.5"), "systolic_pressure": 128, "diastolic_pressure": 82},
-            {"measured_at": base - timedelta(days=60), "blood_glucose": Decimal("126"), "glucose_context": "post_meal", "weight_kg": Decimal("78.1"), "exercise_minutes": 25},
-            {"measured_at": base - timedelta(days=30), "blood_glucose": Decimal("112"), "glucose_context": "fasting", "weight_kg": Decimal("77.6"), "systolic_pressure": 124, "diastolic_pressure": 80},
-            {"measured_at": base - timedelta(days=14), "blood_glucose": Decimal("109"), "glucose_context": "fasting", "weight_kg": Decimal("77.2"), "heart_rate": 72},
-            {"measured_at": base - timedelta(days=3), "blood_glucose": Decimal("115"), "glucose_context": "fasting", "weight_kg": Decimal("76.9"), "systolic_pressure": 122, "diastolic_pressure": 78},
+            {
+                "measured_at": base - timedelta(days=88),
+                "blood_glucose": Decimal("118"),
+                "glucose_context": "fasting",
+            },
+            {
+                "measured_at": base - timedelta(days=62),
+                "blood_glucose": Decimal("126"),
+                "glucose_context": "post_meal",
+                "meal_context": "after lunch",
+            },
+            {
+                "measured_at": base - timedelta(days=45),
+                "blood_glucose": Decimal("112"),
+                "glucose_context": "fasting",
+                "weight_kg": Decimal("77.8"),
+            },
+            {
+                "measured_at": base - timedelta(days=28),
+                "blood_glucose": Decimal("121"),
+                "glucose_context": "post_meal",
+            },
+            {
+                "measured_at": base - timedelta(days=21),
+                "systolic_pressure": 128,
+                "diastolic_pressure": 82,
+            },
+            {
+                "measured_at": base - timedelta(days=12),
+                "systolic_pressure": 124,
+                "diastolic_pressure": 80,
+                "blood_glucose": Decimal("109"),
+                "glucose_context": "fasting",
+            },
+            {
+                "measured_at": base - timedelta(days=4),
+                "systolic_pressure": 122,
+                "diastolic_pressure": 78,
+                "exercise_minutes": 30,
+            },
         ]
     if spec.key == "a2":
         return [
-            {"measured_at": base - timedelta(days=75), "systolic_pressure": 138, "diastolic_pressure": 88, "heart_rate": 78, "weight_kg": Decimal("92.0")},
-            {"measured_at": base - timedelta(days=45), "systolic_pressure": 132, "diastolic_pressure": 84, "heart_rate": 74, "weight_kg": Decimal("91.2")},
-            {"measured_at": base - timedelta(days=25), "systolic_pressure": 128, "diastolic_pressure": 82, "heart_rate": 70, "weight_kg": Decimal("90.5")},
-            {"measured_at": base - timedelta(days=10), "systolic_pressure": 126, "diastolic_pressure": 80, "heart_rate": 68, "weight_kg": Decimal("90.0")},
-            {"measured_at": base - timedelta(days=2), "systolic_pressure": 124, "diastolic_pressure": 78, "heart_rate": 66, "weight_kg": Decimal("89.6")},
+            {
+                "measured_at": base - timedelta(days=68),
+                "systolic_pressure": 138,
+                "diastolic_pressure": 88,
+                "weight_kg": Decimal("91.5"),
+            },
+            {
+                "measured_at": base - timedelta(days=42),
+                "blood_glucose": Decimal("104"),
+                "glucose_context": "fasting",
+            },
+            {
+                "measured_at": base - timedelta(days=26),
+                "systolic_pressure": 130,
+                "diastolic_pressure": 84,
+            },
+            {
+                "measured_at": base - timedelta(days=14),
+                "blood_glucose": Decimal("118"),
+                "glucose_context": "post_meal",
+            },
+            {
+                "measured_at": base - timedelta(days=3),
+                "systolic_pressure": 126,
+                "diastolic_pressure": 80,
+                "heart_rate": 68,
+            },
         ]
     if spec.key == "b1":
         return [
-            {"measured_at": base - timedelta(days=40), "systolic_pressure": 118, "diastolic_pressure": 76, "heart_rate": 64, "weight_kg": Decimal("62.0")},
-            {"measured_at": base - timedelta(days=20), "systolic_pressure": 116, "diastolic_pressure": 74, "heart_rate": 62, "weight_kg": Decimal("61.8"), "exercise_minutes": 40},
-            {"measured_at": base - timedelta(days=7), "systolic_pressure": 114, "diastolic_pressure": 72, "heart_rate": 60, "weight_kg": Decimal("61.5")},
+            {
+                "measured_at": base - timedelta(days=35),
+                "systolic_pressure": 118,
+                "diastolic_pressure": 76,
+            },
+            {
+                "measured_at": base - timedelta(days=18),
+                "blood_glucose": Decimal("92"),
+                "glucose_context": "fasting",
+                "exercise_minutes": 40,
+            },
+            {
+                "measured_at": base - timedelta(days=6),
+                "systolic_pressure": 114,
+                "diastolic_pressure": 72,
+            },
         ]
     return [
-        {"measured_at": base - timedelta(days=80), "systolic_pressure": 142, "diastolic_pressure": 86, "heart_rate": 76, "weight_kg": Decimal("84.0")},
-        {"measured_at": base - timedelta(days=55), "systolic_pressure": 136, "diastolic_pressure": 84, "heart_rate": 74, "weight_kg": Decimal("83.5")},
-        {"measured_at": base - timedelta(days=35), "systolic_pressure": 130, "diastolic_pressure": 82, "heart_rate": 72, "weight_kg": Decimal("83.0")},
-        {"measured_at": base - timedelta(days=15), "systolic_pressure": 128, "diastolic_pressure": 80, "heart_rate": 70, "weight_kg": Decimal("82.6")},
-        {"measured_at": base - timedelta(days=4), "systolic_pressure": 126, "diastolic_pressure": 78, "heart_rate": 68, "weight_kg": Decimal("82.2")},
+        {
+            "measured_at": base - timedelta(days=72),
+            "systolic_pressure": 142,
+            "diastolic_pressure": 86,
+        },
+        {
+            "measured_at": base - timedelta(days=48),
+            "systolic_pressure": 134,
+            "diastolic_pressure": 84,
+            "weight_kg": Decimal("83.2"),
+        },
+        {
+            "measured_at": base - timedelta(days=22),
+            "systolic_pressure": 128,
+            "diastolic_pressure": 80,
+        },
+        {
+            "measured_at": base - timedelta(days=5),
+            "blood_glucose": Decimal("101"),
+            "glucose_context": "fasting",
+        },
     ]
 
 
@@ -446,7 +540,7 @@ async def _seed_medical_records(
     created = 0
     existing = await medical_record_repository.list_by_owner(owner_id, patient_id=patient.id, limit=100)
     for idx, row in enumerate(specs):
-        sub_marker = f"{spec.marker}/record/{idx:02d}"
+        sub_marker = _enrichment_sub_marker(spec, "record", idx)
         if any(_notes_has_marker(rec.notes, sub_marker) for rec in existing):
             continue
         if not mutate:
@@ -458,8 +552,12 @@ async def _seed_medical_records(
                 record_date=row["record_date"],
                 record_type=row["record_type"],
                 title=row["title"],
-                description=row["description"],
+                description=row.get("description"),
+                diagnosis=row.get("diagnosis"),
                 treatment=row.get("treatment"),
+                medications=row.get("medications"),
+                doctor_name=row.get("doctor_name"),
+                hospital_name=row.get("hospital_name"),
                 notes=sub_marker,
             ),
         )
@@ -469,24 +567,159 @@ async def _seed_medical_records(
 
 def _medical_record_specs(spec: EnrichmentPatientSpec) -> list[dict[str, Any]]:
     base = datetime(2026, 5, 15, 10, 0, tzinfo=UTC)
-    neutral = "Synthetic demo record for decision-support review; not a diagnosis."
     if spec.key == "a1":
         return [
-            {"record_date": base - timedelta(days=120), "record_type": "visit", "title": "Metabolic follow-up (demo)", "description": neutral},
-            {"record_date": base - timedelta(days=20), "record_type": "lab", "title": "Glucose trend review (demo)", "description": neutral, "treatment": "Lifestyle counseling discussed"},
+            {
+                "record_date": base - timedelta(days=110),
+                "record_type": "visit",
+                "title": "Endocrine follow-up (demo)",
+                "diagnosis": "Type 2 diabetes mellitus (synthetic demo history for decision-support review).",
+            },
+            {
+                "record_date": base - timedelta(days=55),
+                "record_type": "lab_result",
+                "title": "Metabolic laboratory panel (demo)",
+                "diagnosis": (
+                    "Synthetic laboratory summary (demo): HbA1c 7.2%; LDL 142 mg/dL; "
+                    "triglycerides 180 mg/dL."
+                ),
+                "description": "Fictional demo values for decision-support review only.",
+            },
+            {
+                "record_date": base - timedelta(days=40),
+                "record_type": "visit",
+                "title": "Medication review (demo)",
+                "medications": (
+                    "Metformin dose increased per clinic protocol (synthetic demo note; "
+                    "not a prescribing instruction)."
+                ),
+            },
+            {
+                "record_date": base - timedelta(days=15),
+                "record_type": "visit",
+                "title": "Diabetes follow-up plan (demo)",
+                "treatment": (
+                    "Continue home glucose logging, quarterly HbA1c, and lifestyle counseling "
+                    "(synthetic care plan for demo)."
+                ),
+            },
         ]
     if spec.key == "a2":
         return [
-            {"record_date": base - timedelta(days=100), "record_type": "visit", "title": "Blood pressure review (demo)", "description": neutral},
-            {"record_date": base - timedelta(days=18), "record_type": "visit", "title": "Cardiovascular risk follow-up (demo)", "description": neutral},
+            {
+                "record_date": base - timedelta(days=95),
+                "record_type": "visit",
+                "title": "Cardiovascular clinic visit (demo)",
+                "diagnosis": (
+                    "Hypertension with elevated cardiovascular risk profile "
+                    "(synthetic demo history)."
+                ),
+            },
+            {
+                "record_date": base - timedelta(days=70),
+                "record_type": "lab_result",
+                "title": "Lipid panel (demo)",
+                "diagnosis": (
+                    "Synthetic lipid panel (demo): LDL 156 mg/dL; HDL 42 mg/dL; "
+                    "triglycerides 190 mg/dL."
+                ),
+                "description": "Fictional demo values for decision-support review only.",
+            },
+            {
+                "record_date": base - timedelta(days=50),
+                "record_type": "visit",
+                "title": "Medication adjustment (demo)",
+                "medications": (
+                    "Antihypertensive and statin therapy reviewed; dose adjustment noted "
+                    "(synthetic demo text only)."
+                ),
+            },
+            {
+                "record_date": base - timedelta(days=32),
+                "record_type": "imaging",
+                "title": "Echocardiography summary (demo)",
+                "diagnosis": (
+                    "Synthetic echocardiography report summary (demo): documented for chart "
+                    "review; no image file or automated analysis."
+                ),
+                "description": "Fictional demo imaging narrative for decision-support review only.",
+            },
+            {
+                "record_date": base - timedelta(days=14),
+                "record_type": "visit",
+                "title": "Cardiac follow-up plan (demo)",
+                "treatment": (
+                    "Blood pressure targets, lipid recheck in 3 months, and activity guidance "
+                    "(synthetic demo plan)."
+                ),
+            },
         ]
     if spec.key == "b1":
         return [
-            {"record_date": base - timedelta(days=60), "record_type": "visit", "title": "Preventive check-in (demo)", "description": neutral},
+            {
+                "record_date": base - timedelta(days=55),
+                "record_type": "visit",
+                "title": "Preventive screening visit (demo)",
+                "diagnosis": (
+                    "Preventive screening visit; no major abnormality documented in this "
+                    "synthetic demo record."
+                ),
+            },
+            {
+                "record_date": base - timedelta(days=25),
+                "record_type": "lab_result",
+                "title": "Preventive screening panel (demo)",
+                "diagnosis": (
+                    "Synthetic preventive screening summary (demo): fasting glucose 92 mg/dL; "
+                    "no major abnormality in fictional demo panel."
+                ),
+            },
         ]
     return [
-        {"record_date": base - timedelta(days=90), "record_type": "visit", "title": "Neurology follow-up planning (demo)", "description": neutral},
-        {"record_date": base - timedelta(days=12), "record_type": "visit", "title": "Stroke risk monitoring (demo)", "description": neutral},
+        {
+            "record_date": base - timedelta(days=85),
+            "record_type": "visit",
+            "title": "Cerebrovascular follow-up (demo)",
+            "diagnosis": (
+                "History of cerebrovascular event under outpatient follow-up "
+                "(synthetic demo history)."
+            ),
+        },
+        {
+            "record_date": base - timedelta(days=60),
+            "record_type": "lab_result",
+            "title": "Stroke follow-up laboratories (demo)",
+            "diagnosis": (
+                "Synthetic laboratory summary (demo): LDL 138 mg/dL; fasting glucose 101 mg/dL."
+            ),
+        },
+        {
+            "record_date": base - timedelta(days=45),
+            "record_type": "visit",
+            "title": "Secondary prevention medications (demo)",
+            "medications": (
+                "Antiplatelet and statin therapy continuation reviewed "
+                "(synthetic demo medication note)."
+            ),
+        },
+        {
+            "record_date": base - timedelta(days=28),
+            "record_type": "imaging",
+            "title": "Brain imaging report summary (demo)",
+            "diagnosis": (
+                "Synthetic brain imaging report summary (demo); no DICOM file or "
+                "automated image interpretation."
+            ),
+        },
+        {
+            "record_date": base - timedelta(days=10),
+            "record_type": "visit",
+            "title": "Stroke recovery follow-up plan (demo)",
+            "treatment": (
+                "Neurology follow-up, blood pressure monitoring, and rehabilitation goals "
+                "(synthetic demo care plan)."
+            ),
+        },
     ]
 
 
