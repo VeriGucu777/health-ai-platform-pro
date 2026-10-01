@@ -31,6 +31,7 @@ class HealthMeasurementRepository(Repository[HealthMeasurement]):
         date_to: datetime | None = None,
         glucose_context: str | None = None,
         sort_order: str = "desc",
+        include_inactive: bool = False,
     ) -> list[HealthMeasurement]:
         """List health measurements belonging to the given owner."""
 
@@ -43,6 +44,7 @@ class HealthMeasurementRepository(Repository[HealthMeasurement]):
         date_from: datetime | None = None,
         date_to: datetime | None = None,
         glucose_context: str | None = None,
+        include_inactive: bool = False,
     ) -> int:
         """Count health measurements belonging to the given owner."""
 
@@ -79,6 +81,7 @@ class HealthMeasurementRepository(Repository[HealthMeasurement]):
         date_to: datetime | None = None,
         glucose_context: str | None = None,
         sort_order: str = "desc",
+        include_inactive: bool = False,
     ) -> list[HealthMeasurement]:
         """List measurements for accessible patients."""
 
@@ -91,5 +94,6 @@ class HealthMeasurementRepository(Repository[HealthMeasurement]):
         date_from: datetime | None = None,
         date_to: datetime | None = None,
         glucose_context: str | None = None,
+        include_inactive: bool = False,
     ) -> int:
         """Count measurements for accessible patients."""

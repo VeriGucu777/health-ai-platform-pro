@@ -22,7 +22,7 @@ class InMemoryHealthMeasurementRepository(HealthMeasurementRepository):
         owner_id: UUID,
     ) -> HealthMeasurement | None:
         measurement = self._health_measurements.get(health_measurement_id)
-        if measurement is None or measurement.owner_id != owner_id:
+        if measurement is None or measurement.owner_id != owner_id or not measurement.is_active:
             return None
         return measurement
 
@@ -37,11 +37,13 @@ class InMemoryHealthMeasurementRepository(HealthMeasurementRepository):
         date_to: datetime | None = None,
         glucose_context: str | None = None,
         sort_order: str = "desc",
+        include_inactive: bool = False,
     ) -> list[HealthMeasurement]:
         owned = [
             measurement
             for measurement in self._health_measurements.values()
             if measurement.owner_id == owner_id
+            and (include_inactive or measurement.is_active)
             and (patient_id is None or measurement.patient_id == patient_id)
             and (date_from is None or measurement.measured_at >= date_from)
             and (date_to is None or measurement.measured_at <= date_to)
@@ -61,11 +63,13 @@ class InMemoryHealthMeasurementRepository(HealthMeasurementRepository):
         date_from: datetime | None = None,
         date_to: datetime | None = None,
         glucose_context: str | None = None,
+        include_inactive: bool = False,
     ) -> int:
         return sum(
             1
             for measurement in self._health_measurements.values()
             if measurement.owner_id == owner_id
+            and (include_inactive or measurement.is_active)
             and (patient_id is None or measurement.patient_id == patient_id)
             and (date_from is None or measurement.measured_at >= date_from)
             and (date_to is None or measurement.measured_at <= date_to)
@@ -84,6 +88,7 @@ class InMemoryHealthMeasurementRepository(HealthMeasurementRepository):
             measurement
             for measurement in self._health_measurements.values()
             if measurement.owner_id == owner_id
+            and measurement.is_active
             and measurement.patient_id == patient_id
             and (date_from is None or measurement.measured_at >= date_from)
             and (date_to is None or measurement.measured_at <= date_to)
@@ -102,6 +107,7 @@ class InMemoryHealthMeasurementRepository(HealthMeasurementRepository):
             measurement
             for measurement in self._health_measurements.values()
             if measurement.patient_id == patient_id
+            and measurement.is_active
             and (date_from is None or measurement.measured_at >= date_from)
             and (date_to is None or measurement.measured_at <= date_to)
         ]
@@ -119,6 +125,7 @@ class InMemoryHealthMeasurementRepository(HealthMeasurementRepository):
         date_to: datetime | None = None,
         glucose_context: str | None = None,
         sort_order: str = "desc",
+        include_inactive: bool = False,
     ) -> list[HealthMeasurement]:
         if not patient_ids:
             return []
@@ -131,6 +138,7 @@ class InMemoryHealthMeasurementRepository(HealthMeasurementRepository):
             measurement
             for measurement in self._health_measurements.values()
             if measurement.patient_id in allowed
+            and (include_inactive or measurement.is_active)
             and (date_from is None or measurement.measured_at >= date_from)
             and (date_to is None or measurement.measured_at <= date_to)
             and (glucose_context is None or measurement.glucose_context == glucose_context)
@@ -149,6 +157,7 @@ class InMemoryHealthMeasurementRepository(HealthMeasurementRepository):
         date_from: datetime | None = None,
         date_to: datetime | None = None,
         glucose_context: str | None = None,
+        include_inactive: bool = False,
     ) -> int:
         if not patient_ids:
             return 0
@@ -161,6 +170,7 @@ class InMemoryHealthMeasurementRepository(HealthMeasurementRepository):
             1
             for measurement in self._health_measurements.values()
             if measurement.patient_id in allowed
+            and (include_inactive or measurement.is_active)
             and (date_from is None or measurement.measured_at >= date_from)
             and (date_to is None or measurement.measured_at <= date_to)
             and (glucose_context is None or measurement.glucose_context == glucose_context)

@@ -27,6 +27,7 @@ class MedicalRecordRepository(Repository[MedicalRecord]):
         limit: int = 100,
         patient_id: UUID | None = None,
         record_type: str | None = None,
+        include_inactive: bool = False,
     ) -> list[MedicalRecord]:
         """List medical records belonging to the given owner."""
 
@@ -37,6 +38,7 @@ class MedicalRecordRepository(Repository[MedicalRecord]):
         *,
         patient_id: UUID | None = None,
         record_type: str | None = None,
+        include_inactive: bool = False,
     ) -> int:
         """Count medical records belonging to the given owner."""
 
@@ -49,6 +51,7 @@ class MedicalRecordRepository(Repository[MedicalRecord]):
         limit: int = 100,
         patient_id: UUID | None = None,
         record_type: str | None = None,
+        include_inactive: bool = False,
     ) -> list[MedicalRecord]:
         """List records for accessible patients."""
 
@@ -59,5 +62,6 @@ class MedicalRecordRepository(Repository[MedicalRecord]):
         *,
         patient_id: UUID | None = None,
         record_type: str | None = None,
+        include_inactive: bool = False,
     ) -> int:
         """Count records for accessible patients."""

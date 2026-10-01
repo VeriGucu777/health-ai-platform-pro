@@ -21,7 +21,7 @@ class InMemoryMedicalRecordRepository(MedicalRecordRepository):
         owner_id: UUID,
     ) -> MedicalRecord | None:
         medical_record = self._medical_records.get(medical_record_id)
-        if medical_record is None or medical_record.owner_id != owner_id:
+        if medical_record is None or medical_record.owner_id != owner_id or not medical_record.is_active:
             return None
         return medical_record
 
@@ -33,11 +33,13 @@ class InMemoryMedicalRecordRepository(MedicalRecordRepository):
         limit: int = 100,
         patient_id: UUID | None = None,
         record_type: str | None = None,
+        include_inactive: bool = False,
     ) -> list[MedicalRecord]:
         owned = [
             medical_record
             for medical_record in self._medical_records.values()
             if medical_record.owner_id == owner_id
+            and (include_inactive or medical_record.is_active)
             and (patient_id is None or medical_record.patient_id == patient_id)
             and (record_type is None or medical_record.record_type == record_type)
         ]
@@ -50,11 +52,13 @@ class InMemoryMedicalRecordRepository(MedicalRecordRepository):
         *,
         patient_id: UUID | None = None,
         record_type: str | None = None,
+        include_inactive: bool = False,
     ) -> int:
         return sum(
             1
             for medical_record in self._medical_records.values()
             if medical_record.owner_id == owner_id
+            and (include_inactive or medical_record.is_active)
             and (patient_id is None or medical_record.patient_id == patient_id)
             and (record_type is None or medical_record.record_type == record_type)
         )
@@ -67,6 +71,7 @@ class InMemoryMedicalRecordRepository(MedicalRecordRepository):
         limit: int = 100,
         patient_id: UUID | None = None,
         record_type: str | None = None,
+        include_inactive: bool = False,
     ) -> list[MedicalRecord]:
         if not patient_ids:
             return []
@@ -79,6 +84,7 @@ class InMemoryMedicalRecordRepository(MedicalRecordRepository):
             medical_record
             for medical_record in self._medical_records.values()
             if medical_record.patient_id in allowed
+            and (include_inactive or medical_record.is_active)
             and (record_type is None or medical_record.record_type == record_type)
         ]
         items.sort(key=lambda medical_record: medical_record.created_at, reverse=True)
@@ -90,6 +96,7 @@ class InMemoryMedicalRecordRepository(MedicalRecordRepository):
         *,
         patient_id: UUID | None = None,
         record_type: str | None = None,
+        include_inactive: bool = False,
     ) -> int:
         if not patient_ids:
             return 0
@@ -102,6 +109,7 @@ class InMemoryMedicalRecordRepository(MedicalRecordRepository):
             1
             for medical_record in self._medical_records.values()
             if medical_record.patient_id in allowed
+            and (include_inactive or medical_record.is_active)
             and (record_type is None or medical_record.record_type == record_type)
         )
 

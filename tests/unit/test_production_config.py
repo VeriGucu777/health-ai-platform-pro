@@ -55,6 +55,7 @@ def test_get_settings_accepts_production_env_with_strong_secret(
     )
     monkeypatch.setenv("CORS_ORIGINS", "https://app.example.com")
     monkeypatch.setenv("DEBUG", "false")
+    monkeypatch.setenv("FRONTEND_PUBLIC_URL", "https://app.example.com")
 
     settings = get_settings()
     assert settings.environment == "production"

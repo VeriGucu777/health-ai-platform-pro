@@ -30,6 +30,7 @@ class SQLAlchemyMedicalRecordRepository(
         stmt = select(MedicalRecordModel).where(
             MedicalRecordModel.id == medical_record_id,
             MedicalRecordModel.owner_id == owner_id,
+            MedicalRecordModel.is_active.is_(True),
         )
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
@@ -43,8 +44,10 @@ class SQLAlchemyMedicalRecordRepository(
         limit: int = 100,
         patient_id: UUID | None = None,
         record_type: str | None = None,
+        include_inactive: bool = False,
     ) -> list[MedicalRecord]:
         stmt = select(MedicalRecordModel).where(MedicalRecordModel.owner_id == owner_id)
+        stmt = self._apply_active_filter(stmt, include_inactive)
         if patient_id is not None:
             stmt = stmt.where(MedicalRecordModel.patient_id == patient_id)
         if record_type is not None:
@@ -59,12 +62,14 @@ class SQLAlchemyMedicalRecordRepository(
         *,
         patient_id: UUID | None = None,
         record_type: str | None = None,
+        include_inactive: bool = False,
     ) -> int:
         stmt = (
             select(func.count())
             .select_from(MedicalRecordModel)
             .where(MedicalRecordModel.owner_id == owner_id)
         )
+        stmt = self._apply_active_filter(stmt, include_inactive)
         if patient_id is not None:
             stmt = stmt.where(MedicalRecordModel.patient_id == patient_id)
         if record_type is not None:
@@ -80,6 +85,7 @@ class SQLAlchemyMedicalRecordRepository(
         limit: int = 100,
         patient_id: UUID | None = None,
         record_type: str | None = None,
+        include_inactive: bool = False,
     ) -> list[MedicalRecord]:
         if not patient_ids:
             return []
@@ -87,6 +93,7 @@ class SQLAlchemyMedicalRecordRepository(
         if patient_id is not None and patient_id not in patient_ids:
             return []
         stmt = select(MedicalRecordModel).where(MedicalRecordModel.patient_id.in_(ids))
+        stmt = self._apply_active_filter(stmt, include_inactive)
         if record_type is not None:
             stmt = stmt.where(MedicalRecordModel.record_type == record_type)
         stmt = stmt.order_by(MedicalRecordModel.created_at.desc()).offset(offset).limit(limit)
@@ -99,6 +106,7 @@ class SQLAlchemyMedicalRecordRepository(
         *,
         patient_id: UUID | None = None,
         record_type: str | None = None,
+        include_inactive: bool = False,
     ) -> int:
         if not patient_ids:
             return 0
@@ -110,10 +118,16 @@ class SQLAlchemyMedicalRecordRepository(
             .select_from(MedicalRecordModel)
             .where(MedicalRecordModel.patient_id.in_(ids))
         )
+        stmt = self._apply_active_filter(stmt, include_inactive)
         if record_type is not None:
             stmt = stmt.where(MedicalRecordModel.record_type == record_type)
         result = await self._session.execute(stmt)
         return int(result.scalar_one())
+
+    def _apply_active_filter(self, stmt, include_inactive: bool):
+        if not include_inactive:
+            stmt = stmt.where(MedicalRecordModel.is_active.is_(True))
+        return stmt
 
     def _to_entity(self, model: MedicalRecordModel) -> MedicalRecord:
         return MedicalRecord(
@@ -130,6 +144,8 @@ class SQLAlchemyMedicalRecordRepository(
             doctor_name=model.doctor_name,
             hospital_name=model.hospital_name,
             notes=model.notes,
+            is_active=model.is_active,
+            deleted_at=model.deleted_at,
             created_at=model.created_at,
             updated_at=model.updated_at,
         )
@@ -149,6 +165,8 @@ class SQLAlchemyMedicalRecordRepository(
             doctor_name=entity.doctor_name,
             hospital_name=entity.hospital_name,
             notes=entity.notes,
+            is_active=entity.is_active,
+            deleted_at=entity.deleted_at,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
         )

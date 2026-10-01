@@ -31,6 +31,7 @@ class SQLAlchemyHealthMeasurementRepository(
         stmt = select(HealthMeasurementModel).where(
             HealthMeasurementModel.id == health_measurement_id,
             HealthMeasurementModel.owner_id == owner_id,
+            HealthMeasurementModel.is_active.is_(True),
         )
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
@@ -47,8 +48,10 @@ class SQLAlchemyHealthMeasurementRepository(
         date_to: datetime | None = None,
         glucose_context: str | None = None,
         sort_order: str = "desc",
+        include_inactive: bool = False,
     ) -> list[HealthMeasurement]:
         stmt = select(HealthMeasurementModel).where(HealthMeasurementModel.owner_id == owner_id)
+        stmt = self._apply_active_filter(stmt, include_inactive)
         stmt = self._apply_filters(stmt, patient_id, date_from, date_to, glucose_context)
         order_column = HealthMeasurementModel.measured_at
         stmt = stmt.order_by(
@@ -65,12 +68,14 @@ class SQLAlchemyHealthMeasurementRepository(
         date_from: datetime | None = None,
         date_to: datetime | None = None,
         glucose_context: str | None = None,
+        include_inactive: bool = False,
     ) -> int:
         stmt = (
             select(func.count())
             .select_from(HealthMeasurementModel)
             .where(HealthMeasurementModel.owner_id == owner_id)
         )
+        stmt = self._apply_active_filter(stmt, include_inactive)
         stmt = self._apply_filters(stmt, patient_id, date_from, date_to, glucose_context)
         result = await self._session.execute(stmt)
         return int(result.scalar_one())
@@ -84,6 +89,7 @@ class SQLAlchemyHealthMeasurementRepository(
         date_to: datetime | None = None,
     ) -> list[HealthMeasurement]:
         stmt = select(HealthMeasurementModel).where(HealthMeasurementModel.owner_id == owner_id)
+        stmt = self._apply_active_filter(stmt, include_inactive=False)
         stmt = self._apply_filters(stmt, patient_id, date_from, date_to, None)
         stmt = stmt.order_by(HealthMeasurementModel.measured_at.asc())
         result = await self._session.execute(stmt)
@@ -99,6 +105,7 @@ class SQLAlchemyHealthMeasurementRepository(
         stmt = select(HealthMeasurementModel).where(
             HealthMeasurementModel.patient_id == patient_id,
         )
+        stmt = self._apply_active_filter(stmt, include_inactive=False)
         stmt = self._apply_filters(stmt, patient_id, date_from, date_to, None)
         stmt = stmt.order_by(HealthMeasurementModel.measured_at.asc())
         result = await self._session.execute(stmt)
@@ -115,6 +122,7 @@ class SQLAlchemyHealthMeasurementRepository(
         date_to: datetime | None = None,
         glucose_context: str | None = None,
         sort_order: str = "desc",
+        include_inactive: bool = False,
     ) -> list[HealthMeasurement]:
         if not patient_ids:
             return []
@@ -124,6 +132,7 @@ class SQLAlchemyHealthMeasurementRepository(
         stmt = select(HealthMeasurementModel).where(
             HealthMeasurementModel.patient_id.in_(ids),
         )
+        stmt = self._apply_active_filter(stmt, include_inactive)
         stmt = self._apply_filters(stmt, None, date_from, date_to, glucose_context)
         order_column = HealthMeasurementModel.measured_at
         stmt = stmt.order_by(
@@ -140,6 +149,7 @@ class SQLAlchemyHealthMeasurementRepository(
         date_from: datetime | None = None,
         date_to: datetime | None = None,
         glucose_context: str | None = None,
+        include_inactive: bool = False,
     ) -> int:
         if not patient_ids:
             return 0
@@ -151,9 +161,15 @@ class SQLAlchemyHealthMeasurementRepository(
             .select_from(HealthMeasurementModel)
             .where(HealthMeasurementModel.patient_id.in_(ids))
         )
+        stmt = self._apply_active_filter(stmt, include_inactive)
         stmt = self._apply_filters(stmt, None, date_from, date_to, glucose_context)
         result = await self._session.execute(stmt)
         return int(result.scalar_one())
+
+    def _apply_active_filter(self, stmt, include_inactive: bool):
+        if not include_inactive:
+            stmt = stmt.where(HealthMeasurementModel.is_active.is_(True))
+        return stmt
 
     def _apply_filters(
         self,
@@ -189,6 +205,8 @@ class SQLAlchemyHealthMeasurementRepository(
             meal_context=model.meal_context,
             exercise_minutes=model.exercise_minutes,
             notes=model.notes,
+            is_active=model.is_active,
+            deleted_at=model.deleted_at,
             created_at=model.created_at,
             updated_at=model.updated_at,
         )
@@ -209,6 +227,8 @@ class SQLAlchemyHealthMeasurementRepository(
             meal_context=entity.meal_context,
             exercise_minutes=entity.exercise_minutes,
             notes=entity.notes,
+            is_active=entity.is_active,
+            deleted_at=entity.deleted_at,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
         )

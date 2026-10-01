@@ -23,3 +23,5 @@ class MedicalRecord(BaseEntity):
     doctor_name: str | None = None
     hospital_name: str | None = None
     notes: str | None = None
+    is_active: bool = True
+    deleted_at: datetime | None = None

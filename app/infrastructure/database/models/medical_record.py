@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -34,3 +34,5 @@ class MedicalRecordModel(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     doctor_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     hospital_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

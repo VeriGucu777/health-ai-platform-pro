@@ -25,3 +25,5 @@ class HealthMeasurement(BaseEntity):
     meal_context: str | None = None
     exercise_minutes: int | None = None
     notes: str | None = None
+    is_active: bool = True
+    deleted_at: datetime | None = None

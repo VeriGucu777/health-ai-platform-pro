@@ -4,6 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
+from app.application.clinical_child_soft_delete import soft_deactivate_clinical_child
 from app.application.dtos.health_measurement import HealthMeasurementDTO, HealthMeasurementListDTO
 from app.application.services.clinical_patient_child_service import ClinicalPatientChildService
 from app.application.validators.health_measurement import (
@@ -247,9 +248,8 @@ class HealthMeasurementService(ClinicalPatientChildService):
             patient_id_getter=lambda row: row.patient_id,
         )
         patient_id = health_measurement.patient_id
-        deleted = await self._health_measurements.delete(health_measurement.id)
-        if not deleted:
-            raise NotFoundError("Health measurement not found")
+        soft_deactivate_clinical_child(health_measurement)
+        await self._health_measurements.update(health_measurement)
         return ctx.organization_id, patient_id
 
     def _validate_date_range(

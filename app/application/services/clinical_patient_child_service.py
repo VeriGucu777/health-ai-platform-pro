@@ -99,7 +99,7 @@ class ClinicalPatientChildService(BaseService):
         patient_id_getter,
     ) -> tuple[TChild, ResolvedPatientRead]:
         child = await repository.get_by_id(child_id)
-        if child is None:
+        if child is None or getattr(child, "is_active", True) is False:
             raise NotFoundError(not_found_message)
         patient_id = patient_id_getter(child)
         ctx = await self._require_patient_access(actor_id, actor_role, patient_id, action)

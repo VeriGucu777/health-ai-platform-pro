@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -36,3 +36,5 @@ class HealthMeasurementModel(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     meal_context: Mapped[str | None] = mapped_column(String(50), nullable=True)
     exercise_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

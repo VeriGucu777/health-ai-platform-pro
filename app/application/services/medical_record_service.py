@@ -3,6 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
+from app.application.clinical_child_soft_delete import soft_deactivate_clinical_child
 from app.application.dtos.medical_record import MedicalRecordDTO, MedicalRecordListDTO
 from app.application.services.clinical_patient_child_service import ClinicalPatientChildService
 from app.core.exceptions import NotFoundError
@@ -208,7 +209,6 @@ class MedicalRecordService(ClinicalPatientChildService):
             patient_id_getter=lambda row: row.patient_id,
         )
         patient_id = medical_record.patient_id
-        deleted = await self._medical_records.delete(medical_record.id)
-        if not deleted:
-            raise NotFoundError("Medical record not found")
+        soft_deactivate_clinical_child(medical_record)
+        await self._medical_records.update(medical_record)
         return ctx.organization_id, patient_id
