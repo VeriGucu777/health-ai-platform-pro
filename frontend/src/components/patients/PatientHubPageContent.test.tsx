@@ -37,11 +37,18 @@ const hubFixture = {
   loadError: "Could not load patient",
   assessmentTypes: { diabetes: "Diabetes" },
   riskLevels: { low: "Low" },
+  missingInputLabels: {
+    systolic_blood_pressure: "Sistolik tansiyon",
+  },
+  missingInputReasons: {
+    systolic_blood_pressure:
+      "Seçilen tarih aralığında sistolik tansiyon ölçümü bulunmuyor.",
+  },
 };
 
 const localeFixture = {
-  locale: "en" as const,
-  effectiveLocale: "en" as const,
+  locale: "en" as "en" | "tr",
+  effectiveLocale: "en" as "en" | "tr",
   content: {
     common: { loading: "Loading…", error: "Error", retry: "Retry", back: "Back" },
     patients: { genders: { female: "Female", male: "Male", other: "Other" } },
@@ -136,6 +143,62 @@ describe("PatientHubPageContent", () => {
         screen.getByText("Patient not found or you do not have access to this patient."),
       ).toBeInTheDocument();
     });
+  });
+
+  it("localizes missing inputs in risk history when locale is Turkish", async () => {
+    localeFixture.effectiveLocale = "tr";
+    localeFixture.locale = "tr";
+
+    fetchPatient.mockResolvedValue({
+      id: "p1",
+      first_name: "Demo",
+      last_name: "Patient",
+      date_of_birth: "1990-06-12",
+      gender: "female",
+      is_active: true,
+    });
+    fetchRiskAssessmentHistory.mockResolvedValue({
+      items: [
+        {
+          id: "risk-1",
+          patient_id: "p1",
+          organization_id: null,
+          assessment_type: "diabetes",
+          assessment_status: "insufficient_data",
+          risk_level: null,
+          score: null,
+          probability: null,
+          model_kind: "rule_based",
+          model_version: "rule_based_v1",
+          evaluated_by_user_id: "u1",
+          evaluated_at: "2026-09-29T11:24:32Z",
+          created_at: "2026-09-29T11:24:32Z",
+          result_snapshot: {
+            missing_inputs: [
+              {
+                input: "systolic_blood_pressure",
+                reason:
+                  "No systolic blood pressure measurements are available in the selected date range.",
+                impact: "",
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    render(<PatientHubPageContent patientId="p1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Sistolik tansiyon:/)).toBeInTheDocument();
+    });
+    expect(
+      screen.queryByText(/No systolic blood pressure measurements/i),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/systolic_blood_pressure/)).not.toBeInTheDocument();
+
+    localeFixture.effectiveLocale = "en";
+    localeFixture.locale = "en";
   });
 
   it("downloads pdf on button click", async () => {

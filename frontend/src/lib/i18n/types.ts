@@ -126,6 +126,8 @@ export type CommonContent = {
     loadError: string;
     assessmentTypes: Record<string, string>;
     riskLevels: Record<string, string>;
+    missingInputLabels: Record<string, string>;
+    missingInputReasons: Record<string, string>;
   };
   timeline: {
     title: string;

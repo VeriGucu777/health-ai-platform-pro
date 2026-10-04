@@ -164,6 +164,26 @@ export const commonContent: CommonContent = {
       moderate: "Moderate",
       elevated: "Elevated",
     },
+    missingInputLabels: {
+      systolic_blood_pressure: "Systolic blood pressure",
+      diastolic_blood_pressure: "Diastolic blood pressure",
+      fasting_blood_glucose: "Fasting blood glucose",
+      blood_glucose: "Blood glucose",
+      height_cm: "Height",
+      stroke_history: "Stroke/TIA history",
+    },
+    missingInputReasons: {
+      systolic_blood_pressure:
+        "No systolic blood pressure measurements are available in the selected date range.",
+      diastolic_blood_pressure:
+        "No diastolic blood pressure measurements are available in the selected date range.",
+      fasting_blood_glucose:
+        "No fasting blood glucose measurement is available in the selected date range.",
+      blood_glucose: "No blood glucose measurement is available in the selected date range.",
+      height_cm: "Height is not recorded for this patient.",
+      stroke_history:
+        "No structured stroke or TIA history record types (stroke_history or tia_history) are present in the selected date range.",
+    },
   },
   timeline: {
     title: "Clinical timeline",

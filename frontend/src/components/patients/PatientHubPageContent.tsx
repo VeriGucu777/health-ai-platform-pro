@@ -17,7 +17,9 @@ import {
   calculateAgeYears,
   formatPatientGender,
 } from "@/lib/timeline/display";
+import type { SupportedLocale } from "@/lib/i18n/locale";
 import { useLocale } from "@/lib/i18n/use-locale";
+import { formatRiskMissingInputLine } from "@/lib/risk/format-missing-input";
 
 type PatientHubPageContentProps = {
   patientId: string;
@@ -39,12 +41,16 @@ function formatRiskLevel(level: string | null, labels: Record<string, string>): 
 function RiskHistoryCard({
   item,
   labels,
+  locale,
   formatDateTime,
 }: {
   item: RiskAssessmentHistoryItem;
+  locale: SupportedLocale;
   labels: {
     assessmentTypes: Record<string, string>;
     riskLevels: Record<string, string>;
+    missingInputLabels: Record<string, string>;
+    missingInputReasons: Record<string, string>;
     riskType: string;
     riskLevel: string;
     assessedAt: string;
@@ -99,7 +105,10 @@ function RiskHistoryCard({
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-text-secondary">
             {missing.map((entry) => (
               <li key={`${entry.input}-${entry.reason}`}>
-                {entry.input}: {entry.reason}
+                {formatRiskMissingInputLine(entry, locale, {
+                  missingInputLabels: labels.missingInputLabels,
+                  missingInputReasons: labels.missingInputReasons,
+                })}
               </li>
             ))}
           </ul>
@@ -327,9 +336,12 @@ export function PatientHubPageContent({ patientId }: PatientHubPageContentProps)
               <RiskHistoryCard
                 key={item.id}
                 item={item}
+                locale={effectiveLocale}
                 labels={{
                   assessmentTypes: hub.assessmentTypes,
                   riskLevels: hub.riskLevels,
+                  missingInputLabels: hub.missingInputLabels,
+                  missingInputReasons: hub.missingInputReasons,
                   riskType: hub.riskType,
                   riskLevel: hub.riskLevel,
                   assessedAt: hub.assessedAt,

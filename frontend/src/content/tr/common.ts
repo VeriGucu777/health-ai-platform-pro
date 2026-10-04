@@ -164,6 +164,26 @@ export const commonContent: CommonContent = {
       moderate: "Orta",
       elevated: "Yüksek",
     },
+    missingInputLabels: {
+      systolic_blood_pressure: "Sistolik tansiyon",
+      diastolic_blood_pressure: "Diyastolik tansiyon",
+      fasting_blood_glucose: "Açlık kan şekeri",
+      blood_glucose: "Kan şekeri",
+      height_cm: "Boy",
+      stroke_history: "İnme/TIA öyküsü",
+    },
+    missingInputReasons: {
+      systolic_blood_pressure:
+        "Seçilen tarih aralığında sistolik tansiyon ölçümü bulunmuyor.",
+      diastolic_blood_pressure:
+        "Seçilen tarih aralığında diyastolik tansiyon ölçümü bulunmuyor.",
+      fasting_blood_glucose:
+        "Seçilen tarih aralığında açlık kan şekeri ölçümü bulunmuyor.",
+      blood_glucose: "Seçilen tarih aralığında kan şekeri ölçümü bulunmuyor.",
+      height_cm: "Hasta için boy bilgisi kayıtlı değil.",
+      stroke_history:
+        "Seçilen tarih aralığında yapılandırılmış inme veya geçici iskemik atak (TIA) öyküsü kaydı bulunmuyor.",
+    },
   },
   timeline: {
     title: "Klinik zaman tüneli",
