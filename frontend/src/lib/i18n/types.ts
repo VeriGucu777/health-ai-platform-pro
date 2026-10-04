@@ -151,6 +151,8 @@ export type CommonContent = {
     patientSummary: {
       ageSuffix: string;
     };
+    syntheticDemoBanner: string;
+    evaluatedDataPeriod: string;
   };
   management: {
     title: string;

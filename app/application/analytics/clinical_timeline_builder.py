@@ -34,13 +34,25 @@ def filter_events_by_window(
     date_from: datetime | None,
     date_to: datetime,
 ) -> list[ClinicalTimelineEvent]:
-    """Keep events whose occurred_at falls within the inclusive UTC window."""
+    """Keep events within the inclusive UTC filter window.
+
+    Source events use ``occurred_at``. Derived analyses with ``data_window_*`` use
+    overlap against the filter range.
+    """
     filtered: list[ClinicalTimelineEvent] = []
     for event in events:
-        occurred = event.occurred_at
-        if date_from is not None and occurred < date_from:
-            continue
-        if occurred > date_to:
-            continue
+        if event.data_window_start is not None and event.data_window_end is not None:
+            window_start = event.data_window_start
+            window_end = event.data_window_end
+            if date_from is not None and window_end < date_from:
+                continue
+            if window_start > date_to:
+                continue
+        else:
+            occurred = event.occurred_at
+            if date_from is not None and occurred < date_from:
+                continue
+            if occurred > date_to:
+                continue
         filtered.append(event)
     return filtered

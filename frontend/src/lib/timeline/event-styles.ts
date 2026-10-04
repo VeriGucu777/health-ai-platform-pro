@@ -20,7 +20,10 @@ export function resolveTimelineCategory(eventType: string): TimelineVisualCatego
   if (eventType.startsWith("appointment_")) {
     return "appointment";
   }
-  if (eventType === "measurement_trend_derived") {
+  if (
+    eventType === "measurement_trend_derived" ||
+    eventType === "measurement_trend_insufficient_comparable"
+  ) {
     return "derived";
   }
   if (eventType === "risk_current_snapshot") {

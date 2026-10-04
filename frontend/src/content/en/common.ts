@@ -185,6 +185,8 @@ export const commonContent: CommonContent = {
     patientSummary: {
       ageSuffix: "years",
     },
+    syntheticDemoBanner: "Synthetic demo data — not a real patient.",
+    evaluatedDataPeriod: "Evaluated data period",
     headlines: {},
     sourceKinds: {
       medical_record: "Medical record",
@@ -200,7 +202,9 @@ export const commonContent: CommonContent = {
     },
     detailPhrases: {},
     eventTypes: {
-      medical_record_diagnosis: "Medical record",
+      medical_record_diagnosis: "Diagnosis",
+      medical_record_lab_result: "Laboratory result",
+      medical_record_imaging_report: "Imaging report",
       medical_record_treatment: "Treatment",
       medical_record_medication: "Medication",
       medical_record_hospitalization: "Hospitalization",
@@ -211,6 +215,7 @@ export const commonContent: CommonContent = {
       appointment_status: "Appointment",
       appointment_overdue: "Overdue follow-up",
       measurement_trend_derived: "Trend (derived)",
+      measurement_trend_insufficient_comparable: "Comparable measurements",
       risk_current_snapshot: "Risk snapshot",
     },
   },

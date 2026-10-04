@@ -23,3 +23,5 @@ class ClinicalTimelineEvent:
     detail: str
     source: ClinicalTimelineSource
     severity: str | None = None
+    data_window_start: datetime | None = None
+    data_window_end: datetime | None = None

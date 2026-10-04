@@ -40,6 +40,31 @@ def test_apply_event_limit_truncates() -> None:
     assert len(limited) == 3
 
 
+def test_filter_derived_events_by_data_window_overlap() -> None:
+    derived = ClinicalTimelineEvent(
+        occurred_at=datetime(2026, 10, 3, tzinfo=UTC),
+        event_type="measurement_trend_insufficient_comparable",
+        headline="Comparable measurements insufficient for trend",
+        detail="Generated at 2026-10-03T12:00:00+00:00. Data period 2026-04-20 to 2026-05-18 (UTC).",
+        source=ClinicalTimelineSource(kind="derived", id=uuid4()),
+        data_window_start=datetime(2026, 4, 20, tzinfo=UTC),
+        data_window_end=datetime(2026, 5, 18, tzinfo=UTC),
+    )
+    inside = filter_events_by_window(
+        [derived],
+        date_from=datetime(2026, 4, 1, tzinfo=UTC),
+        date_to=datetime(2026, 5, 31, tzinfo=UTC),
+    )
+    assert len(inside) == 1
+
+    outside = filter_events_by_window(
+        [derived],
+        date_from=datetime(2026, 1, 1, tzinfo=UTC),
+        date_to=datetime(2026, 3, 31, tzinfo=UTC),
+    )
+    assert outside == []
+
+
 def test_filter_events_by_window() -> None:
     events = [
         _event(datetime(2025, 1, 1, tzinfo=UTC), "inside"),

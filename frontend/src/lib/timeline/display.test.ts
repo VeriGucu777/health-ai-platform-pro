@@ -13,6 +13,16 @@ describe("formatTimelineDetail", () => {
     expect(detail).not.toMatch(/seed:/i);
   });
 
+  it("localizes overdue follow-up detail in Turkish", () => {
+    const detail = formatTimelineDetail(
+      "Follow-up date passed (2025-01-01); no completion record found in the system.",
+      "tr",
+      "appointment_overdue",
+    );
+    expect(detail).toContain("Takip tarihi geçti");
+    expect(detail).toContain("tamamlanma kaydı bulunmuyor");
+  });
+
   it("localizes appointment type without seed suffix in Turkish", () => {
     const detail = formatTimelineDetail(
       "follow_up — seed:demo-enrich-a1/appt/01",

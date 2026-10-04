@@ -5,10 +5,13 @@ from decimal import Decimal
 from typing import Literal
 
 from app.core.reference_ranges import (
+    KNOWN_GLUCOSE_CONTEXTS,
     METRIC_REFERENCE_RANGES,
     TREND_STABLE_THRESHOLD_PERCENT,
     TRACKABLE_METRICS,
 )
+
+MIN_DIRECTIONAL_TREND_SAMPLE_COUNT = 3
 from app.domain.entities.health_measurement import HealthMeasurement
 
 TrendDirection = Literal["increasing", "decreasing", "stable", "insufficient_data"]
@@ -155,3 +158,57 @@ def metrics_to_include(metric_filter: str | None) -> tuple[str, ...]:
     if metric_filter is None:
         return TRACKABLE_METRICS
     return (metric_filter,)
+
+
+def normalize_glucose_context(raw: str | None) -> str | None:
+    """Return a known glucose context key or None when context is missing/unknown."""
+    if raw is None:
+        return None
+    key = raw.strip().lower()
+    if key in KNOWN_GLUCOSE_CONTEXTS:
+        return key
+    return None
+
+
+def group_blood_glucose_by_comparable_context(
+    measurements: list[HealthMeasurement],
+) -> dict[str, list[HealthMeasurement]]:
+    """Group glucose measurements by explicit fasting/post_meal context only."""
+    groups: dict[str, list[HealthMeasurement]] = {}
+    for measurement in measurements:
+        if extract_metric_value(measurement, "blood_glucose") is None:
+            continue
+        context = normalize_glucose_context(measurement.glucose_context)
+        if context is None:
+            continue
+        groups.setdefault(context, []).append(measurement)
+    for context in groups:
+        groups[context].sort(key=lambda item: item.measured_at)
+    return groups
+
+
+def sort_measurements_chronologically(
+    measurements: list[HealthMeasurement],
+) -> list[HealthMeasurement]:
+    """Return measurements ordered oldest to newest by measured_at."""
+    return sorted(measurements, key=lambda item: item.measured_at)
+
+
+def data_period_bounds(
+    measurements: list[HealthMeasurement],
+) -> tuple[datetime | None, datetime | None]:
+    """Return UTC min/max measured_at for a non-empty measurement list."""
+    if not measurements:
+        return None, None
+    ordered = sort_measurements_chronologically(measurements)
+    start = ordered[0].measured_at
+    end = ordered[-1].measured_at
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=UTC)
+    else:
+        start = start.astimezone(UTC)
+    if end.tzinfo is None:
+        end = end.replace(tzinfo=UTC)
+    else:
+        end = end.astimezone(UTC)
+    return start, end

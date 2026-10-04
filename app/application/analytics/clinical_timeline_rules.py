@@ -7,7 +7,14 @@ from uuid import UUID
 
 from app.application.analytics.follow_up_status import is_follow_up_overdue
 from app.application.clinical_display_text import text_for_clinical_display
-from app.application.analytics.health_measurement_analytics import compute_metric_statistics
+from app.application.analytics.health_measurement_analytics import (
+    MIN_DIRECTIONAL_TREND_SAMPLE_COUNT,
+    compute_metric_statistics,
+    data_period_bounds,
+    group_blood_glucose_by_comparable_context,
+    sort_measurements_chronologically,
+)
+from app.core.reference_ranges import KNOWN_GLUCOSE_CONTEXTS
 from app.domain.entities.appointment import Appointment
 from app.domain.entities.clinical_timeline import ClinicalTimelineEvent, ClinicalTimelineSource
 from app.domain.entities.health_measurement import HealthMeasurement
@@ -26,6 +33,9 @@ APPOINTMENT_STATUS_EVENT_TYPES = {
 
 TREND_METRICS = ("blood_glucose", "systolic_pressure", "diastolic_pressure", "weight_kg")
 
+LAB_RESULT_RECORD_TYPES = frozenset({"lab_result", "laboratory", "lab"})
+IMAGING_RECORD_TYPES = frozenset({"imaging", "imaging_report", "radiology"})
+
 
 def events_from_medical_record(record: MedicalRecord) -> list[ClinicalTimelineEvent]:
     """Build timeline events from one medical record without inferring new clinical facts."""
@@ -33,9 +43,36 @@ def events_from_medical_record(record: MedicalRecord) -> list[ClinicalTimelineEv
     source = ClinicalTimelineSource(kind="medical_record", id=record.id)
     events: list[ClinicalTimelineEvent] = []
 
+    record_type = record.record_type.strip().lower()
     diagnosis_text = (record.diagnosis or "").strip()
     title_text = record.title.strip()
-    if diagnosis_text:
+    description_text = (record.description or "").strip()
+
+    if record_type in LAB_RESULT_RECORD_TYPES:
+        detail = diagnosis_text or description_text or title_text or "Laboratory result recorded"
+        events.append(
+            ClinicalTimelineEvent(
+                occurred_at=occurred_at,
+                event_type="medical_record_lab_result",
+                headline="Laboratory result",
+                detail=detail,
+                source=source,
+                severity="info",
+            )
+        )
+    elif record_type in IMAGING_RECORD_TYPES:
+        detail = diagnosis_text or description_text or title_text or "Imaging report recorded"
+        events.append(
+            ClinicalTimelineEvent(
+                occurred_at=occurred_at,
+                event_type="medical_record_imaging_report",
+                headline="Imaging report",
+                detail=detail,
+                source=source,
+                severity="info",
+            )
+        )
+    elif diagnosis_text:
         events.append(
             ClinicalTimelineEvent(
                 occurred_at=occurred_at,
@@ -104,8 +141,11 @@ def events_from_health_measurement(measurement: HealthMeasurement) -> list[Clini
     """Represent one health measurement as a timeline event."""
     parts: list[str] = []
     if measurement.blood_glucose is not None:
-        context = measurement.glucose_context or "unspecified context"
-        parts.append(f"blood glucose {measurement.blood_glucose} ({context})")
+        context_key = (measurement.glucose_context or "").strip().lower()
+        if context_key in KNOWN_GLUCOSE_CONTEXTS:
+            parts.append(f"blood glucose {measurement.blood_glucose} ({context_key})")
+        else:
+            parts.append(f"blood glucose {measurement.blood_glucose}")
     if measurement.systolic_pressure is not None and measurement.diastolic_pressure is not None:
         parts.append(
             f"blood pressure {measurement.systolic_pressure}/"
@@ -177,8 +217,8 @@ def events_from_appointment(
                 event_type="appointment_overdue",
                 headline="Follow-up overdue",
                 detail=(
-                    f"Scheduled appointment on {occurred_at.date().isoformat()} "
-                    f"({appointment.appointment_type}) has not been marked completed."
+                    f"Follow-up date passed ({occurred_at.date().isoformat()}); "
+                    "no completion record found in the system."
                 ),
                 source=ClinicalTimelineSource(kind="derived", id=appointment.id),
                 severity="warning",
@@ -194,36 +234,118 @@ def derived_trend_events(
     patient_id: UUID,
     as_of: datetime,
 ) -> list[ClinicalTimelineEvent]:
-    """Create derived trend events when analytics detect increasing metrics."""
-    if len(measurements) < 2:
+    """Create derived timeline items from comparable measurement groups only."""
+    if not measurements:
         return []
 
+    generated_at = _ensure_utc(as_of)
     events: list[ClinicalTimelineEvent] = []
-    measurement_ids = [str(measurement.id) for measurement in measurements]
+    glucose_trend_emitted = False
 
-    for metric in TREND_METRICS:
-        stats = compute_metric_statistics(measurements, metric)
+    glucose_groups = group_blood_glucose_by_comparable_context(measurements)
+    for context, group in glucose_groups.items():
+        if len(group) < MIN_DIRECTIONAL_TREND_SAMPLE_COUNT:
+            continue
+        stats = compute_metric_statistics(group, "blood_glucose")
         if stats["trend_direction"] != "increasing":
             continue
-        count = int(stats["measurement_count"])
-        if count < 2:
+        period_start, period_end = data_period_bounds(group)
+        if period_start is None or period_end is None:
             continue
+        count = int(stats["measurement_count"])
         average = stats["average"]
         events.append(
             ClinicalTimelineEvent(
-                occurred_at=_ensure_utc(as_of),
+                occurred_at=generated_at,
                 event_type="measurement_trend_derived",
-                headline=f"{metric.replace('_', ' ').title()} trend increasing",
-                detail=(
-                    f"Rule-based trend analysis over {count} measurements in the selected "
-                    f"period shows an increasing pattern (informational average: {average}). "
-                    f"Related measurement IDs: {', '.join(measurement_ids[:10])}"
-                    f"{'...' if len(measurement_ids) > 10 else ''}."
+                headline="Blood glucose trend increasing",
+                detail=_format_derived_analysis_detail(
+                    generated_at=generated_at,
+                    period_start=period_start,
+                    period_end=period_end,
+                    body=(
+                        f"Comparable context: {context}. Rule-based analysis over {count} "
+                        f"measurements shows an increasing pattern "
+                        f"(informational average: {average})."
+                    ),
                 ),
                 source=ClinicalTimelineSource(kind="derived", id=patient_id),
                 severity="warning",
+                data_window_start=period_start,
+                data_window_end=period_end,
             )
         )
+        glucose_trend_emitted = True
+
+    ordered = sort_measurements_chronologically(measurements)
+    for metric in (m for m in TREND_METRICS if m != "blood_glucose"):
+        cohort = [
+            measurement
+            for measurement in ordered
+            if _metric_value(measurement, metric) is not None
+        ]
+        if len(cohort) < MIN_DIRECTIONAL_TREND_SAMPLE_COUNT:
+            continue
+        stats = compute_metric_statistics(cohort, metric)
+        if stats["trend_direction"] != "increasing":
+            continue
+        period_start, period_end = data_period_bounds(cohort)
+        if period_start is None or period_end is None:
+            continue
+        count = int(stats["measurement_count"])
+        average = stats["average"]
+        events.append(
+            ClinicalTimelineEvent(
+                occurred_at=generated_at,
+                event_type="measurement_trend_derived",
+                headline=f"{metric.replace('_', ' ').title()} trend increasing",
+                detail=_format_derived_analysis_detail(
+                    generated_at=generated_at,
+                    period_start=period_start,
+                    period_end=period_end,
+                    body=(
+                        f"Rule-based analysis over {count} comparable measurements shows "
+                        f"an increasing pattern (informational average: {average})."
+                    ),
+                ),
+                source=ClinicalTimelineSource(kind="derived", id=patient_id),
+                severity="warning",
+                data_window_start=period_start,
+                data_window_end=period_end,
+            )
+        )
+
+    glucose_with_values = [
+        measurement
+        for measurement in ordered
+        if _metric_value(measurement, "blood_glucose") is not None
+    ]
+    if len(glucose_with_values) >= 2 and not glucose_trend_emitted:
+        max_group = max((len(group) for group in glucose_groups.values()), default=0)
+        if max_group < MIN_DIRECTIONAL_TREND_SAMPLE_COUNT:
+            period_start, period_end = data_period_bounds(glucose_with_values)
+            if period_start is not None and period_end is not None:
+                events.append(
+                    ClinicalTimelineEvent(
+                        occurred_at=generated_at,
+                        event_type="measurement_trend_insufficient_comparable",
+                        headline="Comparable measurements insufficient for trend",
+                        detail=_format_derived_analysis_detail(
+                            generated_at=generated_at,
+                            period_start=period_start,
+                            period_end=period_end,
+                            body=(
+                                "Insufficient comparable blood glucose measurements for a "
+                                "directional trend. Fasting, post-meal, and unknown contexts "
+                                "are not combined."
+                            ),
+                        ),
+                        source=ClinicalTimelineSource(kind="derived", id=patient_id),
+                        severity="info",
+                        data_window_start=period_start,
+                        data_window_end=period_end,
+                    )
+                )
 
     return events
 
@@ -278,3 +400,21 @@ def _ensure_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=UTC)
     return value.astimezone(UTC)
+
+
+def _format_derived_analysis_detail(
+    *,
+    generated_at: datetime,
+    period_start: datetime,
+    period_end: datetime,
+    body: str,
+) -> str:
+    return (
+        f"Generated at {generated_at.isoformat()}. "
+        f"Data period {period_start.date().isoformat()} to "
+        f"{period_end.date().isoformat()} (UTC). {body}"
+    )
+
+
+def _metric_value(measurement: HealthMeasurement, metric: str):
+    return getattr(measurement, metric, None)

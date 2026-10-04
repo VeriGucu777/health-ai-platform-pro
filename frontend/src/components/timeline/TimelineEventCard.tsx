@@ -12,6 +12,7 @@ import {
   formatSourceKind,
   formatTimelineDetail,
   formatTimelineHeadline,
+  parseEvaluatedDataPeriod,
 } from "@/lib/timeline/display";
 import { useLocale } from "@/lib/i18n/use-locale";
 
@@ -33,6 +34,16 @@ export function TimelineEventCard({ event }: TimelineEventCardProps) {
     event.event_type,
     content.timeline.detailPhrases,
   );
+  const evaluatedPeriod = parseEvaluatedDataPeriod(event.detail);
+  const evaluatedPeriodLabel =
+    evaluatedPeriod && locale === "tr"
+      ? `${content.timeline.evaluatedDataPeriod}: ${evaluatedPeriod.from
+          .split("-")
+          .reverse()
+          .join(".")} – ${evaluatedPeriod.to.split("-").reverse().join(".")} (UTC)`
+      : evaluatedPeriod
+        ? `${content.timeline.evaluatedDataPeriod}: ${evaluatedPeriod.from} – ${evaluatedPeriod.to} (UTC)`
+        : null;
   const severityLabel = formatSeverityLevel(event.severity, content.timeline.severityLevels);
   const sourceLabel = formatSourceKind(event.source.kind, content.timeline.sourceKinds);
 
@@ -58,6 +69,9 @@ export function TimelineEventCard({ event }: TimelineEventCardProps) {
             <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">
               {formatDateTime(event.occurred_at)}
             </p>
+            {evaluatedPeriodLabel ? (
+              <p className="mt-0.5 text-xs text-text-secondary">{evaluatedPeriodLabel}</p>
+            ) : null}
             <h3 className="mt-1 text-base font-semibold text-text-primary">{headline}</h3>
             {detail ? (
               <p className="mt-2 break-words text-sm text-text-secondary">{detail}</p>
@@ -65,7 +79,7 @@ export function TimelineEventCard({ event }: TimelineEventCardProps) {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 sm:max-w-xs sm:justify-end">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:max-w-xs sm:justify-end">
           <span
             className={[
               "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",

@@ -11,10 +11,24 @@ const APPOINTMENT_HEADLINE = /^Appointment\s+(.+)$/i;
 const RISK_SNAPSHOT_HEADLINE = /^(.+)\s+risk snapshot \(current\)$/i;
 
 const OVERDUE_DETAIL =
-  /^Scheduled appointment on (\d{4}-\d{2}-\d{2}) \(([^)]+)\) has not been marked completed\.$/i;
+  /^Follow-up date passed \((\d{4}-\d{2}-\d{2})\); no completion record found in the system\.$/i;
 
-const TREND_DETAIL =
-  /^Rule-based trend analysis over (\d+) measurements in the selected period shows an increasing pattern \(informational average: ([0-9.]+)\)\.$/i;
+const DERIVED_DETAIL_PREFIX =
+  /^Generated at .+?\. Data period (\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2}) \(UTC\)\. (.+)$/i;
+
+const TREND_INCREASING_BODY =
+  /^Comparable context: (\w+)\. Rule-based analysis over (\d+) measurements shows an increasing pattern \(informational average: ([0-9.]+)\)\.$/i;
+
+const TREND_INCREASING_BODY_NO_CONTEXT =
+  /^Rule-based analysis over (\d+) comparable measurements shows an increasing pattern \(informational average: ([0-9.]+)\)\.$/i;
+
+const INSUFFICIENT_COMPARABLE_BODY =
+  /^Insufficient comparable blood glucose measurements for a directional trend\. Fasting, post-meal, and unknown contexts are not combined\.$/i;
+
+const GLUCOSE_CONTEXT_TR: Record<string, string> = {
+  fasting: "Açlık",
+  post_meal: "Yemek sonrası",
+};
 
 const RISK_DETAIL =
   /^On-demand rule-based assessment \(([^)]+)\): risk level ([^,]+), score ([^.]+)\. This is a point-in-time snapshot, not stored clinical history\.$/i;
@@ -91,11 +105,12 @@ function translateMeasurementSegment(segment: string): string {
   if (glucoseMatch) {
     const value = glucoseMatch[1];
     const context = glucoseMatch[2]?.trim().toLowerCase();
-    if (!context || context === "unspecified context") {
+    if (!context) {
       return `Kan şekeri: ${value}`;
     }
 
-    return `Kan şekeri: ${value} (${context})`;
+    const contextLabel = GLUCOSE_CONTEXT_TR[context] ?? context.replaceAll("_", " ");
+    return `Kan şekeri: ${value} (${contextLabel})`;
   }
 
   const bpMatch = text.match(/^blood pressure ([0-9.]+)\/([0-9.]+) mmHg$/i);
@@ -168,15 +183,37 @@ function translateTimelineDetailTr(
   const overdueMatch = detail.match(OVERDUE_DETAIL);
   if (overdueMatch) {
     const dateLabel = formatTrDateFromIso(overdueMatch[1] ?? "");
-    const typeLabel = translateAppointmentType(overdueMatch[2] ?? "").toLowerCase();
-    return `${dateLabel} tarihli ${typeLabel} tamamlandı olarak işaretlenmemiş.`;
+    return `Takip tarihi geçti (${dateLabel}); sistemde tamamlanma kaydı bulunmuyor.`;
   }
 
-  const trendMatch = detail.match(TREND_DETAIL);
-  if (trendMatch) {
-    const count = trendMatch[1];
-    const average = formatTrDecimal(trendMatch[2] ?? "");
-    return `Seçilen dönemdeki ${count} ölçümün kural tabanlı analizi artış eğilimi gösteriyor. Bilgilendirici ortalama: ${average}.`;
+  const derivedMatch = detail.match(DERIVED_DETAIL_PREFIX);
+  if (derivedMatch) {
+    const periodFrom = formatTrDateFromIso(derivedMatch[1] ?? "");
+    const periodTo = formatTrDateFromIso(derivedMatch[2] ?? "");
+    const body = derivedMatch[3] ?? "";
+    const periodLine = `Değerlendirilen veri dönemi: ${periodFrom} – ${periodTo} (UTC).`;
+
+    if (INSUFFICIENT_COMPARABLE_BODY.test(body)) {
+      return `${periodLine} Karşılaştırılabilir ölçüm sayısı yetersiz; açlık, yemek sonrası ve bilinmeyen koşullar birlikte değerlendirilmez.`;
+    }
+
+    const trendWithContext = body.match(TREND_INCREASING_BODY);
+    if (trendWithContext) {
+      const contextKey = trendWithContext[1] ?? "";
+      const contextLabel = GLUCOSE_CONTEXT_TR[contextKey] ?? contextKey;
+      const count = trendWithContext[2];
+      const average = formatTrDecimal(trendWithContext[3] ?? "");
+      return `${periodLine} ${contextLabel} koşulunda ${count} ölçüm için kural tabanlı analiz artış eğilimi gösteriyor. Bilgilendirici ortalama: ${average}.`;
+    }
+
+    const trendGeneric = body.match(TREND_INCREASING_BODY_NO_CONTEXT);
+    if (trendGeneric) {
+      const count = trendGeneric[1];
+      const average = formatTrDecimal(trendGeneric[2] ?? "");
+      return `${periodLine} ${count} karşılaştırılabilir ölçüm için kural tabanlı analiz artış eğilimi gösteriyor. Bilgilendirici ortalama: ${average}.`;
+    }
+
+    return `${periodLine} ${applyDetailLexicon(body, detailPhrases)}`;
   }
 
   const riskMatch = detail.match(RISK_DETAIL);
@@ -223,6 +260,14 @@ function applyDetailLexicon(
   }
 
   return result;
+}
+
+export function parseEvaluatedDataPeriod(detail: string): { from: string; to: string } | null {
+  const match = detail.match(DERIVED_DETAIL_PREFIX);
+  if (!match) {
+    return null;
+  }
+  return { from: match[1] ?? "", to: match[2] ?? "" };
 }
 
 /** Removes UUID lists and normalizes numeric precision; localizes detail text for TR. */

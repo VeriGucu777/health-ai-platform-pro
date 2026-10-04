@@ -185,6 +185,8 @@ export const commonContent: CommonContent = {
     patientSummary: {
       ageSuffix: "yaş",
     },
+    syntheticDemoBanner: "Sentetik demo verileri — gerçek hasta değildir.",
+    evaluatedDataPeriod: "Değerlendirilen veri dönemi",
     headlines: {
       "Diagnosis recorded": "Tanı kaydı",
       "Treatment noted": "Tedavi kaydı",
@@ -193,7 +195,12 @@ export const commonContent: CommonContent = {
       "Appointment completed": "Randevu tamamlandı",
       "Appointment scheduled": "Planlanmış randevu",
       "Follow-up overdue": "Gecikmiş takip",
+      "Blood glucose trend increasing": "Kan şekeri yükseliş eğiliminde",
       "Blood Glucose trend increasing": "Kan şekeri yükseliş eğiliminde",
+      "Comparable measurements insufficient for trend":
+        "Karşılaştırılabilir ölçüm sayısı yetersiz",
+      "Laboratory result": "Laboratuvar sonucu",
+      "Imaging report": "Tetkik raporu",
       "Systolic Pressure trend increasing": "Sistolik tansiyon yükseliş eğiliminde",
       "Diastolic Pressure trend increasing": "Diyastolik tansiyon yükseliş eğiliminde",
       "Clinical record": "Klinik kayıt",
@@ -222,7 +229,9 @@ export const commonContent: CommonContent = {
       Hypertension: "Hipertansiyon",
     },
     eventTypes: {
-      medical_record_diagnosis: "Tıbbi kayıt",
+      medical_record_diagnosis: "Tanı kaydı",
+      medical_record_lab_result: "Laboratuvar sonucu",
+      medical_record_imaging_report: "Tetkik raporu",
       medical_record_treatment: "Tedavi",
       medical_record_medication: "İlaç",
       medical_record_hospitalization: "Hastaneye yatış",
@@ -233,6 +242,7 @@ export const commonContent: CommonContent = {
       appointment_status: "Randevu",
       appointment_overdue: "Geciken takip",
       measurement_trend_derived: "Trend analizi",
+      measurement_trend_insufficient_comparable: "Karşılaştırılabilir ölçüm",
       risk_current_snapshot: "Risk anlık görüntüsü",
     },
   },
