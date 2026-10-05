@@ -145,9 +145,9 @@ async def test_enrichment_first_run_creates_four_patients_and_clinical_rows() ->
     assert result.doctor_b_user_id is not None
     assert result.doctor_a_user_id != result.doctor_b_user_id
     assert result.doctor_b_status == "doctor_b_ready"
-    assert len(result.patient_ids) == 4
-    assert all(result.created_patients.get(k) for k in ("a1", "a2", "b1", "b2"))
-    for key in ("a1", "a2", "b1", "b2"):
+    assert len(result.patient_ids) == 5
+    assert all(result.created_patients.get(k) for k in ("a1", "a2", "a3", "b1", "b2"))
+    for key in ("a1", "a2", "a3", "b1", "b2"):
         counts = result.counts[key]
         assert counts.measurements >= 3
         assert counts.medical_records >= 1
@@ -181,9 +181,11 @@ async def test_enrichment_second_run_is_idempotent() -> None:
     )
     first = await seed_demo_clinical_enrichment(**kwargs, mutate=True)
     second = await seed_demo_clinical_enrichment(**kwargs, mutate=True)
-    assert len(first.patient_ids) == len(second.patient_ids) == 4
-    assert all(second.created_patients.get(k) is False for k in ("a1", "a2", "b1", "b2"))
-    for key in ("a1", "a2", "b1", "b2"):
+    assert len(first.patient_ids) == len(second.patient_ids) == 5
+    assert all(
+        second.created_patients.get(k) is False for k in ("a1", "a2", "a3", "b1", "b2")
+    )
+    for key in ("a1", "a2", "a3", "b1", "b2"):
         assert first.counts[key].measurements == second.counts[key].measurements
         assert first.counts[key].risk_history == second.counts[key].risk_history
 
@@ -214,7 +216,13 @@ async def test_assignments_doctor_a_and_b_isolated() -> None:
     doctor_b = await users.get_by_email("enrich-doctor-b@example.com")
     assert doctor_b is not None
 
-    for patient_key, doctor in (("a1", doctor_a), ("a2", doctor_a), ("b1", doctor_b), ("b2", doctor_b)):
+    for patient_key, doctor in (
+        ("a1", doctor_a),
+        ("a2", doctor_a),
+        ("a3", doctor_a),
+        ("b1", doctor_b),
+        ("b2", doctor_b),
+    ):
         assignment = await assignments.get_by_patient_and_assignee(
             result.patient_ids[patient_key],
             doctor.id,
@@ -293,7 +301,7 @@ async def test_clinic_admin_lists_enrichment_patients() -> None:
     enrich_ids = {
         p.id for p in listed.items if p.notes and any(m in p.notes for m in ENRICHMENT_MARKERS)
     }
-    assert len(enrich_ids) == 4
+    assert len(enrich_ids) == 5
 
 
 @pytest.mark.asyncio
@@ -676,3 +684,100 @@ async def test_timeline_event_types_diverse_for_a2() -> None:
     assert "appointment_completed" in event_types or "appointment_scheduled" in event_types
     detail_blob = " ".join(event.detail for event in timeline.events)
     assert "seed:demo-enrich" not in detail_blob
+
+
+@pytest.mark.asyncio
+async def test_a2_canonical_risk_history_has_score_and_level_for_ui() -> None:
+    users, orgs, memberships, assignments, patients, consents, measurements, records, appointments, risk = (
+        await _base_repos()
+    )
+    org, admin, doctor_a = await _seed_org_admin_doctor_a(users, orgs, memberships)
+    kwargs = _enrichment_kwargs(
+        users,
+        orgs,
+        memberships,
+        patients,
+        assignments,
+        consents,
+        measurements,
+        records,
+        appointments,
+        risk,
+        admin_email=admin.email,
+        doctor_a_email=doctor_a.email,
+        doctor_b_email="enrich-doctor-b@example.com",
+        doctor_b_password="DoctorBPass12345!",
+    )
+    result = await seed_demo_clinical_enrichment(**kwargs, mutate=True)
+    rows = await risk.list_by_patient(result.patient_ids["a2"])
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.assessment_type == RiskAssessmentType.HEART_DISEASE
+    assert row.risk_level == "moderate"
+    assert row.score == 58.0
+    assert row.result_snapshot is not None
+    assert row.result_snapshot.get("contributing_factors")
+
+
+@pytest.mark.asyncio
+async def test_a3_stroke_demo_idempotent_and_doctor_b_isolated() -> None:
+    users, orgs, memberships, assignments, patients, consents, measurements, records, appointments, risk = (
+        await _base_repos()
+    )
+    org, admin, doctor_a = await _seed_org_admin_doctor_a(users, orgs, memberships)
+    kwargs = _enrichment_kwargs(
+        users,
+        orgs,
+        memberships,
+        patients,
+        assignments,
+        consents,
+        measurements,
+        records,
+        appointments,
+        risk,
+        admin_email=admin.email,
+        doctor_a_email=doctor_a.email,
+        doctor_b_email="enrich-doctor-b@example.com",
+        doctor_b_password="DoctorBPass12345!",
+    )
+    first = await seed_demo_clinical_enrichment(**kwargs, mutate=True)
+    second = await seed_demo_clinical_enrichment(**kwargs, mutate=True)
+    a3_id = first.patient_ids["a3"]
+    assert first.counts["a3"].risk_history == 1
+    assert first.counts["a3"].measurements >= 4
+    assert second.counts["a3"].risk_history == first.counts["a3"].risk_history
+
+    stroke_rows = await risk.list_by_patient(a3_id)
+    assert len(stroke_rows) == 1
+    assert stroke_rows[0].assessment_type == RiskAssessmentType.STROKE
+
+    doctor_b = await users.get_by_email("enrich-doctor-b@example.com")
+    assert doctor_b is not None
+    assert await assignments.get_by_patient_and_assignee(a3_id, doctor_b.id) is None
+
+    from app.core.exceptions import NotFoundError
+
+    patient_service = build_policy_patient_service(patients, memberships, assignments)
+    with pytest.raises(NotFoundError):
+        await patient_service.get_patient_for_user_with_context(
+            doctor_b.id,
+            UserRole.DOCTOR,
+            a3_id,
+        )
+
+    timeline_service = build_clinical_timeline_service(
+        patients,
+        measurements,
+        records,
+        appointments,
+        memberships,
+        assignments,
+    )
+    timeline, _ = await timeline_service.get_clinical_timeline(
+        doctor_a.id,
+        UserRole.DOCTOR,
+        patient_id=a3_id,
+    )
+    assert timeline.events
+    assert any(e.event_type == "medical_record_imaging_report" for e in timeline.events)

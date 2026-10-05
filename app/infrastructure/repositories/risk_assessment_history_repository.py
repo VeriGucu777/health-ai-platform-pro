@@ -13,7 +13,7 @@ from app.infrastructure.database.models.risk_assessment_history import RiskAsses
 
 
 class SQLAlchemyRiskAssessmentHistoryRepository(RiskAssessmentHistoryRepository):
-    """PostgreSQL-backed append-only risk assessment history."""
+    """PostgreSQL-backed risk assessment history (append + ops soft-deactivate)."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -25,6 +25,25 @@ class SQLAlchemyRiskAssessmentHistoryRepository(RiskAssessmentHistoryRepository)
         await self._session.refresh(model)
         return self._to_entity(model)
 
+    async def get_by_id(
+        self,
+        row_id: UUID,
+        *,
+        include_inactive: bool = False,
+    ) -> RiskAssessmentHistory | None:
+        stmt = select(RiskAssessmentHistoryModel).where(RiskAssessmentHistoryModel.id == row_id)
+        stmt = self._apply_active_filter(stmt, include_inactive)
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        return self._to_entity(model) if model else None
+
+    async def update(self, entry: RiskAssessmentHistory) -> RiskAssessmentHistory:
+        model = self._to_model(entry)
+        merged = await self._session.merge(model)
+        await self._session.flush()
+        await self._session.refresh(merged)
+        return self._to_entity(merged)
+
     async def list_by_patient(
         self,
         patient_id: UUID,
@@ -34,12 +53,14 @@ class SQLAlchemyRiskAssessmentHistoryRepository(RiskAssessmentHistoryRepository)
         evaluated_at_to: datetime | None = None,
         offset: int = 0,
         limit: int = 20,
+        include_inactive: bool = False,
     ) -> list[RiskAssessmentHistory]:
         stmt = self._filtered_stmt(
             patient_id,
             assessment_type=assessment_type,
             evaluated_at_from=evaluated_at_from,
             evaluated_at_to=evaluated_at_to,
+            include_inactive=include_inactive,
         )
         stmt = stmt.order_by(
             RiskAssessmentHistoryModel.evaluated_at.desc(),
@@ -55,12 +76,14 @@ class SQLAlchemyRiskAssessmentHistoryRepository(RiskAssessmentHistoryRepository)
         assessment_type: RiskAssessmentType | None = None,
         evaluated_at_from: datetime | None = None,
         evaluated_at_to: datetime | None = None,
+        include_inactive: bool = False,
     ) -> int:
         base = self._filtered_stmt(
             patient_id,
             assessment_type=assessment_type,
             evaluated_at_from=evaluated_at_from,
             evaluated_at_to=evaluated_at_to,
+            include_inactive=include_inactive,
         )
         stmt = select(func.count()).select_from(base.subquery())
         result = await self._session.execute(stmt)
@@ -73,10 +96,12 @@ class SQLAlchemyRiskAssessmentHistoryRepository(RiskAssessmentHistoryRepository)
         assessment_type: RiskAssessmentType | None,
         evaluated_at_from: datetime | None,
         evaluated_at_to: datetime | None,
+        include_inactive: bool,
     ):
         stmt = select(RiskAssessmentHistoryModel).where(
             RiskAssessmentHistoryModel.patient_id == patient_id,
         )
+        stmt = self._apply_active_filter(stmt, include_inactive)
         if assessment_type is not None:
             stmt = stmt.where(
                 RiskAssessmentHistoryModel.assessment_type == assessment_type.value,
@@ -85,6 +110,12 @@ class SQLAlchemyRiskAssessmentHistoryRepository(RiskAssessmentHistoryRepository)
             stmt = stmt.where(RiskAssessmentHistoryModel.evaluated_at >= evaluated_at_from)
         if evaluated_at_to is not None:
             stmt = stmt.where(RiskAssessmentHistoryModel.evaluated_at <= evaluated_at_to)
+        return stmt
+
+    @staticmethod
+    def _apply_active_filter(stmt, include_inactive: bool):
+        if not include_inactive:
+            stmt = stmt.where(RiskAssessmentHistoryModel.is_active.is_(True))
         return stmt
 
     @staticmethod
@@ -103,6 +134,8 @@ class SQLAlchemyRiskAssessmentHistoryRepository(RiskAssessmentHistoryRepository)
             evaluated_by_user_id=model.evaluated_by_user_id,
             evaluated_at=model.evaluated_at,
             result_snapshot=model.result_snapshot,
+            is_active=model.is_active,
+            deleted_at=model.deleted_at,
             created_at=model.created_at,
             updated_at=model.updated_at,
         )
@@ -123,6 +156,8 @@ class SQLAlchemyRiskAssessmentHistoryRepository(RiskAssessmentHistoryRepository)
             evaluated_by_user_id=entry.evaluated_by_user_id,
             evaluated_at=entry.evaluated_at,
             result_snapshot=entry.result_snapshot,
+            is_active=entry.is_active,
+            deleted_at=entry.deleted_at,
             created_at=entry.created_at,
             updated_at=entry.updated_at,
         )

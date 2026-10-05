@@ -10,6 +10,7 @@ from app.domain.audit.taxonomy import AuditAction, AuditResourceType
 from app.domain.entities.user import User, UserRole
 from app.domain.organization.entities import PatientAssignment
 from app.domain.organization.enums import AssignmentStatus, OrganizationMembershipRole
+from app.application.clinical_child_soft_delete import soft_deactivate_clinical_child
 from app.domain.risk.enums import RULE_BASED_MODEL_KIND, RiskAssessmentType
 from tests.api.test_child_resource_policy import (
     _login,
@@ -301,12 +302,49 @@ async def test_history_read_audit_phi_safe(
 
 
 @pytest.mark.asyncio
-async def test_repository_has_no_public_update_or_delete() -> None:
+async def test_soft_deleted_history_row_hidden_from_api_list(
+    client: AsyncClient,
+    history_setup,
+    risk_assessment_history_repository,
+) -> None:
+    headers = history_setup["assigned_headers"]
+    patient_id = history_setup["patient_id"]
+    await _seed_vitals(client, history_setup["owner_headers"], patient_id)
+    await client.get(
+        f"/api/v1/patients/{patient_id}/risk-assessments/diabetes?{ASSESSMENT_DATE_RANGE}",
+        headers=history_setup["owner_headers"],
+    )
+    await client.get(
+        f"/api/v1/patients/{patient_id}/risk-assessments/stroke?{ASSESSMENT_DATE_RANGE}",
+        headers=history_setup["owner_headers"],
+    )
+    assert len(risk_assessment_history_repository.rows) == 2
+    stroke_row = next(
+        r for r in risk_assessment_history_repository.rows
+        if r.assessment_type == RiskAssessmentType.STROKE
+    )
+    soft_deactivate_clinical_child(stroke_row)
+    await risk_assessment_history_repository.update(stroke_row)
+
+    listing = await client.get(
+        HISTORY_URL.format(patient_id=patient_id),
+        headers=headers,
+    )
+    assert listing.status_code == 200
+    body = listing.json()
+    assert body["total"] == 1
+    assert len(body["items"]) == 1
+    assert body["items"][0]["assessment_type"] == "diabetes"
+    assert len(risk_assessment_history_repository.rows) == 2
+
+
+@pytest.mark.asyncio
+async def test_repository_has_update_for_ops_soft_delete_but_no_delete() -> None:
     from app.infrastructure.repositories.risk_assessment_history_repository import (
         SQLAlchemyRiskAssessmentHistoryRepository,
     )
 
-    assert not hasattr(SQLAlchemyRiskAssessmentHistoryRepository, "update")
+    assert hasattr(SQLAlchemyRiskAssessmentHistoryRepository, "update")
     assert not hasattr(SQLAlchemyRiskAssessmentHistoryRepository, "delete")
 
 

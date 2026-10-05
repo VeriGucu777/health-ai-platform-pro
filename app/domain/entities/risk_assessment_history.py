@@ -25,3 +25,5 @@ class RiskAssessmentHistory(BaseEntity):
     evaluated_by_user_id: UUID
     evaluated_at: datetime
     result_snapshot: dict[str, Any] | None = None
+    is_active: bool = True
+    deleted_at: datetime | None = None

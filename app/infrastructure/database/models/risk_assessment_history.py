@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import DateTime, Float, ForeignKey, String, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -48,3 +48,5 @@ class RiskAssessmentHistoryModel(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         index=True,
     )
     result_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

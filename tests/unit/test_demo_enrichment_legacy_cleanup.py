@@ -102,6 +102,8 @@ async def _legacy_fixture_repos(*, wrong_meas_count: bool = False, with_v2: bool
     )
     now = datetime.now(UTC)
     for spec in PATIENT_SPECS:
+        if spec.key not in EXPECTED_PRODUCTION_PATIENT_IDS:
+            continue
         patient_id = EXPECTED_PRODUCTION_PATIENT_IDS[spec.key]
         patient = await patients.create(
             Patient(

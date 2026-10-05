@@ -48,10 +48,11 @@ from app.infrastructure.repositories.user_repository import normalize_email
 
 MARKER_A1 = "seed:demo-enrich-a1"
 MARKER_A2 = "seed:demo-enrich-a2"
+MARKER_A3 = "seed:demo-enrich-a3"
 MARKER_B1 = "seed:demo-enrich-b1"
 MARKER_B2 = "seed:demo-enrich-b2"
 
-ENRICHMENT_MARKERS = (MARKER_A1, MARKER_A2, MARKER_B1, MARKER_B2)
+ENRICHMENT_MARKERS = (MARKER_A1, MARKER_A2, MARKER_A3, MARKER_B1, MARKER_B2)
 
 # Bump when measurement/record templates change. Older rows use /meas/00 and /record/00
 # (pre-v2); re-seed adds v2 rows idempotently. Production may need soft-deactivate of
@@ -130,6 +131,16 @@ PATIENT_SPECS: tuple[EnrichmentPatientSpec, ...] = (
         primary_risk=RiskAssessmentType.HEART_DISEASE,
     ),
     EnrichmentPatientSpec(
+        key="a3",
+        marker=MARKER_A3,
+        first_name="Demo",
+        last_name="Stroke Follow-up Patient",
+        date_of_birth=date(1963, 3, 22),
+        gender="female",
+        doctor_slot="a",
+        primary_risk=RiskAssessmentType.STROKE,
+    ),
+    EnrichmentPatientSpec(
         key="b1",
         marker=MARKER_B1,
         first_name="Demo",
@@ -158,6 +169,102 @@ def _notes_has_marker(notes: str | None, sub_marker: str) -> bool:
 
 def _enrichment_sub_marker(spec: EnrichmentPatientSpec, kind: str, index: int) -> str:
     return f"{spec.marker}/{kind}/{ENRICHMENT_CLINICAL_DATA_VERSION}/{index:02d}"
+
+
+def _snapshot_has_marker(result_snapshot: dict[str, Any] | None, sub_marker: str) -> bool:
+    if not result_snapshot:
+        return False
+    marker = result_snapshot.get("seed_marker")
+    return isinstance(marker, str) and marker.strip() == sub_marker
+
+
+def _demo_risk_seed_fields(spec: EnrichmentPatientSpec, *, sub_marker: str) -> dict[str, Any]:
+    """PHI-safe demo risk history payload for enrichment seed (decision-support only)."""
+    profiles: dict[str, dict[str, Any]] = {
+        "a1": {
+            "score": 52.0,
+            "risk_level": "moderate",
+            "probability": 0.38,
+            "model_version": "rule_based_v1",
+            "factors": [
+                {
+                    "factor": "fasting_glucose",
+                    "message": (
+                        "Synthetic demo: fasting glucose readings in follow-up range "
+                        "(rule-based decision support only)."
+                    ),
+                },
+            ],
+        },
+        "a2": {
+            "score": 58.0,
+            "risk_level": "moderate",
+            "probability": 0.41,
+            "model_version": "heart_rule_based_v1",
+            "factors": [
+                {
+                    "factor": "blood_pressure",
+                    "message": (
+                        "Synthetic demo: blood pressure readings documented for chart review "
+                        "(not a validated clinical score)."
+                    ),
+                },
+            ],
+        },
+        "a3": {
+            "score": 56.0,
+            "risk_level": "moderate",
+            "probability": 0.45,
+            "model_version": "stroke_rule_based_v1",
+            "factors": [
+                {
+                    "factor": "blood_pressure",
+                    "message": (
+                        "Synthetic demo: elevated blood pressure context in stroke follow-up "
+                        "(rule-based decision support only)."
+                    ),
+                },
+            ],
+        },
+        "b1": {
+            "score": 28.0,
+            "risk_level": "low",
+            "probability": 0.18,
+            "model_version": "heart_rule_based_v1",
+            "factors": [],
+        },
+        "b2": {
+            "score": 54.0,
+            "risk_level": "moderate",
+            "probability": 0.44,
+            "model_version": "stroke_rule_based_v1",
+            "factors": [
+                {
+                    "factor": "blood_pressure",
+                    "message": (
+                        "Synthetic demo: cerebrovascular follow-up context "
+                        "(decision support only)."
+                    ),
+                },
+            ],
+        },
+    }
+    profile = profiles[spec.key]
+    return {
+        "assessment_status": "completed",
+        "risk_level": profile["risk_level"],
+        "score": profile["score"],
+        "probability": profile["probability"],
+        "model_version": profile["model_version"],
+        "result_snapshot": {
+            "seed_marker": sub_marker,
+            "contributing_factors": profile["factors"],
+            "missing_inputs": [],
+            "recommendations": [
+                "Synthetic demo output for pilot walkthrough; not a medical diagnosis.",
+            ],
+        },
+    }
 
 
 def _validate_doctor_b_email_distinct_from_a(config: DemoClinicalEnrichmentConfig) -> None:
@@ -189,12 +296,6 @@ def _require_doctor_b_password_for_mutate(config: DemoClinicalEnrichmentConfig, 
     if not config.doctor_b_password or not config.doctor_b_password.strip():
         msg = "DEMO_DOCTOR_B_PASSWORD is required with --confirm-seed."
         raise ValueError(msg)
-
-
-def _snapshot_has_marker(snapshot: dict[str, Any] | None, sub_marker: str) -> bool:
-    if not snapshot:
-        return False
-    return snapshot.get("seed_marker") == sub_marker
 
 
 async def _validate_organization(organization_repository: OrganizationSeedRepository, slug: str):
@@ -503,7 +604,40 @@ def _measurement_templates(spec: EnrichmentPatientSpec) -> list[dict[str, Any]]:
                 "diastolic_pressure": 72,
             },
         ]
-    return [
+    if spec.key == "a3":
+        return [
+            {
+                "measured_at": base - timedelta(days=70),
+                "systolic_pressure": 144,
+                "diastolic_pressure": 88,
+                "heart_rate": 74,
+            },
+            {
+                "measured_at": base - timedelta(days=52),
+                "systolic_pressure": 136,
+                "diastolic_pressure": 86,
+                "weight_kg": Decimal("79.5"),
+            },
+            {
+                "measured_at": base - timedelta(days=34),
+                "blood_glucose": Decimal("108"),
+                "glucose_context": "fasting",
+            },
+            {
+                "measured_at": base - timedelta(days=20),
+                "systolic_pressure": 132,
+                "diastolic_pressure": 82,
+            },
+            {
+                "measured_at": base - timedelta(days=7),
+                "blood_glucose": Decimal("114"),
+                "glucose_context": "post_meal",
+                "systolic_pressure": 128,
+                "diastolic_pressure": 80,
+            },
+        ]
+    if spec.key == "b2":
+        return [
         {
             "measured_at": base - timedelta(days=72),
             "systolic_pressure": 142,
@@ -526,6 +660,8 @@ def _measurement_templates(spec: EnrichmentPatientSpec) -> list[dict[str, Any]]:
             "glucose_context": "fasting",
         },
     ]
+    msg = f"No measurement templates for enrichment patient key {spec.key!r}"
+    raise ValueError(msg)
 
 
 async def _seed_medical_records(
@@ -675,7 +811,57 @@ def _medical_record_specs(spec: EnrichmentPatientSpec) -> list[dict[str, Any]]:
                 ),
             },
         ]
-    return [
+    if spec.key == "a3":
+        return [
+            {
+                "record_date": base - timedelta(days=90),
+                "record_type": "visit",
+                "title": "Neurology stroke follow-up (demo)",
+                "diagnosis": (
+                    "Hypertension with prior cerebrovascular event in synthetic demo history "
+                    "(decision-support chart context only)."
+                ),
+            },
+            {
+                "record_date": base - timedelta(days=58),
+                "record_type": "lab_result",
+                "title": "Stroke follow-up laboratories (demo)",
+                "diagnosis": (
+                    "Synthetic laboratory summary (demo): LDL 136 mg/dL; fasting glucose 108 mg/dL."
+                ),
+                "description": "Fictional demo values for decision-support review only.",
+            },
+            {
+                "record_date": base - timedelta(days=42),
+                "record_type": "visit",
+                "title": "Secondary prevention medications (demo)",
+                "medications": (
+                    "Antiplatelet and antihypertensive therapy reviewed "
+                    "(synthetic demo medication note)."
+                ),
+            },
+            {
+                "record_date": base - timedelta(days=26),
+                "record_type": "imaging",
+                "title": "Brain imaging report summary (demo)",
+                "diagnosis": (
+                    "Synthetic brain imaging report summary (demo); no DICOM file or "
+                    "automated image interpretation."
+                ),
+                "description": "Fictional demo imaging narrative for decision-support review only.",
+            },
+            {
+                "record_date": base - timedelta(days=12),
+                "record_type": "visit",
+                "title": "Stroke recovery follow-up plan (demo)",
+                "treatment": (
+                    "Blood pressure monitoring, neurology follow-up, and rehabilitation goals "
+                    "(synthetic demo care plan)."
+                ),
+            },
+        ]
+    if spec.key == "b2":
+        return [
         {
             "record_date": base - timedelta(days=85),
             "record_type": "visit",
@@ -721,6 +907,8 @@ def _medical_record_specs(spec: EnrichmentPatientSpec) -> list[dict[str, Any]]:
             ),
         },
     ]
+    msg = f"No medical record templates for enrichment patient key {spec.key!r}"
+    raise ValueError(msg)
 
 
 async def _seed_appointments(
@@ -783,22 +971,21 @@ async def _seed_risk_history(
     if not mutate:
         return 0
     evaluated_at = datetime(2026, 6, 20, 12, 0, tzinfo=UTC)
-    probability = {"a1": 0.38, "a2": 0.41, "b1": 0.18, "b2": 0.44}[spec.key]
-    risk_level = "moderate" if spec.key != "b1" else "low"
+    fields = _demo_risk_seed_fields(spec, sub_marker=sub_marker)
     await risk_repository.append(
         RiskAssessmentHistory(
             patient_id=patient.id,
             organization_id=organization_id,
             assessment_type=spec.primary_risk,
-            assessment_status="complete",
-            risk_level=risk_level,
-            score=52.0 if spec.key != "b1" else 28.0,
-            probability=probability,
+            assessment_status=fields["assessment_status"],
+            risk_level=fields["risk_level"],
+            score=fields["score"],
+            probability=fields["probability"],
             model_kind=RULE_BASED_MODEL_KIND,
-            model_version="rule_based_v1",
+            model_version=fields["model_version"],
             evaluated_by_user_id=evaluator_id,
             evaluated_at=evaluated_at,
-            result_snapshot={"seed_marker": sub_marker, "demo": True},
+            result_snapshot=fields["result_snapshot"],
         ),
     )
     return 1

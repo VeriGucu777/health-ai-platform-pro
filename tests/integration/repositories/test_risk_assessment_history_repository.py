@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.application.dtos.diabetes_risk_assessment import DiabetesRiskAssessmentDTO
 from app.application.services.diabetes_risk_assessment_service import DiabetesRiskAssessmentService
 from app.application.services.patient_access_policy_service import DefaultPatientAccessPolicy
+from app.application.clinical_child_soft_delete import soft_deactivate_clinical_child
 from app.application.services.risk_assessment_history_persistence import (
     append_risk_assessment_history,
     build_result_snapshot,
@@ -499,11 +500,11 @@ async def test_organization_delete_sets_history_organization_id_null(
     assert row.patient_id == patient.id
 
 
-def test_repository_port_has_no_update_or_delete() -> None:
-    assert not hasattr(RiskAssessmentHistoryRepository, "update")
+def test_repository_port_has_update_for_soft_delete_but_no_delete() -> None:
+    assert hasattr(RiskAssessmentHistoryRepository, "update")
     assert not hasattr(RiskAssessmentHistoryRepository, "delete")
     repo = SQLAlchemyRiskAssessmentHistoryRepository  # type: ignore[assignment]
-    assert not hasattr(repo, "update")
+    assert hasattr(repo, "update")
     assert not hasattr(repo, "delete")
 
 
@@ -552,6 +553,55 @@ async def test_invalid_history_append_does_not_persist_row(
         await db_session.commit()
     await db_session.rollback()
     assert await _count_history_rows(db_session, patient.id) == 0
+
+
+async def test_soft_deactivated_row_hidden_from_list_include_inactive_ops_path(
+    db_session: AsyncSession,
+    user_repository: SQLAlchemyUserRepository,
+    patient_repository: SQLAlchemyPatientRepository,
+    risk_assessment_history_repository: SQLAlchemyRiskAssessmentHistoryRepository,
+) -> None:
+    doctor, patient = await _seed_doctor_and_patient(db_session, user_repository, patient_repository)
+    saved = await _append_entity(
+        risk_assessment_history_repository,
+        patient_id=patient.id,
+        evaluator_id=doctor.id,
+    )
+    await db_session.commit()
+
+    soft_deactivate_clinical_child(saved)
+    await risk_assessment_history_repository.update(saved)
+    await db_session.commit()
+
+    assert await risk_assessment_history_repository.count_by_patient(patient.id) == 0
+    assert await risk_assessment_history_repository.count_by_patient(
+        patient.id,
+        include_inactive=True,
+    ) == 1
+    assert await risk_assessment_history_repository.get_by_id(saved.id) is None
+    inactive = await risk_assessment_history_repository.get_by_id(saved.id, include_inactive=True)
+    assert inactive is not None
+    assert inactive.is_active is False
+    assert inactive.deleted_at is not None
+
+
+async def test_append_defaults_is_active_true(
+    db_session: AsyncSession,
+    user_repository: SQLAlchemyUserRepository,
+    patient_repository: SQLAlchemyPatientRepository,
+    risk_assessment_history_repository: SQLAlchemyRiskAssessmentHistoryRepository,
+) -> None:
+    doctor, patient = await _seed_doctor_and_patient(db_session, user_repository, patient_repository)
+    saved = await _append_entity(
+        risk_assessment_history_repository,
+        patient_id=patient.id,
+        evaluator_id=doctor.id,
+    )
+    await db_session.commit()
+    row = await _load_model_by_id(db_session, saved.id)
+    assert row is not None
+    assert row.is_active is True
+    assert row.deleted_at is None
 
 
 async def test_diabetes_service_single_invocation_appends_one_history_row(
