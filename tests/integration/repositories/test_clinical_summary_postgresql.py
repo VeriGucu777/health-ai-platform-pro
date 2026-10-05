@@ -144,7 +144,7 @@ async def test_postgresql_evidence_and_summary_provenance(
         UserRole.DOCTOR,
         patient_id=patient.id,
     )
-    assert summary.summary_version == "deterministic_v1"
+    assert summary.summary_version == "deterministic_v2"
     assert any(i.provenance.source_id == record.id for i in summary.clinical_items)
     assert any(m.provenance.source_id == measurement.id for m in summary.recent_measurements)
     assert any(e.provenance.source_id == appointment.id for e in summary.encounters)

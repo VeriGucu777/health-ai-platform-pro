@@ -1,0 +1,387 @@
+"""Unit tests for deterministic clinical summary overview bullets."""
+
+from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
+from uuid import uuid4
+
+from app.application.analytics.clinical_summary_overview_builder import (
+    build_clinical_summary_overview_items,
+)
+from app.application.dtos.clinical_evidence import ClinicalEvidenceBundle
+from app.domain.entities.appointment import Appointment
+from app.domain.entities.health_measurement import HealthMeasurement
+from app.domain.entities.medical_record import MedicalRecord
+from app.domain.entities.patient import Patient
+
+
+def _patient() -> Patient:
+    return Patient(
+        owner_id=uuid4(),
+        first_name="Demo",
+        last_name="Patient",
+        date_of_birth=date(1975, 6, 15),
+        gender="female",
+    )
+
+
+def _bundle(**kwargs: object) -> ClinicalEvidenceBundle:
+    return ClinicalEvidenceBundle(patient=_patient(), **kwargs)  # type: ignore[arg-type]
+
+
+def _measurement(
+    *,
+    measured_at: datetime,
+    blood_glucose: Decimal | None = None,
+    glucose_context: str | None = None,
+    systolic_pressure: int | None = None,
+    diastolic_pressure: int | None = None,
+    heart_rate: int | None = None,
+    is_active: bool = True,
+) -> HealthMeasurement:
+    return HealthMeasurement(
+        owner_id=uuid4(),
+        patient_id=uuid4(),
+        measured_at=measured_at,
+        blood_glucose=blood_glucose,
+        glucose_context=glucose_context,
+        systolic_pressure=systolic_pressure,
+        diastolic_pressure=diastolic_pressure,
+        heart_rate=heart_rate,
+        is_active=is_active,
+    )
+
+
+def _record(**kwargs: object) -> MedicalRecord:
+    defaults = {
+        "owner_id": uuid4(),
+        "patient_id": uuid4(),
+        "record_date": datetime(2026, 5, 1, tzinfo=UTC),
+        "record_type": "visit",
+        "title": "Visit",
+    }
+    defaults.update(kwargs)
+    return MedicalRecord(**defaults)  # type: ignore[arg-type]
+
+
+def test_diabetes_overview_includes_glucose_lab_and_follow_up() -> None:
+    as_of = datetime(2026, 10, 1, 12, 0, tzinfo=UTC)
+    measurements = [
+        _measurement(
+            measured_at=datetime(2026, 8, 1, 8, 0, tzinfo=UTC),
+            blood_glucose=Decimal("108"),
+            glucose_context="fasting",
+            systolic_pressure=128,
+            diastolic_pressure=82,
+        ),
+        _measurement(
+            measured_at=datetime(2026, 8, 15, 8, 0, tzinfo=UTC),
+            blood_glucose=Decimal("112"),
+            glucose_context="fasting",
+            systolic_pressure=130,
+            diastolic_pressure=84,
+        ),
+        _measurement(
+            measured_at=datetime(2026, 9, 1, 8, 0, tzinfo=UTC),
+            blood_glucose=Decimal("118"),
+            glucose_context="fasting",
+            systolic_pressure=132,
+            diastolic_pressure=86,
+        ),
+        _measurement(
+            measured_at=datetime(2026, 9, 10, 13, 0, tzinfo=UTC),
+            blood_glucose=Decimal("165"),
+            glucose_context="post_meal",
+        ),
+        _measurement(
+            measured_at=datetime(2026, 9, 20, 13, 0, tzinfo=UTC),
+            blood_glucose=Decimal("172"),
+            glucose_context="post_meal",
+        ),
+    ]
+    records = [
+        _record(
+            record_type="lab_result",
+            title="Metabolic laboratory panel",
+            diagnosis="HbA1c 7.2%; LDL 142 mg/dL",
+        ),
+        _record(
+            record_type="visit",
+            title="Diabetes follow-up",
+            medications="Metformin 1000 mg twice daily",
+        ),
+    ]
+    appointments = [
+        Appointment(
+            owner_id=uuid4(),
+            patient_id=uuid4(),
+            appointment_date=as_of + timedelta(days=14),
+            appointment_type="Diabetes follow-up",
+            status="scheduled",
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(
+            health_measurements=measurements,
+            medical_records=records,
+            appointments=appointments,
+        ),
+        as_of=as_of,
+    )
+    keys = [item.key for item in items]
+    assert keys[:5] == [
+        "fasting_glucose_trend",
+        "post_meal_glucose_trend",
+        "blood_pressure_trend",
+        "laboratory_summary",
+        "medication_treatment_follow_up",
+    ]
+    fasting = next(item for item in items if item.key == "fasting_glucose_trend")
+    assert fasting.trend_status == "increasing"
+    assert fasting.source_count == 3
+
+
+def test_cardiac_overview_includes_heart_rate_imaging_and_labs() -> None:
+    as_of = datetime(2026, 10, 1, 12, 0, tzinfo=UTC)
+    measurements = [
+        _measurement(
+            measured_at=datetime(2026, 7, 1, 9, 0, tzinfo=UTC),
+            systolic_pressure=122,
+            heart_rate=72,
+        ),
+        _measurement(
+            measured_at=datetime(2026, 8, 1, 9, 0, tzinfo=UTC),
+            systolic_pressure=126,
+            heart_rate=74,
+        ),
+        _measurement(
+            measured_at=datetime(2026, 9, 1, 9, 0, tzinfo=UTC),
+            systolic_pressure=130,
+            heart_rate=76,
+        ),
+    ]
+    records = [
+        _record(
+            record_type="lab_result",
+            title="Lipid panel",
+            diagnosis="LDL 152 mg/dL; HDL 44 mg/dL",
+        ),
+        _record(
+            record_type="imaging",
+            title="Echocardiography summary",
+            diagnosis="LVEF 55%; mild concentric remodeling",
+        ),
+        _record(record_type="visit", treatment="Continue beta-blocker therapy"),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(health_measurements=measurements, medical_records=records),
+        as_of=as_of,
+    )
+    keys = [item.key for item in items]
+    assert "heart_rate_trend" in keys
+    assert "laboratory_summary" in keys
+    assert "imaging_summary" in keys
+    assert "medication_treatment_follow_up" in keys
+
+
+def test_stroke_overview_includes_neurology_imaging_and_metabolic() -> None:
+    as_of = datetime(2026, 10, 1, 12, 0, tzinfo=UTC)
+    measurements = [
+        _measurement(
+            measured_at=datetime(2026, 6, 1, 8, 0, tzinfo=UTC),
+            systolic_pressure=138,
+            blood_glucose=Decimal("104"),
+            glucose_context="fasting",
+        ),
+        _measurement(
+            measured_at=datetime(2026, 7, 1, 8, 0, tzinfo=UTC),
+            systolic_pressure=142,
+            blood_glucose=Decimal("108"),
+            glucose_context="fasting",
+        ),
+    ]
+    records = [
+        _record(
+            record_type="visit",
+            title="Neurology follow-up",
+            diagnosis="Residual mild hemiparesis; secondary stroke prevention plan documented.",
+        ),
+        _record(
+            record_type="imaging",
+            title="Brain imaging report summary",
+            diagnosis="Chronic ischemic changes without acute infarct on summary report.",
+        ),
+        _record(
+            record_type="visit",
+            medications="Antiplatelet and statin therapy per recorded plan",
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(health_measurements=measurements, medical_records=records),
+        as_of=as_of,
+    )
+    keys = [item.key for item in items]
+    assert "fasting_glucose_trend" in keys
+    assert "blood_pressure_trend" in keys
+    assert "clinical_visit_summary" in keys
+    assert "imaging_summary" in keys
+    assert "medication_treatment_follow_up" in keys
+
+
+def test_insufficient_data_returns_empty_overview() -> None:
+    items = build_clinical_summary_overview_items(
+        _bundle(),
+        as_of=datetime(2026, 10, 1, tzinfo=UTC),
+    )
+    assert items == []
+
+
+def test_inactive_measurements_excluded_from_bundle_convention() -> None:
+    """Overview builder only sees active rows supplied by evidence loading."""
+    active = [
+        _measurement(
+            measured_at=datetime(2026, 8, 1, tzinfo=UTC),
+            systolic_pressure=120,
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(health_measurements=active),
+        as_of=datetime(2026, 10, 1, tzinfo=UTC),
+    )
+    assert len(items) == 1
+    assert items[0].key == "blood_pressure_trend"
+    assert items[0].source_count == 1
+
+
+def test_two_point_fasting_glucose_does_not_claim_direction() -> None:
+    measurements = [
+        _measurement(
+            measured_at=datetime(2026, 8, 1, tzinfo=UTC),
+            blood_glucose=Decimal("100"),
+            glucose_context="fasting",
+        ),
+        _measurement(
+            measured_at=datetime(2026, 9, 1, tzinfo=UTC),
+            blood_glucose=Decimal("130"),
+            glucose_context="fasting",
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(health_measurements=measurements),
+        as_of=datetime(2026, 10, 1, tzinfo=UTC),
+    )
+    fasting = next(item for item in items if item.key == "fasting_glucose_trend")
+    assert fasting.trend_status == "recorded_no_direction"
+    assert "not enough data for a directional trend" in fasting.message
+
+
+def test_fasting_and_post_meal_glucose_evaluated_separately() -> None:
+    measurements = [
+        _measurement(
+            measured_at=datetime(2026, 8, 1, tzinfo=UTC),
+            blood_glucose=Decimal("105"),
+            glucose_context="fasting",
+        ),
+        _measurement(
+            measured_at=datetime(2026, 8, 2, tzinfo=UTC),
+            blood_glucose=Decimal("190"),
+            glucose_context="post_meal",
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(health_measurements=measurements),
+        as_of=datetime(2026, 10, 1, tzinfo=UTC),
+    )
+    keys = [item.key for item in items]
+    assert "fasting_glucose_trend" in keys
+    assert "post_meal_glucose_trend" in keys
+
+
+def test_scheduled_appointment_summary() -> None:
+    as_of = datetime(2026, 10, 1, tzinfo=UTC)
+    appointments = [
+        Appointment(
+            owner_id=uuid4(),
+            patient_id=uuid4(),
+            appointment_date=as_of + timedelta(days=10),
+            appointment_type="Stroke follow-up",
+            status="scheduled",
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(appointments=appointments),
+        as_of=as_of,
+    )
+    assert len(items) == 1
+    assert items[0].key == "upcoming_follow_up"
+    assert "stroke follow-up" in items[0].message
+
+
+def test_seed_markers_stripped_from_record_snippets() -> None:
+    records = [
+        _record(
+            record_type="lab_result",
+            title="Panel",
+            diagnosis="HbA1c 7.0% seed:demo-enrich-a1 hidden marker",
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(medical_records=records),
+        as_of=datetime(2026, 10, 1, tzinfo=UTC),
+    )
+    assert items[0].message == "Panel; HbA1c 7.0% hidden marker"
+
+
+def test_overview_capped_at_six_items() -> None:
+    as_of = datetime(2026, 10, 1, tzinfo=UTC)
+    measurements = [
+        _measurement(
+            measured_at=datetime(2026, 6, 1, tzinfo=UTC),
+            blood_glucose=Decimal("100"),
+            glucose_context="fasting",
+            systolic_pressure=120,
+            heart_rate=70,
+        ),
+        _measurement(
+            measured_at=datetime(2026, 7, 1, tzinfo=UTC),
+            blood_glucose=Decimal("110"),
+            glucose_context="fasting",
+            systolic_pressure=125,
+            heart_rate=72,
+        ),
+        _measurement(
+            measured_at=datetime(2026, 8, 1, tzinfo=UTC),
+            blood_glucose=Decimal("120"),
+            glucose_context="fasting",
+            systolic_pressure=130,
+            heart_rate=74,
+        ),
+        _measurement(
+            measured_at=datetime(2026, 8, 2, tzinfo=UTC),
+            blood_glucose=Decimal("180"),
+            glucose_context="post_meal",
+        ),
+    ]
+    records = [
+        _record(record_type="lab_result", title="Lab", diagnosis="LDL 140"),
+        _record(record_type="imaging", title="Echo", diagnosis="Normal LV function"),
+        _record(record_type="visit", diagnosis="Stable outpatient course"),
+        _record(record_type="visit", medications="Aspirin 81 mg daily"),
+    ]
+    appointments = [
+        Appointment(
+            owner_id=uuid4(),
+            patient_id=uuid4(),
+            appointment_date=as_of + timedelta(days=5),
+            appointment_type="Follow-up",
+            status="scheduled",
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(
+            health_measurements=measurements,
+            medical_records=records,
+            appointments=appointments,
+        ),
+        as_of=as_of,
+    )
+    assert len(items) == 6

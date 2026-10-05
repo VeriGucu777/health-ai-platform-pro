@@ -7,7 +7,12 @@ import {
   fetchHealthSummaryPdf,
   triggerBlobDownload,
 } from "@/lib/api/health-report";
+import {
+  fetchPatientClinicalSummary,
+  type ClinicalSummaryOverviewItem,
+} from "@/lib/api/clinical-summary";
 import { fetchPatient, type Patient } from "@/lib/api/patients";
+import { ClinicalSummaryCard } from "@/components/patients/ClinicalSummaryCard";
 import {
   fetchRiskAssessmentHistory,
   type RiskAssessmentHistoryItem,
@@ -137,6 +142,10 @@ export function PatientHubPageContent({ patientId }: PatientHubPageContentProps)
   const [loadState, setLoadState] = useState<HubLoadState>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  const [summaryItems, setSummaryItems] = useState<ClinicalSummaryOverviewItem[]>([]);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+
   const [riskItems, setRiskItems] = useState<RiskAssessmentHistoryItem[]>([]);
   const [riskLoading, setRiskLoading] = useState(true);
   const [riskError, setRiskError] = useState<string | null>(null);
@@ -175,6 +184,29 @@ export function PatientHubPageContent({ patientId }: PatientHubPageContentProps)
     }
   }, [accessToken, handleUnauthorized, hub.loadError, patientId]);
 
+  const loadClinicalSummary = useCallback(async () => {
+    if (!accessToken || loadState !== "ready") {
+      return;
+    }
+
+    setSummaryLoading(true);
+    setSummaryError(null);
+
+    try {
+      const response = await fetchPatientClinicalSummary(accessToken, patientId);
+      setSummaryItems(response.overview_items);
+    } catch (err) {
+      if (err instanceof ApiClientError && err.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+      setSummaryItems([]);
+      setSummaryError(hub.clinicalSummaryLoadError);
+    } finally {
+      setSummaryLoading(false);
+    }
+  }, [accessToken, handleUnauthorized, hub.clinicalSummaryLoadError, loadState, patientId]);
+
   const loadRiskHistory = useCallback(async () => {
     if (!accessToken || loadState !== "ready") {
       return;
@@ -207,9 +239,10 @@ export function PatientHubPageContent({ patientId }: PatientHubPageContentProps)
 
   useEffect(() => {
     if (loadState === "ready") {
+      void loadClinicalSummary();
       void loadRiskHistory();
     }
-  }, [loadRiskHistory, loadState]);
+  }, [loadClinicalSummary, loadRiskHistory, loadState]);
 
   const handleDownloadPdf = async () => {
     if (!accessToken) {
@@ -293,6 +326,23 @@ export function PatientHubPageContent({ patientId }: PatientHubPageContentProps)
         </h2>
         <p className="mt-2 text-sm text-text-secondary">{hub.decisionSupportBody}</p>
       </section>
+
+      <ClinicalSummaryCard
+        locale={effectiveLocale}
+        title={hub.clinicalSummaryTitle}
+        subtitle={hub.clinicalSummarySubtitle}
+        description={hub.clinicalSummaryDescription}
+        emptyMessage={hub.clinicalSummaryEmpty}
+        disclaimer={hub.clinicalSummaryDisclaimer}
+        itemLabels={hub.clinicalSummaryItemLabels}
+        trendMessages={hub.clinicalSummaryTrendMessages}
+        items={summaryItems}
+        loading={summaryLoading}
+        loadError={summaryError}
+        onRetry={() => void loadClinicalSummary()}
+        retryLabel={content.common.retry}
+        loadingLabel={content.common.loading}
+      />
 
       <section className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Button href={`/patients/${patientId}/timeline`} size="lg">

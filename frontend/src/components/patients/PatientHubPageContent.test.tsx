@@ -24,6 +24,14 @@ const hubFixture = {
   riskHistoryTitle: "Risk history",
   riskHistoryEmpty: "No risk history",
   riskHistoryLoadError: "Risk load failed",
+  clinicalSummaryTitle: "Clinical summary",
+  clinicalSummarySubtitle: "Recent clinical picture",
+  clinicalSummaryDescription: "Brief summary from records.",
+  clinicalSummaryEmpty: "Not enough data for summary.",
+  clinicalSummaryLoadError: "Summary load failed",
+  clinicalSummaryDisclaimer: "Decision support only.",
+  clinicalSummaryItemLabels: { laboratory_summary: "Laboratory" },
+  clinicalSummaryTrendMessages: {},
   riskType: "Type",
   riskLevel: "Level",
   assessedAt: "Assessed at",
@@ -64,12 +72,17 @@ vi.mock("@/lib/i18n/use-locale", () => ({
 }));
 
 const fetchPatient = vi.fn();
+const fetchPatientClinicalSummary = vi.fn();
 const fetchRiskAssessmentHistory = vi.fn();
 const fetchHealthSummaryPdf = vi.fn();
 const triggerBlobDownload = vi.fn();
 
 vi.mock("@/lib/api/patients", () => ({
   fetchPatient: (...args: unknown[]) => fetchPatient(...args),
+}));
+
+vi.mock("@/lib/api/clinical-summary", () => ({
+  fetchPatientClinicalSummary: (...args: unknown[]) => fetchPatientClinicalSummary(...args),
 }));
 
 vi.mock("@/lib/api/risk-history", () => ({
@@ -84,6 +97,8 @@ vi.mock("@/lib/api/health-report", () => ({
 describe("PatientHubPageContent", () => {
   beforeEach(() => {
     fetchPatient.mockReset();
+    fetchPatientClinicalSummary.mockReset();
+    fetchPatientClinicalSummary.mockResolvedValue({ overview_items: [] });
     fetchRiskAssessmentHistory.mockReset();
     fetchHealthSummaryPdf.mockReset();
     triggerBlobDownload.mockReset();
@@ -111,6 +126,39 @@ describe("PatientHubPageContent", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Demo Patient" })).toBeInTheDocument();
+    });
+  });
+
+  it("shows clinical summary card with overview items", async () => {
+    fetchPatient.mockResolvedValue({
+      id: "p1",
+      first_name: "Demo",
+      last_name: "Patient",
+      date_of_birth: "1990-06-12",
+      gender: "female",
+      is_active: true,
+    });
+    fetchPatientClinicalSummary.mockResolvedValue({
+      overview_items: [
+        {
+          key: "laboratory_summary",
+          severity: "info",
+          label: "Laboratory",
+          message: "HbA1c 7.2%",
+          trend_status: null,
+          source_count: 1,
+          data_window_start: null,
+          data_window_end: null,
+        },
+      ],
+    });
+    fetchRiskAssessmentHistory.mockResolvedValue({ items: [] });
+
+    render(<PatientHubPageContent patientId="p1" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Clinical summary" })).toBeInTheDocument();
+      expect(screen.getByText(/HbA1c 7.2%/)).toBeInTheDocument();
     });
   });
 

@@ -142,6 +142,36 @@ export const commonContent: CommonContent = {
     riskHistoryTitle: "Risk değerlendirme geçmişi",
     riskHistoryEmpty: "Bu hasta için henüz kayıtlı risk değerlendirmesi yok.",
     riskHistoryLoadError: "Risk geçmişi yüklenemedi.",
+    clinicalSummaryTitle: "Klinik özet",
+    clinicalSummarySubtitle: "Son dönem klinik görünüm",
+    clinicalSummaryDescription: "Mevcut kayıtların kısa karar destek özeti.",
+    clinicalSummaryEmpty: "Özet oluşturmak için yeterli klinik veri bulunmuyor.",
+    clinicalSummaryLoadError: "Klinik özet yüklenemedi.",
+    clinicalSummaryDisclaimer:
+      "Bu özet klinik karar destek amaçlıdır; tanı veya tedavi önerisi değildir.",
+    clinicalSummaryItemLabels: {
+      fasting_glucose_trend: "Açlık kan şekeri",
+      post_meal_glucose_trend: "Yemek sonrası kan şekeri",
+      blood_pressure_trend: "Kan basıncı",
+      heart_rate_trend: "Nabız",
+      laboratory_summary: "Laboratuvar",
+      imaging_summary: "Görüntüleme",
+      clinical_visit_summary: "Klinik muayene notu",
+      medication_treatment_follow_up: "İlaç ve takip",
+      upcoming_follow_up: "Yaklaşan kontrol",
+    },
+    clinicalSummaryTrendMessages: {
+      stable:
+        "{count} karşılaştırılabilir {context} ölçümüne göre değerler stabil bir seyir gösteriyor (bilgilendirme).",
+      increasing:
+        "{count} karşılaştırılabilir {context} ölçümüne göre değerler artış eğilimi gösteriyor (bilgilendirme).",
+      decreasing:
+        "{count} karşılaştırılabilir {context} ölçümüne göre değerler azalış eğilimi gösteriyor (bilgilendirme).",
+      recorded_no_direction:
+        "{count} karşılaştırılabilir {context} ölçümü kayıtlı; yönlü trend için yeterli veri yok.",
+      insufficient_data:
+        "{count} karşılaştırılabilir {context} ölçümü kayıtlı; trend değerlendirilmedi.",
+    },
     riskType: "Tür",
     riskLevel: "Düzey",
     assessedAt: "Değerlendirme zamanı",

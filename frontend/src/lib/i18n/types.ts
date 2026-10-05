@@ -113,6 +113,14 @@ export type CommonContent = {
     riskHistoryTitle: string;
     riskHistoryEmpty: string;
     riskHistoryLoadError: string;
+    clinicalSummaryTitle: string;
+    clinicalSummarySubtitle: string;
+    clinicalSummaryDescription: string;
+    clinicalSummaryEmpty: string;
+    clinicalSummaryLoadError: string;
+    clinicalSummaryDisclaimer: string;
+    clinicalSummaryItemLabels: Record<string, string>;
+    clinicalSummaryTrendMessages: Record<string, string>;
     riskType: string;
     riskLevel: string;
     assessedAt: string;

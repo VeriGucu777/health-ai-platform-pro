@@ -76,6 +76,19 @@ class CareFlagResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ClinicalSummaryOverviewItemResponse(BaseModel):
+    key: str
+    severity: str
+    label: str
+    message: str
+    trend_status: str | None = None
+    source_count: int = 0
+    data_window_start: datetime | None = None
+    data_window_end: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ClinicalSummaryDataQualityResponse(BaseModel):
     no_data: bool
     missing_sections: list[str]
@@ -90,6 +103,10 @@ class PatientClinicalSummaryResponse(BaseModel):
     generated_at: datetime
     summary_version: str
     data_window: ClinicalSummaryDataWindowResponse
+    overview_items: list[ClinicalSummaryOverviewItemResponse] = Field(
+        default_factory=list,
+        description="Short deterministic overview bullets for clinician review (max 6).",
+    )
     clinical_items: list[ClinicalItemResponse]
     recent_measurements: list[RecentMeasurementResponse]
     encounters: list[EncounterResponse]

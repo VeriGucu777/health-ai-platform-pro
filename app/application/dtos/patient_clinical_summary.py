@@ -5,6 +5,7 @@ from uuid import UUID
 
 from app.application.dtos.base import BaseSchema
 from app.application.dtos.clinical_evidence import ClinicalEvidenceProvenanceDTO
+from app.application.dtos.clinical_summary_overview import ClinicalSummaryOverviewItemDTO
 
 
 class ClinicalSummaryDataWindowDTO(BaseSchema):
@@ -66,6 +67,7 @@ class PatientClinicalSummaryDTO(BaseSchema):
     generated_at: datetime
     summary_version: str
     data_window: ClinicalSummaryDataWindowDTO
+    overview_items: list[ClinicalSummaryOverviewItemDTO]
     clinical_items: list[ClinicalItemDTO]
     recent_measurements: list[RecentMeasurementDTO]
     encounters: list[EncounterDTO]

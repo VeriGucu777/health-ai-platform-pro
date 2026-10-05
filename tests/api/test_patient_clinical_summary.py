@@ -231,6 +231,11 @@ async def test_clinical_summary_content_and_provenance(
     ]
     assert len(older_diabetes_prob) == 0
 
+    overview_keys = [item["key"] for item in data["overview_items"]]
+    assert "fasting_glucose_trend" in overview_keys
+    assert "medication_treatment_follow_up" in overview_keys
+    assert "upcoming_follow_up" in overview_keys
+
 
 @pytest.mark.asyncio
 async def test_clinical_summary_empty_data_quality_not_normal(
@@ -251,6 +256,7 @@ async def test_clinical_summary_empty_data_quality_not_normal(
     assert response.status_code == 200
     data = response.json()
     assert data["data_quality"]["no_data"] is True
+    assert data["overview_items"] == []
     assert "clinical_items" in data["data_quality"]["missing_sections"]
     assert any(f["flag_type"] == "missing_recent_measurement" for f in data["care_flags"])
 

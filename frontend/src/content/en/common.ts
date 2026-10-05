@@ -142,6 +142,37 @@ export const commonContent: CommonContent = {
     riskHistoryTitle: "Risk assessment history",
     riskHistoryEmpty: "No risk assessments recorded for this patient yet.",
     riskHistoryLoadError: "Could not load risk assessment history.",
+    clinicalSummaryTitle: "Clinical summary",
+    clinicalSummarySubtitle: "Recent clinical picture",
+    clinicalSummaryDescription:
+      "A brief decision-support summary from records on file.",
+    clinicalSummaryEmpty: "Not enough clinical data on file to build a summary.",
+    clinicalSummaryLoadError: "Could not load the clinical summary.",
+    clinicalSummaryDisclaimer:
+      "This summary is for clinical decision support only; it is not a diagnosis or treatment recommendation.",
+    clinicalSummaryItemLabels: {
+      fasting_glucose_trend: "Fasting blood glucose",
+      post_meal_glucose_trend: "Post-meal blood glucose",
+      blood_pressure_trend: "Blood pressure",
+      heart_rate_trend: "Heart rate",
+      laboratory_summary: "Laboratory",
+      imaging_summary: "Imaging",
+      clinical_visit_summary: "Clinical visit note",
+      medication_treatment_follow_up: "Medication and follow-up",
+      upcoming_follow_up: "Upcoming follow-up",
+    },
+    clinicalSummaryTrendMessages: {
+      stable:
+        "Based on {count} comparable {context} measurements, values show a stable pattern (informational).",
+      increasing:
+        "Based on {count} comparable {context} measurements, values show an increasing pattern (informational).",
+      decreasing:
+        "Based on {count} comparable {context} measurements, values show a decreasing pattern (informational).",
+      recorded_no_direction:
+        "{count} comparable {context} measurements recorded; not enough data for a directional trend.",
+      insufficient_data:
+        "{count} comparable {context} measurement(s) on file; trend not assessed.",
+    },
     riskType: "Type",
     riskLevel: "Level",
     assessedAt: "Assessed at",

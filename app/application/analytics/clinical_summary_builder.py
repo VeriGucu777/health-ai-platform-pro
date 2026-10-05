@@ -7,6 +7,9 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
+from app.application.analytics.clinical_summary_overview_builder import (
+    build_clinical_summary_overview_items,
+)
 from app.application.analytics.follow_up_status import is_follow_up_overdue
 from app.application.analytics.health_measurement_analytics import extract_metric_value
 from app.application.analytics.clinical_timeline_rules import HOSPITALIZATION_RECORD_TYPES
@@ -67,12 +70,18 @@ def build_deterministic_clinical_summary(
         encounters=encounters,
         latest_risks=latest_risks,
     )
+    overview_items = build_clinical_summary_overview_items(
+        bundle,
+        as_of=generated_at,
+        max_items=6,
+    )
 
     return PatientClinicalSummaryDTO(
         patient_id=bundle.patient.id,
         generated_at=generated_at,
         summary_version=SUMMARY_VERSION,
         data_window=ClinicalSummaryDataWindowDTO(date_from=date_from, date_to=date_to),
+        overview_items=overview_items,
         clinical_items=clinical_items,
         recent_measurements=recent_measurements,
         encounters=encounters,
