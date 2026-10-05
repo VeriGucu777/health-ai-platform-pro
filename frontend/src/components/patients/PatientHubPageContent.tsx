@@ -19,6 +19,7 @@ import {
 } from "@/lib/timeline/display";
 import type { SupportedLocale } from "@/lib/i18n/locale";
 import { useLocale } from "@/lib/i18n/use-locale";
+import { formatContributingFactorMessage } from "@/lib/risk/format-contributing-factor";
 import { formatRiskMissingInputLine } from "@/lib/risk/format-missing-input";
 
 type PatientHubPageContentProps = {
@@ -93,7 +94,9 @@ function RiskHistoryCard({
           <p className="text-sm font-medium text-text-primary">{labels.factors}</p>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-text-secondary">
             {factors.map((factor) => (
-              <li key={`${factor.factor}-${factor.message}`}>{factor.message}</li>
+              <li key={`${factor.factor}-${factor.message}`}>
+                {formatContributingFactorMessage(factor, locale)}
+              </li>
             ))}
           </ul>
         </div>

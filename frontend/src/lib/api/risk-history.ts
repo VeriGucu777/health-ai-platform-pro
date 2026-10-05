@@ -6,6 +6,8 @@ export type RiskContributingFactor = {
   severity: string;
   weight: number;
   message: string;
+  message_tr?: string;
+  message_en?: string;
   source: string;
 };
 

@@ -716,7 +716,13 @@ async def test_a2_canonical_risk_history_has_score_and_level_for_ui() -> None:
     assert row.risk_level == "moderate"
     assert row.score == 58.0
     assert row.result_snapshot is not None
-    assert row.result_snapshot.get("contributing_factors")
+    factors = row.result_snapshot.get("contributing_factors")
+    assert factors
+    assert len(factors) == 3
+    tr_messages = [f.get("message_tr", "") for f in factors]
+    assert any("Kan basıncı" in msg for msg in tr_messages)
+    assert any("takip ölçümleri" in msg for msg in tr_messages)
+    assert any("kardiyak takip" in msg for msg in tr_messages)
 
 
 @pytest.mark.asyncio

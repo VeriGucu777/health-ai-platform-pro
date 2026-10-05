@@ -13,6 +13,7 @@ from app.application.seeding.demo_a2_canonical_risk_repair import (
     analyze_demo_a2_canonical_risk_repair,
     run_demo_a2_canonical_risk_repair,
 )
+from app.application.seeding.demo_clinical_enrichment import a2_demo_cardiac_factors_are_enriched
 from app.domain.entities.patient import Patient
 from app.domain.entities.risk_assessment_history import RiskAssessmentHistory
 from app.domain.risk.enums import RULE_BASED_MODEL_KIND, RiskAssessmentType
@@ -20,6 +21,55 @@ from tests.support.memory_patient_repository import InMemoryPatientRepository
 from tests.support.memory_risk_assessment_history_repository import (
     InMemoryRiskAssessmentHistoryRepository,
 )
+
+
+@pytest.mark.asyncio
+async def test_analyze_detects_legacy_single_synthetic_factor():
+    patients = InMemoryPatientRepository()
+    risk = InMemoryRiskAssessmentHistoryRepository()
+    owner_id = uuid4()
+    await patients.create(
+        Patient(
+            id=A2_DEMO_PATIENT_ID,
+            owner_id=owner_id,
+            first_name="Demo",
+            last_name="Cardiac Follow-up Patient",
+            date_of_birth=datetime(1966, 9, 3, tzinfo=UTC).date(),
+            gender="male",
+            notes="seed:demo-enrich-a2",
+        ),
+    )
+    await risk.append(
+        RiskAssessmentHistory(
+            patient_id=A2_DEMO_PATIENT_ID,
+            assessment_type=RiskAssessmentType.HEART_DISEASE,
+            assessment_status="completed",
+            risk_level="moderate",
+            score=58.0,
+            model_kind=RULE_BASED_MODEL_KIND,
+            model_version="heart_rule_based_v1",
+            evaluated_by_user_id=owner_id,
+            evaluated_at=datetime(2026, 6, 20, tzinfo=UTC),
+            result_snapshot={
+                "seed_marker": A2_CANONICAL_SEED_MARKER,
+                "contributing_factors": [
+                    {
+                        "factor": "blood_pressure",
+                        "message": "Synthetic demo: blood pressure readings documented.",
+                    },
+                ],
+            },
+        ),
+    )
+    result = await analyze_demo_a2_canonical_risk_repair(
+        patient_repository=patients,
+        risk_history_repository=risk,
+    )
+    assert result.guard.ok
+    assert result.would_update is True
+    assert not a2_demo_cardiac_factors_are_enriched(
+        {"contributing_factors": [{"factor": "blood_pressure", "message": "Synthetic demo: x"}]},
+    )
 
 
 @pytest.mark.asyncio
@@ -100,4 +150,7 @@ async def test_confirm_repair_sets_score_and_factors():
     assert updated is not None
     assert updated.score == 58.0
     assert updated.risk_level == "moderate"
-    assert updated.result_snapshot.get("contributing_factors")
+    factors = updated.result_snapshot.get("contributing_factors")
+    assert factors
+    assert len(factors) == 3
+    assert factors[0].get("message_tr")

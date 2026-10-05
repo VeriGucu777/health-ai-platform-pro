@@ -178,6 +178,90 @@ def _snapshot_has_marker(result_snapshot: dict[str, Any] | None, sub_marker: str
     return isinstance(marker, str) and marker.strip() == sub_marker
 
 
+def _a2_demo_cardiac_contributing_factors() -> list[dict[str, Any]]:
+    """Rich cardiac demo factors for history cards (decision-support tone; not a diagnosis)."""
+    return [
+        {
+            "factor": "blood_pressure_monitoring",
+            "status": "present",
+            "severity": "info",
+            "weight": 0.25,
+            "source": "health_measurement",
+            "message_en": (
+                "Blood pressure readings are monitored for cardiovascular risk context "
+                "(rule-based decision support only)."
+            ),
+            "message_tr": (
+                "Kan basıncı ölçümleri kardiyovasküler risk açısından izlenmektedir."
+            ),
+            "message": (
+                "Blood pressure readings are monitored for cardiovascular risk context "
+                "(rule-based decision support only)."
+            ),
+        },
+        {
+            "factor": "follow_up_measurements",
+            "status": "present",
+            "severity": "info",
+            "weight": 0.2,
+            "source": "health_measurement",
+            "message_en": (
+                "Regular follow-up measurements support ongoing risk review "
+                "(demonstration data; not a validated clinical score)."
+            ),
+            "message_tr": "Düzenli takip ölçümleri risk değerlendirmesini desteklemektedir.",
+            "message": (
+                "Regular follow-up measurements support ongoing risk review "
+                "(demonstration data; not a validated clinical score)."
+            ),
+        },
+        {
+            "factor": "cardiac_clinical_records",
+            "status": "present",
+            "severity": "info",
+            "weight": 0.15,
+            "source": "medical_record",
+            "message_en": (
+                "Cardiac follow-up information documented in clinical records contributes "
+                "to the rule-based assessment context."
+            ),
+            "message_tr": (
+                "Klinik kayıtlardaki kardiyak takip bilgileri değerlendirmeye katkı sağlamaktadır."
+            ),
+            "message": (
+                "Cardiac follow-up information documented in clinical records contributes "
+                "to the rule-based assessment context."
+            ),
+        },
+    ]
+
+
+def a2_demo_cardiac_factors_are_enriched(snapshot: dict[str, Any] | None) -> bool:
+    """True when A2 canonical snapshot has the full demo cardiac factor set."""
+    if not snapshot:
+        return False
+    factors = snapshot.get("contributing_factors")
+    if not isinstance(factors, list) or len(factors) < 3:
+        return False
+    required = {"blood_pressure_monitoring", "follow_up_measurements", "cardiac_clinical_records"}
+    present = {
+        f.get("factor")
+        for f in factors
+        if isinstance(f, dict) and isinstance(f.get("factor"), str)
+    }
+    if not required.issubset(present):
+        return False
+    for item in factors:
+        if not isinstance(item, dict):
+            return False
+        msg = str(item.get("message") or "").lower()
+        if "synthetic demo" in msg:
+            return False
+        if not str(item.get("message_tr") or "").strip():
+            return False
+    return True
+
+
 def _demo_risk_seed_fields(spec: EnrichmentPatientSpec, *, sub_marker: str) -> dict[str, Any]:
     """PHI-safe demo risk history payload for enrichment seed (decision-support only)."""
     profiles: dict[str, dict[str, Any]] = {
@@ -201,15 +285,7 @@ def _demo_risk_seed_fields(spec: EnrichmentPatientSpec, *, sub_marker: str) -> d
             "risk_level": "moderate",
             "probability": 0.41,
             "model_version": "heart_rule_based_v1",
-            "factors": [
-                {
-                    "factor": "blood_pressure",
-                    "message": (
-                        "Synthetic demo: blood pressure readings documented for chart review "
-                        "(not a validated clinical score)."
-                    ),
-                },
-            ],
+            "factors": _a2_demo_cardiac_contributing_factors(),
         },
         "a3": {
             "score": 56.0,
@@ -260,9 +336,15 @@ def _demo_risk_seed_fields(spec: EnrichmentPatientSpec, *, sub_marker: str) -> d
             "seed_marker": sub_marker,
             "contributing_factors": profile["factors"],
             "missing_inputs": [],
-            "recommendations": [
-                "Synthetic demo output for pilot walkthrough; not a medical diagnosis.",
-            ],
+            "recommendations": (
+                [
+                    "Pilot gösterimi için sentetik karar destek çıktısıdır; tıbbi tanı yerine geçmez.",
+                ]
+                if spec.key == "a2"
+                else [
+                    "Synthetic demo output for pilot walkthrough; not a medical diagnosis.",
+                ]
+            ),
         },
     }
 

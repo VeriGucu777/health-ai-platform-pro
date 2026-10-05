@@ -10,6 +10,7 @@ from app.application.seeding.demo_clinical_enrichment import (
     PATIENT_SPECS,
     _demo_risk_seed_fields,
     _snapshot_has_marker,
+    a2_demo_cardiac_factors_are_enriched,
 )
 from app.domain.interfaces.patient_repository import PatientRepository
 from app.domain.interfaces.risk_assessment_history_repository import RiskAssessmentHistoryRepository
@@ -49,6 +50,8 @@ def _needs_repair(row) -> bool:
         return True
     snapshot = row.result_snapshot or {}
     if not snapshot.get("contributing_factors"):
+        return True
+    if not a2_demo_cardiac_factors_are_enriched(snapshot):
         return True
     if row.assessment_status.strip().lower() not in {"completed", "complete"}:
         return True
