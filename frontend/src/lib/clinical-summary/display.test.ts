@@ -13,16 +13,22 @@ const copy = {
     laboratory_summary: "Laboratuvar",
   },
   trendMessages: {
-    recorded_no_direction:
+    recorded_no_direction_in_range:
       "{period_range} arasında {count} karşılaştırılabilir {context} ölçümü kayıtlı; yönlü değerlendirme için yeterli veri bulunmuyor.",
-    decreasing:
+    recorded_no_direction_on_date:
+      "{period_date} tarihinde {count} karşılaştırılabilir {context} ölçümü kayıtlı; yönlü değerlendirme için yeterli veri bulunmuyor.",
+    decreasing_in_range:
       "{period_range} arasında kayıtlı {count} karşılaştırılabilir {context} ölçümünde azalış eğilimi izleniyor.",
   },
   itemMessages: {
-    trend_hybrid_decreasing:
+    trend_hybrid_decreasing_in_range:
       "{period_range} arasında kayıtlı {count} karşılaştırılabilir {context} ölçümünde azalış eğilimi izleniyor (bilgilendirme).",
-    trend_hybrid_no_direction:
+    trend_hybrid_no_direction_in_range:
       "{period_range} arasında {count} karşılaştırılabilir {context} ölçümü kayıtlı; yönlü değerlendirme için yeterli veri bulunmuyor.",
+    trend_hybrid_insufficient_on_date:
+      "{period_date} tarihinde {count} karşılaştırılabilir {context} ölçümü kayıtlı; yönlü değerlendirme için yeterli veri bulunmuyor.",
+    trend_hybrid_insufficient_in_range:
+      "{period_range} arasında {count} karşılaştırılabilir {context} ölçümü kayıtlı; trend değerlendirilmedi.",
     lipid_panel_with_triglycerides:
       "En güncel lipid paneli ({record_date}): LDL {ldl} mg/dL, HDL {hdl} mg/dL ve trigliserid {triglycerides} mg/dL kayıtlı.",
     echocardiography_on_file: "Ekokardiyografi raporu ({record_date}) kayıtlarda mevcut.",
@@ -146,6 +152,72 @@ describe("clinical summary display", () => {
     expect(text).toContain("sistolik tansiyon");
     expect(text).toContain("azalış eğilimi");
     expect(text).toContain("3");
+    expect(text).toContain("arasında");
+  });
+
+  it("uses tarihinde for single-day hybrid trend window in TR", () => {
+    const item: ClinicalSummaryOverviewItem = {
+      key: "heart_rate_trend",
+      severity: "info",
+      label: "Heart rate",
+      message: "English fallback",
+      message_key: "trend_hybrid_insufficient",
+      message_params: { window_start: "2026-05-29", window_end: "2026-05-29" },
+      trend_status: "insufficient_data",
+      source_count: 1,
+      data_window_start: null,
+      data_window_end: null,
+    };
+    const text = formatClinicalSummaryItemMessage(item, copy, "tr");
+    expect(text).toContain("tarihinde");
+    expect(text).not.toContain("arasında");
+    expect(text).toContain("yönlü değerlendirme için yeterli veri bulunmuyor");
+    expect(text).not.toContain("azalış");
+  });
+
+  it("uses arasında for multi-day hybrid trend window in TR", () => {
+    const item: ClinicalSummaryOverviewItem = {
+      key: "heart_rate_trend",
+      severity: "info",
+      label: "Heart rate",
+      message: "English fallback",
+      message_key: "trend_hybrid_no_direction",
+      message_params: { window_start: "2026-03-25", window_end: "2026-05-29" },
+      trend_status: "recorded_no_direction",
+      source_count: 2,
+      data_window_start: null,
+      data_window_end: null,
+    };
+    const text = formatClinicalSummaryItemMessage(item, copy, "tr");
+    expect(text).toContain("arasında");
+    expect(text).not.toContain("tarihinde");
+  });
+
+  it("uses on-date wording for single-day hybrid trend in EN", () => {
+    const enCopy = {
+      ...copy,
+      itemMessages: {
+        ...copy.itemMessages,
+        trend_hybrid_insufficient_on_date:
+          "{count} comparable {context} measurement(s) recorded on {period_date}; there is insufficient data for a directional assessment.",
+      },
+    };
+    const item: ClinicalSummaryOverviewItem = {
+      key: "heart_rate_trend",
+      severity: "info",
+      label: "Heart rate",
+      message: "English fallback",
+      message_key: "trend_hybrid_insufficient",
+      message_params: { window_start: "2026-05-29", window_end: "2026-05-29" },
+      trend_status: "insufficient_data",
+      source_count: 1,
+      data_window_start: null,
+      data_window_end: null,
+    };
+    const text = formatClinicalSummaryItemMessage(item, enCopy, "en");
+    expect(text).toContain("recorded on");
+    expect(text).toContain("insufficient data for a directional assessment");
+    expect(text).not.toMatch(/Between/i);
   });
 
   it("builds overview subtitle from API period with locale dates", () => {

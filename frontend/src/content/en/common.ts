@@ -164,28 +164,48 @@ export const commonContent: CommonContent = {
       overdue_follow_up: "Overdue follow-up",
     },
     clinicalSummaryTrendMessages: {
-      stable:
-        "From {period_range}, {count} comparable {context} measurements show a stable pattern (informational).",
-      increasing:
-        "From {period_range}, {count} comparable {context} measurements show an increasing pattern (informational).",
-      decreasing:
-        "From {period_range}, {count} comparable {context} measurements show a decreasing pattern (informational).",
-      recorded_no_direction:
-        "From {period_range}, {count} comparable {context} measurements recorded; not enough data for a directional trend.",
-      insufficient_data:
-        "From {period_range}, {count} comparable {context} measurement(s) on file; trend not assessed.",
+      stable_in_range:
+        "Between {period_range}, {count} comparable {context} measurements show a stable pattern (informational).",
+      stable_on_date:
+        "On {period_date}, {count} comparable {context} measurements show a stable pattern (informational).",
+      increasing_in_range:
+        "Between {period_range}, {count} comparable {context} measurements show an increasing pattern (informational).",
+      increasing_on_date:
+        "On {period_date}, {count} comparable {context} measurements show an increasing pattern (informational).",
+      decreasing_in_range:
+        "Between {period_range}, {count} comparable {context} measurements show a decreasing pattern (informational).",
+      decreasing_on_date:
+        "On {period_date}, {count} comparable {context} measurements show a decreasing pattern (informational).",
+      recorded_no_direction_in_range:
+        "Between {period_range}, {count} comparable {context} measurements recorded; not enough data for a directional trend.",
+      recorded_no_direction_on_date:
+        "On {period_date}, {count} comparable {context} measurements recorded; not enough data for a directional trend.",
+      insufficient_data_in_range:
+        "Between {period_range}, {count} comparable {context} measurement(s) on file; trend not assessed.",
+      insufficient_data_on_date:
+        "{count} comparable {context} measurement(s) recorded on {period_date}; there is insufficient data for a directional assessment.",
     },
     clinicalSummaryItemMessages: {
-      trend_hybrid_stable:
-        "From {period_range}, {count} comparable {context} measurements show a stable pattern (informational).",
-      trend_hybrid_increasing:
-        "From {period_range}, {count} comparable {context} measurements show an increasing pattern (informational).",
-      trend_hybrid_decreasing:
-        "From {period_range}, {count} comparable {context} measurements show a decreasing pattern (informational).",
-      trend_hybrid_no_direction:
-        "From {period_range}, {count} comparable {context} measurements recorded; not enough data for a directional trend.",
-      trend_hybrid_insufficient:
-        "From {period_range}, {count} comparable {context} measurement(s) on file; trend not assessed.",
+      trend_hybrid_stable_in_range:
+        "Between {period_range}, {count} comparable {context} measurements show a stable pattern (informational).",
+      trend_hybrid_stable_on_date:
+        "On {period_date}, {count} comparable {context} measurements show a stable pattern (informational).",
+      trend_hybrid_increasing_in_range:
+        "Between {period_range}, {count} comparable {context} measurements show an increasing pattern (informational).",
+      trend_hybrid_increasing_on_date:
+        "On {period_date}, {count} comparable {context} measurements show an increasing pattern (informational).",
+      trend_hybrid_decreasing_in_range:
+        "Between {period_range}, {count} comparable {context} measurements show a decreasing pattern (informational).",
+      trend_hybrid_decreasing_on_date:
+        "On {period_date}, {count} comparable {context} measurements show a decreasing pattern (informational).",
+      trend_hybrid_no_direction_in_range:
+        "Between {period_range}, {count} comparable {context} measurements recorded; not enough data for a directional trend.",
+      trend_hybrid_no_direction_on_date:
+        "On {period_date}, {count} comparable {context} measurements recorded; not enough data for a directional trend.",
+      trend_hybrid_insufficient_in_range:
+        "Between {period_range}, {count} comparable {context} measurement(s) on file; trend not assessed.",
+      trend_hybrid_insufficient_on_date:
+        "{count} comparable {context} measurement(s) recorded on {period_date}; there is insufficient data for a directional assessment.",
       lipid_panel_summary:
         "Most recent lipid panel ({record_date}): LDL {ldl} mg/dL and HDL {hdl} mg/dL on file.",
       lipid_panel_with_triglycerides:

@@ -163,28 +163,48 @@ export const commonContent: CommonContent = {
       overdue_follow_up: "Gecikmiş takip",
     },
     clinicalSummaryTrendMessages: {
-      stable:
+      stable_in_range:
         "{period_range} arasında kayıtlı {count} karşılaştırılabilir {context} ölçümünde stabil seyir izleniyor (bilgilendirme).",
-      increasing:
+      stable_on_date:
+        "{period_date} tarihinde kayıtlı {count} karşılaştırılabilir {context} ölçümünde stabil seyir izleniyor (bilgilendirme).",
+      increasing_in_range:
         "{period_range} arasında kayıtlı {count} karşılaştırılabilir {context} ölçümünde artış eğilimi izleniyor (bilgilendirme).",
-      decreasing:
+      increasing_on_date:
+        "{period_date} tarihinde kayıtlı {count} karşılaştırılabilir {context} ölçümünde artış eğilimi izleniyor (bilgilendirme).",
+      decreasing_in_range:
         "{period_range} arasında kayıtlı {count} karşılaştırılabilir {context} ölçümünde azalış eğilimi izleniyor (bilgilendirme).",
-      recorded_no_direction:
+      decreasing_on_date:
+        "{period_date} tarihinde kayıtlı {count} karşılaştırılabilir {context} ölçümünde azalış eğilimi izleniyor (bilgilendirme).",
+      recorded_no_direction_in_range:
         "{period_range} arasında {count} karşılaştırılabilir {context} ölçümü kayıtlı; yönlü değerlendirme için yeterli veri bulunmuyor.",
-      insufficient_data:
+      recorded_no_direction_on_date:
+        "{period_date} tarihinde {count} karşılaştırılabilir {context} ölçümü kayıtlı; yönlü değerlendirme için yeterli veri bulunmuyor.",
+      insufficient_data_in_range:
         "{period_range} arasında {count} karşılaştırılabilir {context} ölçümü kayıtlı; trend değerlendirilmedi.",
+      insufficient_data_on_date:
+        "{period_date} tarihinde {count} karşılaştırılabilir {context} ölçümü kayıtlı; yönlü değerlendirme için yeterli veri bulunmuyor.",
     },
     clinicalSummaryItemMessages: {
-      trend_hybrid_stable:
+      trend_hybrid_stable_in_range:
         "{period_range} arasında kayıtlı {count} karşılaştırılabilir {context} ölçümünde stabil seyir izleniyor (bilgilendirme).",
-      trend_hybrid_increasing:
+      trend_hybrid_stable_on_date:
+        "{period_date} tarihinde kayıtlı {count} karşılaştırılabilir {context} ölçümünde stabil seyir izleniyor (bilgilendirme).",
+      trend_hybrid_increasing_in_range:
         "{period_range} arasında kayıtlı {count} karşılaştırılabilir {context} ölçümünde artış eğilimi izleniyor (bilgilendirme).",
-      trend_hybrid_decreasing:
+      trend_hybrid_increasing_on_date:
+        "{period_date} tarihinde kayıtlı {count} karşılaştırılabilir {context} ölçümünde artış eğilimi izleniyor (bilgilendirme).",
+      trend_hybrid_decreasing_in_range:
         "{period_range} arasında kayıtlı {count} karşılaştırılabilir {context} ölçümünde azalış eğilimi izleniyor (bilgilendirme).",
-      trend_hybrid_no_direction:
+      trend_hybrid_decreasing_on_date:
+        "{period_date} tarihinde kayıtlı {count} karşılaştırılabilir {context} ölçümünde azalış eğilimi izleniyor (bilgilendirme).",
+      trend_hybrid_no_direction_in_range:
         "{period_range} arasında {count} karşılaştırılabilir {context} ölçümü kayıtlı; yönlü değerlendirme için yeterli veri bulunmuyor.",
-      trend_hybrid_insufficient:
+      trend_hybrid_no_direction_on_date:
+        "{period_date} tarihinde {count} karşılaştırılabilir {context} ölçümü kayıtlı; yönlü değerlendirme için yeterli veri bulunmuyor.",
+      trend_hybrid_insufficient_in_range:
         "{period_range} arasında {count} karşılaştırılabilir {context} ölçümü kayıtlı; trend değerlendirilmedi.",
+      trend_hybrid_insufficient_on_date:
+        "{period_date} tarihinde {count} karşılaştırılabilir {context} ölçümü kayıtlı; yönlü değerlendirme için yeterli veri bulunmuyor.",
       lipid_panel_summary:
         "En güncel lipid paneli ({record_date}): LDL {ldl} mg/dL ve HDL {hdl} mg/dL kayıtlı.",
       lipid_panel_with_triglycerides:
