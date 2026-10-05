@@ -35,8 +35,8 @@ const hubFixture = {
   inactive: "Inactive",
   notFoundOrDenied: "Patient not found or you do not have access to this patient.",
   loadError: "Could not load patient",
-  assessmentTypes: { diabetes: "Diabetes" },
-  riskLevels: { low: "Low" },
+  assessmentTypes: { diabetes: "Diabetes", heart_disease: "Kalp hastalığı" },
+  riskLevels: { low: "Low", moderate: "Orta", high: "Yüksek" },
   missingInputLabels: {
     systolic_blood_pressure: "Sistolik tansiyon",
   },
@@ -199,6 +199,54 @@ describe("PatientHubPageContent", () => {
 
     localeFixture.effectiveLocale = "en";
     localeFixture.locale = "en";
+  });
+
+  it("shows score and localized risk level on risk history card", async () => {
+    localeFixture.effectiveLocale = "tr";
+    localeFixture.locale = "tr";
+    hubFixture.score = "Skor";
+    hubFixture.riskLevel = "Düzey";
+
+    fetchPatient.mockResolvedValue({
+      id: "p1",
+      first_name: "Demo",
+      last_name: "Patient",
+      date_of_birth: "1990-06-12",
+      gender: "female",
+      is_active: true,
+    });
+    fetchRiskAssessmentHistory.mockResolvedValue({
+      items: [
+        {
+          id: "risk-cardiac",
+          patient_id: "p1",
+          organization_id: null,
+          assessment_type: "heart_disease",
+          assessment_status: "completed",
+          risk_level: "moderate",
+          score: 58,
+          probability: null,
+          model_kind: "rule_based",
+          model_version: "heart_rule_based_v1",
+          evaluated_by_user_id: "u1",
+          evaluated_at: "2026-09-29T11:24:32Z",
+          created_at: "2026-09-29T11:24:32Z",
+          result_snapshot: { contributing_factors: [{ factor: "bp", message: "TR", message_tr: "TR" }] },
+        },
+      ],
+    });
+
+    render(<PatientHubPageContent patientId="p1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Skor: 58/)).toBeInTheDocument();
+      expect(screen.getByText(/Düzey: Orta/)).toBeInTheDocument();
+    });
+
+    localeFixture.effectiveLocale = "en";
+    localeFixture.locale = "en";
+    hubFixture.score = "Score";
+    hubFixture.riskLevel = "Level";
   });
 
   it("downloads pdf on button click", async () => {

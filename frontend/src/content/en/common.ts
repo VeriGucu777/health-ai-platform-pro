@@ -163,6 +163,8 @@ export const commonContent: CommonContent = {
       low: "Low",
       moderate: "Moderate",
       elevated: "Elevated",
+      high: "High",
+      very_high: "Very high",
     },
     missingInputLabels: {
       systolic_blood_pressure: "Systolic blood pressure",

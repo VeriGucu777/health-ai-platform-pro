@@ -21,6 +21,12 @@ import type { SupportedLocale } from "@/lib/i18n/locale";
 import { useLocale } from "@/lib/i18n/use-locale";
 import { formatContributingFactorMessage } from "@/lib/risk/format-contributing-factor";
 import { formatRiskMissingInputLine } from "@/lib/risk/format-missing-input";
+import {
+  formatRiskLevelLabel,
+  formatRiskScoreLabel,
+  resolveRiskHistoryLevel,
+  resolveRiskHistoryScore,
+} from "@/lib/risk/history-display";
 
 type PatientHubPageContentProps = {
   patientId: string;
@@ -30,13 +36,6 @@ type HubLoadState = "loading" | "ready" | "not_found" | "error";
 
 function formatRiskType(type: string, labels: Record<string, string>): string {
   return labels[type] ?? type;
-}
-
-function formatRiskLevel(level: string | null, labels: Record<string, string>): string {
-  if (!level) {
-    return "—";
-  }
-  return labels[level] ?? level;
 }
 
 function RiskHistoryCard({
@@ -65,6 +64,8 @@ function RiskHistoryCard({
   const snapshot = item.result_snapshot;
   const factors = snapshot?.contributing_factors ?? [];
   const missing = snapshot?.missing_inputs ?? [];
+  const displayScore = resolveRiskHistoryScore(item);
+  const displayLevel = resolveRiskHistoryLevel(item);
 
   return (
     <article className="rounded-xl border border-border bg-white p-4 sm:p-5">
@@ -77,16 +78,20 @@ function RiskHistoryCard({
             {formatRiskType(item.assessment_type, labels.assessmentTypes)}
           </h3>
         </div>
-        <div className="flex flex-wrap gap-2 text-sm">
-          <span className="rounded-full bg-brand-50 px-2.5 py-1 font-medium text-brand-800">
-            {labels.riskLevel}: {formatRiskLevel(item.risk_level, labels.riskLevels)}
-          </span>
-          {item.score !== null ? (
-            <span className="rounded-full bg-surface px-2.5 py-1 text-text-secondary">
-              {labels.score}: {item.score}
-            </span>
-          ) : null}
-        </div>
+        {displayLevel !== null || displayScore !== null ? (
+          <div className="flex flex-wrap gap-2 text-sm">
+            {displayLevel !== null ? (
+              <span className="rounded-full bg-brand-50 px-2.5 py-1 font-medium text-brand-800">
+                {labels.riskLevel}: {formatRiskLevelLabel(displayLevel, labels.riskLevels)}
+              </span>
+            ) : null}
+            {displayScore !== null ? (
+              <span className="rounded-full bg-surface px-2.5 py-1 text-text-secondary">
+                {labels.score}: {formatRiskScoreLabel(displayScore)}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {factors.length > 0 ? (

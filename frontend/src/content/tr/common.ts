@@ -163,6 +163,8 @@ export const commonContent: CommonContent = {
       low: "Düşük",
       moderate: "Orta",
       elevated: "Yüksek",
+      high: "Yüksek",
+      very_high: "Çok yüksek",
     },
     missingInputLabels: {
       systolic_blood_pressure: "Sistolik tansiyon",
