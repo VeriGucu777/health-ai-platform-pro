@@ -1,0 +1,28 @@
+"""Unit tests for clinical summary record sanitization and lipid parsing."""
+
+from app.application.analytics.clinical_summary_record_presentation import (
+    extract_lipid_panel_values,
+    sanitize_clinical_summary_text,
+)
+
+
+def test_sanitize_removes_synthetic_and_fictional_demo_phrases() -> None:
+    raw = (
+        "Synthetic lipid panel (demo): LDL 156 mg/dL; HDL 42 mg/dL; "
+        "triglycerides 190 mg/dL. Fictional demo values for decision-support review only."
+    )
+    cleaned = sanitize_clinical_summary_text(raw)
+    assert "Synthetic" not in cleaned
+    assert "Fictional" not in cleaned
+    assert "decision-support review only" not in cleaned.lower()
+    assert "156" in cleaned
+    assert "190" in cleaned
+
+
+def test_extract_lipid_panel_values_from_demo_text() -> None:
+    raw = "Synthetic lipid panel (demo): LDL 156 mg/dL; HDL 42 mg/dL; triglycerides 190 mg/dL."
+    values = extract_lipid_panel_values(raw)
+    assert values is not None
+    assert values.ldl == "156"
+    assert values.hdl == "42"
+    assert values.triglycerides == "190"

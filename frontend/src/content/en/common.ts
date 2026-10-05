@@ -163,15 +163,30 @@ export const commonContent: CommonContent = {
     },
     clinicalSummaryTrendMessages: {
       stable:
-        "Based on {count} comparable {context} measurements, values show a stable pattern (informational).",
+        "Across the last {count} comparable {context} measurements, a stable pattern is observed (informational).",
       increasing:
-        "Based on {count} comparable {context} measurements, values show an increasing pattern (informational).",
+        "Across the last {count} comparable {context} measurements, an increasing pattern is observed (informational).",
       decreasing:
-        "Based on {count} comparable {context} measurements, values show a decreasing pattern (informational).",
+        "Across the last {count} comparable {context} measurements, a decreasing pattern is observed (informational).",
       recorded_no_direction:
         "{count} comparable {context} measurements recorded; not enough data for a directional trend.",
       insufficient_data:
         "{count} comparable {context} measurement(s) on file; trend not assessed.",
+    },
+    clinicalSummaryItemMessages: {
+      lipid_panel_summary: "Lipid panel records LDL {ldl} mg/dL and HDL {hdl} mg/dL.",
+      lipid_panel_with_triglycerides:
+        "Lipid panel records LDL {ldl} mg/dL, HDL {hdl} mg/dL, and triglycerides {triglycerides} mg/dL.",
+      echocardiography_on_file: "Echocardiography report is documented in clinical records.",
+      imaging_report_on_file: "Imaging report is documented in clinical records.",
+      heart_rate_monitoring_insufficient_trend:
+        "Resting heart rate measurements are on file; insufficient comparable data for a directional trend.",
+      medication_treatment_summary: "{detail}",
+      medication_plan_on_file: "Medication and follow-up plan documented in clinical records.",
+      upcoming_follow_up_date: "Upcoming follow-up appointment: {date}.",
+      laboratory_on_file: "Laboratory results are documented in clinical records.",
+      brain_imaging_summary: "{detail}",
+      clinical_visit_summary: "{detail}",
     },
     riskType: "Type",
     riskLevel: "Level",

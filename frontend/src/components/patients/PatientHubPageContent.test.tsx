@@ -32,6 +32,7 @@ const hubFixture = {
   clinicalSummaryDisclaimer: "Decision support only.",
   clinicalSummaryItemLabels: { laboratory_summary: "Laboratory" },
   clinicalSummaryTrendMessages: {},
+  clinicalSummaryItemMessages: {},
   riskType: "Type",
   riskLevel: "Level",
   assessedAt: "Assessed at",

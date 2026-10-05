@@ -16,6 +16,7 @@ type ClinicalSummaryCardProps = {
   disclaimer: string;
   itemLabels: Record<string, string>;
   trendMessages: Record<string, string>;
+  itemMessages: Record<string, string>;
   items: ClinicalSummaryOverviewItem[];
   loading: boolean;
   loadError: string | null;
@@ -33,6 +34,7 @@ export function ClinicalSummaryCard({
   disclaimer,
   itemLabels,
   trendMessages,
+  itemMessages,
   items,
   loading,
   loadError,
@@ -40,7 +42,7 @@ export function ClinicalSummaryCard({
   retryLabel,
   loadingLabel,
 }: ClinicalSummaryCardProps) {
-  const copy = { itemLabels, trendMessages };
+  const copy = { itemLabels, trendMessages, itemMessages };
 
   return (
     <section

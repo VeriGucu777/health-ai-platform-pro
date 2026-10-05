@@ -121,6 +121,7 @@ export type CommonContent = {
     clinicalSummaryDisclaimer: string;
     clinicalSummaryItemLabels: Record<string, string>;
     clinicalSummaryTrendMessages: Record<string, string>;
+    clinicalSummaryItemMessages: Record<string, string>;
     riskType: string;
     riskLevel: string;
     assessedAt: string;

@@ -162,15 +162,31 @@ export const commonContent: CommonContent = {
     },
     clinicalSummaryTrendMessages: {
       stable:
-        "{count} karşılaştırılabilir {context} ölçümüne göre değerler stabil bir seyir gösteriyor (bilgilendirme).",
+        "Son {count} karşılaştırılabilir {context} ölçümünde stabil seyir izleniyor (bilgilendirme).",
       increasing:
-        "{count} karşılaştırılabilir {context} ölçümüne göre değerler artış eğilimi gösteriyor (bilgilendirme).",
+        "Son {count} karşılaştırılabilir {context} ölçümünde artış eğilimi izleniyor (bilgilendirme).",
       decreasing:
-        "{count} karşılaştırılabilir {context} ölçümüne göre değerler azalış eğilimi gösteriyor (bilgilendirme).",
+        "Son {count} karşılaştırılabilir {context} ölçümünde azalış eğilimi izleniyor (bilgilendirme).",
       recorded_no_direction:
         "{count} karşılaştırılabilir {context} ölçümü kayıtlı; yönlü trend için yeterli veri yok.",
       insufficient_data:
         "{count} karşılaştırılabilir {context} ölçümü kayıtlı; trend değerlendirilmedi.",
+    },
+    clinicalSummaryItemMessages: {
+      lipid_panel_summary:
+        "Lipid panelinde LDL {ldl} mg/dL ve HDL {hdl} mg/dL kayıtlı.",
+      lipid_panel_with_triglycerides:
+        "Lipid panelinde LDL {ldl} mg/dL, HDL {hdl} mg/dL ve trigliserid {triglycerides} mg/dL kayıtlı.",
+      echocardiography_on_file: "Ekokardiyografi raporu klinik kayıtlarda mevcut.",
+      imaging_report_on_file: "Görüntüleme raporu klinik kayıtlarda mevcut.",
+      heart_rate_monitoring_insufficient_trend:
+        "Dinlenme nabzı için mevcut kayıtlar izlenmektedir; yönlü değerlendirme için yeterli karşılaştırılabilir veri bulunmuyor.",
+      medication_treatment_summary: "{detail}",
+      medication_plan_on_file: "İlaç ve takip planı klinik kayıtlarda mevcut.",
+      upcoming_follow_up_date: "Yaklaşan kontrol randevusu: {date}.",
+      laboratory_on_file: "Laboratuvar sonuçları klinik kayıtlarda mevcut.",
+      brain_imaging_summary: "{detail}",
+      clinical_visit_summary: "{detail}",
     },
     riskType: "Tür",
     riskLevel: "Düzey",

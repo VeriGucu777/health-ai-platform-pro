@@ -336,6 +336,7 @@ export function PatientHubPageContent({ patientId }: PatientHubPageContentProps)
         disclaimer={hub.clinicalSummaryDisclaimer}
         itemLabels={hub.clinicalSummaryItemLabels}
         trendMessages={hub.clinicalSummaryTrendMessages}
+        itemMessages={hub.clinicalSummaryItemMessages}
         items={summaryItems}
         loading={summaryLoading}
         loadError={summaryError}

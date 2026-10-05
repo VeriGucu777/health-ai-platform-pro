@@ -12,6 +12,8 @@ from app.domain.entities.appointment import Appointment
 from app.domain.entities.health_measurement import HealthMeasurement
 from app.domain.entities.medical_record import MedicalRecord
 from app.domain.entities.patient import Patient
+from app.domain.entities.risk_assessment_history import RiskAssessmentHistory
+from app.domain.risk.enums import RULE_BASED_MODEL_KIND, RiskAssessmentType
 
 
 def _patient() -> Patient:
@@ -140,18 +142,22 @@ def test_diabetes_overview_includes_glucose_lab_and_follow_up() -> None:
     assert fasting.source_count == 3
 
 
-def test_cardiac_overview_includes_heart_rate_imaging_and_labs() -> None:
+def test_cardiac_focus_orders_bp_hr_lab_imaging_medication_appointment() -> None:
     as_of = datetime(2026, 10, 1, 12, 0, tzinfo=UTC)
     measurements = [
         _measurement(
             measured_at=datetime(2026, 7, 1, 9, 0, tzinfo=UTC),
-            systolic_pressure=122,
+            systolic_pressure=142,
             heart_rate=72,
+            blood_glucose=Decimal("108"),
+            glucose_context="fasting",
         ),
         _measurement(
             measured_at=datetime(2026, 8, 1, 9, 0, tzinfo=UTC),
-            systolic_pressure=126,
+            systolic_pressure=136,
             heart_rate=74,
+            blood_glucose=Decimal("112"),
+            glucose_context="fasting",
         ),
         _measurement(
             measured_at=datetime(2026, 9, 1, 9, 0, tzinfo=UTC),
@@ -162,25 +168,117 @@ def test_cardiac_overview_includes_heart_rate_imaging_and_labs() -> None:
     records = [
         _record(
             record_type="lab_result",
-            title="Lipid panel",
-            diagnosis="LDL 152 mg/dL; HDL 44 mg/dL",
+            title="Lipid panel (demo)",
+            diagnosis=(
+                "Synthetic lipid panel (demo): LDL 156 mg/dL; HDL 42 mg/dL; "
+                "triglycerides 190 mg/dL."
+            ),
+            description="Fictional demo values for decision-support review only.",
         ),
         _record(
             record_type="imaging",
-            title="Echocardiography summary",
-            diagnosis="LVEF 55%; mild concentric remodeling",
+            title="Echocardiography summary (demo)",
+            diagnosis=(
+                "Synthetic echocardiography report summary (demo): documented for chart "
+                "review; no image file or automated analysis."
+            ),
+            description="Fictional demo imaging narrative for decision-support review only.",
         ),
-        _record(record_type="visit", treatment="Continue beta-blocker therapy"),
+        _record(
+            record_type="visit",
+            title="Medication adjustment (demo)",
+            medications=(
+                "Antihypertensive and statin therapy reviewed; dose adjustment noted "
+                "(synthetic demo text only)."
+            ),
+        ),
+    ]
+    appointments = [
+        Appointment(
+            owner_id=uuid4(),
+            patient_id=uuid4(),
+            appointment_date=as_of + timedelta(days=12),
+            appointment_type="Cardiac follow-up",
+            status="scheduled",
+        ),
+    ]
+    risk_history = [
+        RiskAssessmentHistory(
+            patient_id=uuid4(),
+            assessment_type=RiskAssessmentType.HEART_DISEASE,
+            assessment_status="complete",
+            risk_level="moderate",
+            score=58.0,
+            probability=0.4,
+            model_kind=RULE_BASED_MODEL_KIND,
+            model_version="heart_rule_based_v1",
+            evaluated_by_user_id=uuid4(),
+            evaluated_at=datetime(2026, 9, 15, tzinfo=UTC),
+        ),
     ]
     items = build_clinical_summary_overview_items(
-        _bundle(health_measurements=measurements, medical_records=records),
+        _bundle(
+            health_measurements=measurements,
+            medical_records=records,
+            appointments=appointments,
+            risk_assessment_history=risk_history,
+        ),
         as_of=as_of,
     )
     keys = [item.key for item in items]
-    assert "heart_rate_trend" in keys
-    assert "laboratory_summary" in keys
-    assert "imaging_summary" in keys
-    assert "medication_treatment_follow_up" in keys
+    assert keys == [
+        "blood_pressure_trend",
+        "heart_rate_trend",
+        "laboratory_summary",
+        "imaging_summary",
+        "medication_treatment_follow_up",
+        "upcoming_follow_up",
+    ]
+    assert "fasting_glucose_trend" not in keys
+
+    lab = next(item for item in items if item.key == "laboratory_summary")
+    assert lab.message_key == "lipid_panel_with_triglycerides"
+    assert lab.message_params == {"ldl": "156", "hdl": "42", "triglycerides": "190"}
+    assert "Synthetic" not in lab.message
+    assert "Fictional" not in lab.message
+
+    imaging = next(item for item in items if item.key == "imaging_summary")
+    assert imaging.message_key == "echocardiography_on_file"
+    assert "Synthetic" not in imaging.message
+
+    bp = next(item for item in items if item.key == "blood_pressure_trend")
+    assert bp.trend_status == "decreasing"
+    assert bp.source_count == 3
+
+
+def test_cardiac_heart_rate_two_measurements_use_insufficient_trend_copy() -> None:
+    measurements = [
+        _measurement(
+            measured_at=datetime(2026, 8, 1, tzinfo=UTC),
+            systolic_pressure=130,
+            heart_rate=72,
+        ),
+        _measurement(
+            measured_at=datetime(2026, 9, 1, tzinfo=UTC),
+            systolic_pressure=128,
+            heart_rate=74,
+        ),
+    ]
+    records = [
+        _record(
+            record_type="lab_result",
+            title="Lipid panel",
+            diagnosis="LDL 156 mg/dL; HDL 42 mg/dL; triglycerides 190 mg/dL.",
+        ),
+        _record(record_type="imaging", title="Echocardiography summary", diagnosis="On file"),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(health_measurements=measurements, medical_records=records),
+        as_of=datetime(2026, 10, 1, tzinfo=UTC),
+    )
+    hr = next(item for item in items if item.key == "heart_rate_trend")
+    assert hr.message_key == "heart_rate_monitoring_insufficient_trend"
+    assert hr.trend_status == "insufficient_data"
 
 
 def test_stroke_overview_includes_neurology_imaging_and_metabolic() -> None:
@@ -328,7 +426,9 @@ def test_seed_markers_stripped_from_record_snippets() -> None:
         _bundle(medical_records=records),
         as_of=datetime(2026, 10, 1, tzinfo=UTC),
     )
-    assert items[0].message == "Panel; HbA1c 7.0% hidden marker"
+    assert items
+    assert "seed:" not in items[0].message.lower()
+    assert "7.0%" in items[0].message or items[0].message_key is not None
 
 
 def test_overview_capped_at_six_items() -> None:

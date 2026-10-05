@@ -5,6 +5,8 @@ export type ClinicalSummaryOverviewItem = {
   severity: string;
   label: string;
   message: string;
+  message_key: string | null;
+  message_params: Record<string, string>;
   trend_status: string | null;
   source_count: number;
   data_window_start: string | null;

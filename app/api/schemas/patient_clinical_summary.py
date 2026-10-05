@@ -81,6 +81,8 @@ class ClinicalSummaryOverviewItemResponse(BaseModel):
     severity: str
     label: str
     message: str
+    message_key: str | None = None
+    message_params: dict[str, str] = Field(default_factory=dict)
     trend_status: str | None = None
     source_count: int = 0
     data_window_start: datetime | None = None

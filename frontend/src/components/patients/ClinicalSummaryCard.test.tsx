@@ -11,6 +11,10 @@ const baseProps = {
   disclaimer: "Bu özet klinik karar destek amaçlıdır; tanı veya tedavi önerisi değildir.",
   itemLabels: { laboratory_summary: "Laboratuvar" },
   trendMessages: {},
+  itemMessages: {
+    lipid_panel_with_triglycerides:
+      "Lipid panelinde LDL {ldl} mg/dL, HDL {hdl} mg/dL ve trigliserid {triglycerides} mg/dL kayıtlı.",
+  },
   loading: false,
   loadError: null,
   onRetry: () => undefined,
@@ -45,6 +49,8 @@ describe("ClinicalSummaryCard", () => {
       severity: "info",
       label: `Label ${index}`,
       message: `Message ${index}`,
+      message_key: null,
+      message_params: {},
       trend_status: null,
       source_count: 1,
       data_window_start: null,
