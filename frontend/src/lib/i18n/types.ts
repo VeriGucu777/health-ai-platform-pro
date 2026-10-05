@@ -115,6 +115,7 @@ export type CommonContent = {
     riskHistoryLoadError: string;
     clinicalSummaryTitle: string;
     clinicalSummarySubtitle: string;
+    clinicalSummaryPeriodViewSuffix: string;
     clinicalSummaryDescription: string;
     clinicalSummaryEmpty: string;
     clinicalSummaryLoadError: string;

@@ -26,6 +26,7 @@ const hubFixture = {
   riskHistoryLoadError: "Risk load failed",
   clinicalSummaryTitle: "Clinical summary",
   clinicalSummarySubtitle: "Recent clinical picture",
+  clinicalSummaryPeriodViewSuffix: "clinical picture",
   clinicalSummaryDescription: "Brief summary from records.",
   clinicalSummaryEmpty: "Not enough data for summary.",
   clinicalSummaryLoadError: "Summary load failed",
@@ -99,7 +100,11 @@ describe("PatientHubPageContent", () => {
   beforeEach(() => {
     fetchPatient.mockReset();
     fetchPatientClinicalSummary.mockReset();
-    fetchPatientClinicalSummary.mockResolvedValue({ overview_items: [] });
+    fetchPatientClinicalSummary.mockResolvedValue({
+      overview_items: [],
+      overview_clinical_period_start: null,
+      overview_clinical_period_end: null,
+    });
     fetchRiskAssessmentHistory.mockReset();
     fetchHealthSummaryPdf.mockReset();
     triggerBlobDownload.mockReset();
@@ -140,12 +145,16 @@ describe("PatientHubPageContent", () => {
       is_active: true,
     });
     fetchPatientClinicalSummary.mockResolvedValue({
+      overview_clinical_period_start: "2026-06-15",
+      overview_clinical_period_end: "2026-10-05",
       overview_items: [
         {
           key: "laboratory_summary",
           severity: "info",
           label: "Laboratory",
           message: "HbA1c 7.2%",
+          message_key: null,
+          message_params: {},
           trend_status: null,
           source_count: 1,
           data_window_start: null,
@@ -159,6 +168,7 @@ describe("PatientHubPageContent", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Clinical summary" })).toBeInTheDocument();
+      expect(screen.getByText(/2026-06-15 – 2026-10-05 clinical picture/)).toBeInTheDocument();
       expect(screen.getByText(/HbA1c 7.2%/)).toBeInTheDocument();
     });
   });

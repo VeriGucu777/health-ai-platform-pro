@@ -17,6 +17,8 @@ export type PatientClinicalSummary = {
   patient_id: string;
   generated_at: string;
   summary_version: string;
+  overview_clinical_period_start: string | null;
+  overview_clinical_period_end: string | null;
   overview_items: ClinicalSummaryOverviewItem[];
   disclaimer: string;
   data_quality: {

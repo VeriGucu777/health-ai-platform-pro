@@ -144,6 +144,7 @@ export const commonContent: CommonContent = {
     riskHistoryLoadError: "Risk geçmişi yüklenemedi.",
     clinicalSummaryTitle: "Klinik özet",
     clinicalSummarySubtitle: "Son dönem klinik görünüm",
+    clinicalSummaryPeriodViewSuffix: "klinik görünümü",
     clinicalSummaryDescription: "Mevcut kayıtların kısa karar destek özeti.",
     clinicalSummaryEmpty: "Özet oluşturmak için yeterli klinik veri bulunmuyor.",
     clinicalSummaryLoadError: "Klinik özet yüklenemedi.",
@@ -163,23 +164,34 @@ export const commonContent: CommonContent = {
     },
     clinicalSummaryTrendMessages: {
       stable:
-        "Son {count} karşılaştırılabilir {context} ölçümünde stabil seyir izleniyor (bilgilendirme).",
+        "{period_range} arasında kayıtlı {count} karşılaştırılabilir {context} ölçümünde stabil seyir izleniyor (bilgilendirme).",
       increasing:
-        "Son {count} karşılaştırılabilir {context} ölçümünde artış eğilimi izleniyor (bilgilendirme).",
+        "{period_range} arasında kayıtlı {count} karşılaştırılabilir {context} ölçümünde artış eğilimi izleniyor (bilgilendirme).",
       decreasing:
-        "Son {count} karşılaştırılabilir {context} ölçümünde azalış eğilimi izleniyor (bilgilendirme).",
+        "{period_range} arasında kayıtlı {count} karşılaştırılabilir {context} ölçümünde azalış eğilimi izleniyor (bilgilendirme).",
       recorded_no_direction:
-        "{count} karşılaştırılabilir {context} ölçümü kayıtlı; yönlü trend için yeterli veri yok.",
+        "{period_range} arasında {count} karşılaştırılabilir {context} ölçümü kayıtlı; yönlü değerlendirme için yeterli veri bulunmuyor.",
       insufficient_data:
-        "{count} karşılaştırılabilir {context} ölçümü kayıtlı; trend değerlendirilmedi.",
+        "{period_range} arasında {count} karşılaştırılabilir {context} ölçümü kayıtlı; trend değerlendirilmedi.",
     },
     clinicalSummaryItemMessages: {
+      trend_hybrid_stable:
+        "{period_range} arasında kayıtlı {count} karşılaştırılabilir {context} ölçümünde stabil seyir izleniyor (bilgilendirme).",
+      trend_hybrid_increasing:
+        "{period_range} arasında kayıtlı {count} karşılaştırılabilir {context} ölçümünde artış eğilimi izleniyor (bilgilendirme).",
+      trend_hybrid_decreasing:
+        "{period_range} arasında kayıtlı {count} karşılaştırılabilir {context} ölçümünde azalış eğilimi izleniyor (bilgilendirme).",
+      trend_hybrid_no_direction:
+        "{period_range} arasında {count} karşılaştırılabilir {context} ölçümü kayıtlı; yönlü değerlendirme için yeterli veri bulunmuyor.",
+      trend_hybrid_insufficient:
+        "{period_range} arasında {count} karşılaştırılabilir {context} ölçümü kayıtlı; trend değerlendirilmedi.",
       lipid_panel_summary:
-        "Lipid panelinde LDL {ldl} mg/dL ve HDL {hdl} mg/dL kayıtlı.",
+        "En güncel lipid paneli ({record_date}): LDL {ldl} mg/dL ve HDL {hdl} mg/dL kayıtlı.",
       lipid_panel_with_triglycerides:
-        "Lipid panelinde LDL {ldl} mg/dL, HDL {hdl} mg/dL ve trigliserid {triglycerides} mg/dL kayıtlı.",
-      echocardiography_on_file: "Ekokardiyografi raporu klinik kayıtlarda mevcut.",
-      imaging_report_on_file: "Görüntüleme raporu klinik kayıtlarda mevcut.",
+        "En güncel lipid paneli ({record_date}): LDL {ldl} mg/dL, HDL {hdl} mg/dL ve trigliserid {triglycerides} mg/dL kayıtlı.",
+      echocardiography_on_file:
+        "Ekokardiyografi raporu ({record_date}) kayıtlarda mevcut.",
+      imaging_report_on_file: "Görüntüleme raporu ({record_date}) kayıtlarda mevcut.",
       heart_rate_monitoring_insufficient_trend:
         "Dinlenme nabzı için mevcut kayıtlar izlenmektedir; yönlü değerlendirme için yeterli karşılaştırılabilir veri bulunmuyor.",
       medication_treatment_summary: "{detail}",

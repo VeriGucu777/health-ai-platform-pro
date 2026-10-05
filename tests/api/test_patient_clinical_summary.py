@@ -235,6 +235,12 @@ async def test_clinical_summary_content_and_provenance(
     assert "fasting_glucose_trend" in overview_keys
     assert "medication_treatment_follow_up" in overview_keys
     assert "upcoming_follow_up" in overview_keys
+    assert data["overview_clinical_period_start"] is not None
+    assert data["overview_clinical_period_end"] is not None
+    fasting_item = next(i for i in data["overview_items"] if i["key"] == "fasting_glucose_trend")
+    assert fasting_item["message_key"] == "trend_hybrid_insufficient"
+    assert fasting_item["message_params"]["window_start"] == "2026-05-02"
+    assert fasting_item["message_params"]["window_end"] == "2026-05-02"
 
 
 @pytest.mark.asyncio
@@ -257,6 +263,8 @@ async def test_clinical_summary_empty_data_quality_not_normal(
     data = response.json()
     assert data["data_quality"]["no_data"] is True
     assert data["overview_items"] == []
+    assert data["overview_clinical_period_start"] is None
+    assert data["overview_clinical_period_end"] is None
     assert "clinical_items" in data["data_quality"]["missing_sections"]
     assert any(f["flag_type"] == "missing_recent_measurement" for f in data["care_flags"])
 

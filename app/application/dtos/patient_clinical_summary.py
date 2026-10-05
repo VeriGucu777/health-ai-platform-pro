@@ -67,6 +67,8 @@ class PatientClinicalSummaryDTO(BaseSchema):
     generated_at: datetime
     summary_version: str
     data_window: ClinicalSummaryDataWindowDTO
+    overview_clinical_period_start: datetime | None = None
+    overview_clinical_period_end: datetime | None = None
     overview_items: list[ClinicalSummaryOverviewItemDTO]
     clinical_items: list[ClinicalItemDTO]
     recent_measurements: list[RecentMeasurementDTO]

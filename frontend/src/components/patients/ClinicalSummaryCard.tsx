@@ -55,7 +55,9 @@ export function ClinicalSummaryCard({
         {title}
       </h2>
       <p className="mt-1 text-sm font-medium text-text-secondary">{subtitle}</p>
-      <p className="mt-2 text-sm text-text-secondary">{description}</p>
+      {description ? (
+        <p className="mt-2 text-sm text-text-secondary">{description}</p>
+      ) : null}
 
       {loading ? <p className="mt-4 text-sm text-text-secondary">{loadingLabel}</p> : null}
 

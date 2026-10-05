@@ -241,13 +241,29 @@ def _heart_rate_overview_item(
     period_start, period_end = data_period_bounds(cohort)
     count = len(cohort)
     if cardiac_focus and count < MIN_DIRECTIONAL_TREND_SAMPLE_COUNT:
+        window_params = _window_date_params(period_start, period_end)
+        if count == 2:
+            message_key = "trend_hybrid_no_direction"
+            trend_status: TrendStatus = "recorded_no_direction"
+            message = (
+                f"{count} comparable resting measurements recorded; "
+                "not enough data for a directional trend."
+            )
+        else:
+            message_key = "trend_hybrid_insufficient"
+            trend_status = "insufficient_data"
+            message = (
+                "Resting heart rate measurements are on file; "
+                "insufficient comparable data for a directional trend."
+            )
         return ClinicalSummaryOverviewItemDTO(
             key="heart_rate_trend",
             severity="info",
             label="Heart rate",
-            message="Resting heart rate measurements are on file; insufficient comparable data for a directional trend.",
-            message_key="heart_rate_monitoring_insufficient_trend",
-            trend_status="insufficient_data",
+            message=message,
+            message_key=message_key,
+            message_params=window_params,
+            trend_status=trend_status,
             source_count=count,
             data_window_start=period_start,
             data_window_end=period_end,
@@ -271,16 +287,20 @@ def _metric_trend_overview_item(
 ) -> ClinicalSummaryOverviewItemDTO:
     period_start, period_end = data_period_bounds(cohort)
     count = len(cohort)
-    trend_status, message, severity = _describe_trend(
+    trend_status, message, severity, message_key, message_params = _describe_trend(
         cohort,
         metric=metric,
         context_label=context_label,
+        period_start=period_start,
+        period_end=period_end,
     )
     return ClinicalSummaryOverviewItemDTO(
         key=key,
         severity=severity,
         label=label,
         message=message,
+        message_key=message_key,
+        message_params=message_params,
         trend_status=trend_status,
         source_count=count,
         data_window_start=period_start,
@@ -293,8 +313,11 @@ def _describe_trend(
     *,
     metric: str,
     context_label: str,
-) -> tuple[TrendStatus, str, OverviewSeverity]:
+    period_start: datetime | None,
+    period_end: datetime | None,
+) -> tuple[TrendStatus, str, OverviewSeverity, str, dict[str, str]]:
     count = len(cohort)
+    window_params = _window_date_params(period_start, period_end)
     if count < MIN_DIRECTIONAL_TREND_SAMPLE_COUNT:
         if count == 2:
             return (
@@ -304,6 +327,8 @@ def _describe_trend(
                     "not enough data for a directional trend."
                 ),
                 "info",
+                "trend_hybrid_no_direction",
+                window_params,
             )
         stats = compute_metric_statistics(cohort, metric)
         latest = stats["maximum"]
@@ -314,6 +339,8 @@ def _describe_trend(
                 f"latest recorded value {latest} (informational)."
             ),
             "info",
+            "trend_hybrid_insufficient",
+            window_params,
         )
 
     stats = compute_metric_statistics(cohort, metric)
@@ -324,6 +351,8 @@ def _describe_trend(
             "insufficient_data",
             f"Comparable {context_label} measurements present; trend not assessed.",
             "info",
+            "trend_hybrid_insufficient",
+            window_params,
         )
 
     trend_status: TrendStatus = direction
@@ -338,7 +367,12 @@ def _describe_trend(
         f"Based on {count} comparable {context_label} measurements, values show an "
         f"informational {direction_phrase} (average {average})."
     )
-    return trend_status, message, severity
+    hybrid_key = {
+        "stable": "trend_hybrid_stable",
+        "increasing": "trend_hybrid_increasing",
+        "decreasing": "trend_hybrid_decreasing",
+    }[direction]
+    return trend_status, message, severity, hybrid_key, window_params
 
 
 def _lab_overview_item(
@@ -357,7 +391,8 @@ def _lab_overview_item(
     blob = record_text_blob(latest)
     lipids = extract_lipid_panel_values(blob)
     if lipids is not None:
-        params = {"ldl": lipids.ldl, "hdl": lipids.hdl}
+        record_date = _record_date_param(latest.record_date)
+        params = {"ldl": lipids.ldl, "hdl": lipids.hdl, "record_date": record_date}
         message = f"Lipid panel: LDL {lipids.ldl} mg/dL, HDL {lipids.hdl} mg/dL"
         message_key = "lipid_panel_summary"
         if lipids.triglycerides:
@@ -410,12 +445,14 @@ def _imaging_overview_item(
     latest = max(imaging_records, key=lambda row: (row.record_date, str(row.id)))
 
     if is_echocardiography_record(latest):
+        record_date = _record_date_param(latest.record_date)
         return ClinicalSummaryOverviewItemDTO(
             key="imaging_summary",
             severity="info",
             label="Imaging",
             message="Echocardiography report is documented in clinical records.",
             message_key="echocardiography_on_file",
+            message_params={"record_date": record_date},
             source_count=len(imaging_records),
             data_window_start=latest.record_date,
             data_window_end=latest.record_date,
@@ -439,12 +476,14 @@ def _imaging_overview_item(
     snippet = _safe_record_snippet(latest)
     if not snippet or (cardiac_focus and _contains_internal_markers(snippet)):
         if cardiac_focus:
+            record_date = _record_date_param(latest.record_date)
             return ClinicalSummaryOverviewItemDTO(
                 key="imaging_summary",
                 severity="info",
                 label="Imaging",
                 message="Imaging report is documented in clinical records.",
                 message_key="imaging_report_on_file",
+                message_params={"record_date": record_date},
                 source_count=len(imaging_records),
                 data_window_start=latest.record_date,
                 data_window_end=latest.record_date,
@@ -643,6 +682,22 @@ def _ensure_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=UTC)
     return value.astimezone(UTC)
+
+
+def _window_date_params(
+    period_start: datetime | None,
+    period_end: datetime | None,
+) -> dict[str, str]:
+    params: dict[str, str] = {}
+    if period_start is not None:
+        params["window_start"] = _ensure_utc(period_start).date().isoformat()
+    if period_end is not None:
+        params["window_end"] = _ensure_utc(period_end).date().isoformat()
+    return params
+
+
+def _record_date_param(record_date: datetime) -> str:
+    return _ensure_utc(record_date).date().isoformat()
 
 
 def overview_items_for_determinism_check(

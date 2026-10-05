@@ -10,6 +10,9 @@ from uuid import UUID
 from app.application.analytics.clinical_summary_overview_builder import (
     build_clinical_summary_overview_items,
 )
+from app.application.analytics.clinical_summary_overview_period import (
+    compute_overview_clinical_period,
+)
 from app.application.analytics.follow_up_status import is_follow_up_overdue
 from app.application.analytics.health_measurement_analytics import extract_metric_value
 from app.application.analytics.clinical_timeline_rules import HOSPITALIZATION_RECORD_TYPES
@@ -75,12 +78,15 @@ def build_deterministic_clinical_summary(
         as_of=generated_at,
         max_items=6,
     )
+    period_start, period_end = compute_overview_clinical_period(overview_items)
 
     return PatientClinicalSummaryDTO(
         patient_id=bundle.patient.id,
         generated_at=generated_at,
         summary_version=SUMMARY_VERSION,
         data_window=ClinicalSummaryDataWindowDTO(date_from=date_from, date_to=date_to),
+        overview_clinical_period_start=period_start,
+        overview_clinical_period_end=period_end,
         overview_items=overview_items,
         clinical_items=clinical_items,
         recent_measurements=recent_measurements,

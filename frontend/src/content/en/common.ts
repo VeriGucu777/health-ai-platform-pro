@@ -144,6 +144,7 @@ export const commonContent: CommonContent = {
     riskHistoryLoadError: "Could not load risk assessment history.",
     clinicalSummaryTitle: "Clinical summary",
     clinicalSummarySubtitle: "Recent clinical picture",
+    clinicalSummaryPeriodViewSuffix: "clinical picture",
     clinicalSummaryDescription:
       "A brief decision-support summary from records on file.",
     clinicalSummaryEmpty: "Not enough clinical data on file to build a summary.",
@@ -164,22 +165,35 @@ export const commonContent: CommonContent = {
     },
     clinicalSummaryTrendMessages: {
       stable:
-        "Across the last {count} comparable {context} measurements, a stable pattern is observed (informational).",
+        "From {period_range}, {count} comparable {context} measurements show a stable pattern (informational).",
       increasing:
-        "Across the last {count} comparable {context} measurements, an increasing pattern is observed (informational).",
+        "From {period_range}, {count} comparable {context} measurements show an increasing pattern (informational).",
       decreasing:
-        "Across the last {count} comparable {context} measurements, a decreasing pattern is observed (informational).",
+        "From {period_range}, {count} comparable {context} measurements show a decreasing pattern (informational).",
       recorded_no_direction:
-        "{count} comparable {context} measurements recorded; not enough data for a directional trend.",
+        "From {period_range}, {count} comparable {context} measurements recorded; not enough data for a directional trend.",
       insufficient_data:
-        "{count} comparable {context} measurement(s) on file; trend not assessed.",
+        "From {period_range}, {count} comparable {context} measurement(s) on file; trend not assessed.",
     },
     clinicalSummaryItemMessages: {
-      lipid_panel_summary: "Lipid panel records LDL {ldl} mg/dL and HDL {hdl} mg/dL.",
+      trend_hybrid_stable:
+        "From {period_range}, {count} comparable {context} measurements show a stable pattern (informational).",
+      trend_hybrid_increasing:
+        "From {period_range}, {count} comparable {context} measurements show an increasing pattern (informational).",
+      trend_hybrid_decreasing:
+        "From {period_range}, {count} comparable {context} measurements show a decreasing pattern (informational).",
+      trend_hybrid_no_direction:
+        "From {period_range}, {count} comparable {context} measurements recorded; not enough data for a directional trend.",
+      trend_hybrid_insufficient:
+        "From {period_range}, {count} comparable {context} measurement(s) on file; trend not assessed.",
+      lipid_panel_summary:
+        "Most recent lipid panel ({record_date}): LDL {ldl} mg/dL and HDL {hdl} mg/dL on file.",
       lipid_panel_with_triglycerides:
-        "Lipid panel records LDL {ldl} mg/dL, HDL {hdl} mg/dL, and triglycerides {triglycerides} mg/dL.",
-      echocardiography_on_file: "Echocardiography report is documented in clinical records.",
-      imaging_report_on_file: "Imaging report is documented in clinical records.",
+        "Most recent lipid panel ({record_date}): LDL {ldl} mg/dL, HDL {hdl} mg/dL, and triglycerides {triglycerides} mg/dL on file.",
+      echocardiography_on_file:
+        "Echocardiography report ({record_date}) is documented in clinical records.",
+      imaging_report_on_file:
+        "Imaging report ({record_date}) is documented in clinical records.",
       heart_rate_monitoring_insufficient_trend:
         "Resting heart rate measurements are on file; insufficient comparable data for a directional trend.",
       medication_treatment_summary: "{detail}",

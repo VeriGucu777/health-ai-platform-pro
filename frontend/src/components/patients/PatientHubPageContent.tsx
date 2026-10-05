@@ -13,6 +13,7 @@ import {
 } from "@/lib/api/clinical-summary";
 import { fetchPatient, type Patient } from "@/lib/api/patients";
 import { ClinicalSummaryCard } from "@/components/patients/ClinicalSummaryCard";
+import { formatClinicalSummaryOverviewSubtitle } from "@/lib/clinical-summary/display";
 import {
   fetchRiskAssessmentHistory,
   type RiskAssessmentHistoryItem,
@@ -143,6 +144,8 @@ export function PatientHubPageContent({ patientId }: PatientHubPageContentProps)
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [summaryItems, setSummaryItems] = useState<ClinicalSummaryOverviewItem[]>([]);
+  const [summaryPeriodStart, setSummaryPeriodStart] = useState<string | null>(null);
+  const [summaryPeriodEnd, setSummaryPeriodEnd] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
@@ -195,12 +198,16 @@ export function PatientHubPageContent({ patientId }: PatientHubPageContentProps)
     try {
       const response = await fetchPatientClinicalSummary(accessToken, patientId);
       setSummaryItems(response.overview_items);
+      setSummaryPeriodStart(response.overview_clinical_period_start ?? null);
+      setSummaryPeriodEnd(response.overview_clinical_period_end ?? null);
     } catch (err) {
       if (err instanceof ApiClientError && err.status === 401) {
         handleUnauthorized();
         return;
       }
       setSummaryItems([]);
+      setSummaryPeriodStart(null);
+      setSummaryPeriodEnd(null);
       setSummaryError(hub.clinicalSummaryLoadError);
     } finally {
       setSummaryLoading(false);
@@ -301,6 +308,15 @@ export function PatientHubPageContent({ patientId }: PatientHubPageContentProps)
 
   const age = calculateAgeYears(patient.date_of_birth);
   const genderLabel = formatPatientGender(patient.gender, content.patients.genders);
+  const summaryHasPeriod = Boolean(summaryPeriodStart && summaryPeriodEnd);
+  const clinicalSummarySubtitle = formatClinicalSummaryOverviewSubtitle(
+    summaryPeriodStart,
+    summaryPeriodEnd,
+    formatDate,
+    hub.clinicalSummaryDescription,
+    hub.clinicalSummaryPeriodViewSuffix,
+  );
+  const clinicalSummaryDescription = summaryHasPeriod ? "" : hub.clinicalSummaryDescription;
 
   return (
     <div className="space-y-8">
@@ -330,8 +346,8 @@ export function PatientHubPageContent({ patientId }: PatientHubPageContentProps)
       <ClinicalSummaryCard
         locale={effectiveLocale}
         title={hub.clinicalSummaryTitle}
-        subtitle={hub.clinicalSummarySubtitle}
-        description={hub.clinicalSummaryDescription}
+        subtitle={clinicalSummarySubtitle}
+        description={clinicalSummaryDescription}
         emptyMessage={hub.clinicalSummaryEmpty}
         disclaimer={hub.clinicalSummaryDisclaimer}
         itemLabels={hub.clinicalSummaryItemLabels}

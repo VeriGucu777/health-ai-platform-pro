@@ -105,6 +105,8 @@ class PatientClinicalSummaryResponse(BaseModel):
     generated_at: datetime
     summary_version: str
     data_window: ClinicalSummaryDataWindowResponse
+    overview_clinical_period_start: datetime | None = None
+    overview_clinical_period_end: datetime | None = None
     overview_items: list[ClinicalSummaryOverviewItemResponse] = Field(
         default_factory=list,
         description="Short deterministic overview bullets for clinician review (max 6).",

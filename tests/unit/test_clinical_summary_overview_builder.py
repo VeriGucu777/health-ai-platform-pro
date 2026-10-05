@@ -7,6 +7,9 @@ from uuid import uuid4
 from app.application.analytics.clinical_summary_overview_builder import (
     build_clinical_summary_overview_items,
 )
+from app.application.analytics.clinical_summary_overview_period import (
+    compute_overview_clinical_period,
+)
 from app.application.dtos.clinical_evidence import ClinicalEvidenceBundle
 from app.domain.entities.appointment import Appointment
 from app.domain.entities.health_measurement import HealthMeasurement
@@ -274,7 +277,10 @@ def test_cardiac_focus_orders_bp_hr_lab_imaging_medication_appointment() -> None
 
     lab = next(item for item in items if item.key == "laboratory_summary")
     assert lab.message_key == "lipid_panel_with_triglycerides"
-    assert lab.message_params == {"ldl": "156", "hdl": "42", "triglycerides": "190"}
+    assert lab.message_params["ldl"] == "156"
+    assert lab.message_params["hdl"] == "42"
+    assert lab.message_params["triglycerides"] == "190"
+    assert lab.message_params["record_date"] == "2026-05-01"
     assert "Synthetic" not in lab.message
     assert "Fictional" not in lab.message
 
@@ -289,6 +295,15 @@ def test_cardiac_focus_orders_bp_hr_lab_imaging_medication_appointment() -> None
     bp = next(item for item in items if item.key == "blood_pressure_trend")
     assert bp.trend_status == "decreasing"
     assert bp.source_count == 3
+    assert bp.message_key == "trend_hybrid_decreasing"
+    assert bp.message_params["window_start"] == "2026-07-01"
+    assert bp.message_params["window_end"] == "2026-09-01"
+
+    period_start, period_end = compute_overview_clinical_period(items)
+    assert period_start is not None
+    assert period_end is not None
+    assert period_start.date().isoformat() == "2026-05-01"
+    assert period_end.date().isoformat() == "2026-09-20"
 
 
 def test_past_scheduled_appointment_produces_overdue_follow_up() -> None:
@@ -531,8 +546,11 @@ def test_cardiac_heart_rate_two_measurements_use_insufficient_trend_copy() -> No
         as_of=datetime(2026, 10, 1, tzinfo=UTC),
     )
     hr = next(item for item in items if item.key == "heart_rate_trend")
-    assert hr.message_key == "heart_rate_monitoring_insufficient_trend"
-    assert hr.trend_status == "insufficient_data"
+    assert hr.message_key == "trend_hybrid_no_direction"
+    assert hr.trend_status == "recorded_no_direction"
+    assert hr.message_params["window_start"] == "2026-08-01"
+    assert hr.message_params["window_end"] == "2026-09-01"
+    assert hr.source_count == 2
 
 
 def test_stroke_overview_includes_neurology_imaging_and_metabolic() -> None:
@@ -623,6 +641,7 @@ def test_two_point_fasting_glucose_does_not_claim_direction() -> None:
     )
     fasting = next(item for item in items if item.key == "fasting_glucose_trend")
     assert fasting.trend_status == "recorded_no_direction"
+    assert fasting.message_key == "trend_hybrid_no_direction"
     assert "not enough data for a directional trend" in fasting.message
 
 
