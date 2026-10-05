@@ -44,7 +44,7 @@ export const commonContent: CommonContent = {
       "Coordinate patient records, health insights, and risk assessments in one secure workspace designed for healthcare professionals.",
     primaryCta: "Get started",
     secondaryCta: "Sign in",
-    secondaryCtaAuthenticated: "Go to patients",
+    secondaryCtaAuthenticated: "View my patients",
     featuresTitle: "Built for responsible healthcare AI",
     features: [
       {

@@ -44,7 +44,7 @@ export const commonContent: CommonContent = {
       "Sağlık profesyonelleri için tasarlanmış güvenli bir çalışma alanında hasta kayıtlarını, sağlık içgörülerini ve risk değerlendirmelerini yönetin.",
     primaryCta: "Başlayın",
     secondaryCta: "Giriş yap",
-    secondaryCtaAuthenticated: "Hastalara git",
+    secondaryCtaAuthenticated: "Hastalarımı görüntüle",
     featuresTitle: "Sorumlu sağlık yapay zekası için tasarlandı",
     features: [
       {

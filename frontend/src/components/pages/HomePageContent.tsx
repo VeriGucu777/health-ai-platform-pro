@@ -26,20 +26,26 @@ export function HomePageContent() {
                 {content.landing.heroDescription}
               </p>
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <Button href="/register" size="lg" fullWidth className="sm:w-auto sm:min-w-[10rem]">
-                  {content.landing.primaryCta}
-                </Button>
-                <Button
-                  href={showPatientsCta ? "/patients" : "/login"}
-                  variant="secondary"
-                  size="lg"
-                  fullWidth
-                  className="sm:w-auto sm:min-w-[10rem]"
-                >
-                  {showPatientsCta
-                    ? content.landing.secondaryCtaAuthenticated
-                    : content.landing.secondaryCta}
-                </Button>
+                {showPatientsCta ? (
+                  <Button href="/patients" size="lg" fullWidth className="sm:w-auto sm:min-w-[10rem]">
+                    {content.landing.secondaryCtaAuthenticated}
+                  </Button>
+                ) : (
+                  <>
+                    <Button href="/register" size="lg" fullWidth className="sm:w-auto sm:min-w-[10rem]">
+                      {content.landing.primaryCta}
+                    </Button>
+                    <Button
+                      href="/login"
+                      variant="secondary"
+                      size="lg"
+                      fullWidth
+                      className="sm:w-auto sm:min-w-[10rem]"
+                    >
+                      {content.landing.secondaryCta}
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
 
