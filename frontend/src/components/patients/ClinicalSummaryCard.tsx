@@ -23,6 +23,7 @@ type ClinicalSummaryCardProps = {
   onRetry: () => void;
   retryLabel: string;
   loadingLabel: string;
+  formatDate: (value: string) => string;
 };
 
 export function ClinicalSummaryCard({
@@ -41,6 +42,7 @@ export function ClinicalSummaryCard({
   onRetry,
   retryLabel,
   loadingLabel,
+  formatDate,
 }: ClinicalSummaryCardProps) {
   const copy = { itemLabels, trendMessages, itemMessages };
 
@@ -81,7 +83,7 @@ export function ClinicalSummaryCard({
                   {formatClinicalSummaryItemLabel(item, copy)}:
                 </span>{" "}
                 <span className="text-text-secondary">
-                  {formatClinicalSummaryItemMessage(item, copy, locale)}
+                  {formatClinicalSummaryItemMessage(item, copy, locale, formatDate)}
                 </span>
               </li>
             ))}

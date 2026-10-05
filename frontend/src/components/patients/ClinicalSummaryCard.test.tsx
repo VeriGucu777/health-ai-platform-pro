@@ -20,6 +20,7 @@ const baseProps = {
   onRetry: () => undefined,
   retryLabel: "Yeniden dene",
   loadingLabel: "Yükleniyor…",
+  formatDate: (value: string) => value,
 };
 
 describe("ClinicalSummaryCard", () => {

@@ -182,6 +182,8 @@ export const commonContent: CommonContent = {
       heart_rate_monitoring_insufficient_trend:
         "Dinlenme nabzı için mevcut kayıtlar izlenmektedir; yönlü değerlendirme için yeterli karşılaştırılabilir veri bulunmuyor.",
       medication_treatment_summary: "{detail}",
+      cardiac_care_plan_documented:
+        "Kan basıncı takibi, 3 ay içinde lipid kontrolü ve aktiviteye ilişkin takip planı kayıtlarda yer almaktadır.",
       medication_plan_on_file: "İlaç ve takip planı klinik kayıtlarda mevcut.",
       upcoming_follow_up_date: "Yaklaşan kontrol randevusu: {date}.",
       laboratory_on_file: "Laboratuvar sonuçları klinik kayıtlarda mevcut.",

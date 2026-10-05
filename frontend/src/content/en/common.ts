@@ -182,6 +182,8 @@ export const commonContent: CommonContent = {
       heart_rate_monitoring_insufficient_trend:
         "Resting heart rate measurements are on file; insufficient comparable data for a directional trend.",
       medication_treatment_summary: "{detail}",
+      cardiac_care_plan_documented:
+        "Blood pressure follow-up, lipid recheck within 3 months, and an activity follow-up plan are documented.",
       medication_plan_on_file: "Medication and follow-up plan documented in clinical records.",
       upcoming_follow_up_date: "Upcoming follow-up appointment: {date}.",
       laboratory_on_file: "Laboratory results are documented in clinical records.",

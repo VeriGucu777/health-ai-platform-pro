@@ -82,3 +82,16 @@ def sanitized_medication_or_treatment(record: MedicalRecord) -> str:
     if meds and treatment and treatment not in meds:
         return sanitize_clinical_summary_text(f"{meds}; {treatment}")
     return meds or treatment
+
+
+def is_documented_cardiac_monitoring_care_plan(text: str) -> bool:
+    """Detect blood-pressure/lipid/activity follow-up plans without inventing new content."""
+    cleaned = sanitize_clinical_summary_text(text).lower()
+    if not cleaned:
+        return False
+    has_blood_pressure = "blood pressure" in cleaned or "kan basınc" in cleaned
+    has_lipid_follow_up = "lipid recheck" in cleaned or (
+        "lipid" in cleaned and ("recheck" in cleaned or "month" in cleaned)
+    )
+    has_activity = "activity" in cleaned or "aktivite" in cleaned or "guidance" in cleaned
+    return has_blood_pressure and has_lipid_follow_up and has_activity

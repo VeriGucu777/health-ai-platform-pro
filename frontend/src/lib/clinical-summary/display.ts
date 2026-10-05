@@ -25,9 +25,14 @@ export function formatClinicalSummaryItemMessage(
   item: ClinicalSummaryOverviewItem,
   copy: ClinicalSummaryCopy,
   locale: SupportedLocale,
+  formatDate?: (value: string) => string,
 ): string {
   if (item.message_key && copy.itemMessages[item.message_key]) {
-    return applyTemplate(copy.itemMessages[item.message_key], item.message_params ?? {});
+    const params = { ...(item.message_params ?? {}) };
+    if (item.message_key === "upcoming_follow_up_date" && params.date && formatDate) {
+      params.date = formatDate(params.date);
+    }
+    return applyTemplate(copy.itemMessages[item.message_key], params);
   }
 
   if (item.trend_status && copy.trendMessages[item.trend_status]) {

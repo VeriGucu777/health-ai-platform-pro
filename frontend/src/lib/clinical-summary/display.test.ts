@@ -19,6 +19,9 @@ const copy = {
     lipid_panel_with_triglycerides:
       "Lipid panelinde LDL {ldl} mg/dL, HDL {hdl} mg/dL ve trigliserid {triglycerides} mg/dL kayıtlı.",
     echocardiography_on_file: "Ekokardiyografi raporu klinik kayıtlarda mevcut.",
+    cardiac_care_plan_documented:
+      "Kan basıncı takibi, 3 ay içinde lipid kontrolü ve aktiviteye ilişkin takip planı kayıtlarda yer almaktadır.",
+    upcoming_follow_up_date: "Yaklaşan kontrol randevusu: {date}.",
   },
 };
 
@@ -56,6 +59,41 @@ describe("clinical summary display", () => {
     expect(text).toContain("156");
     expect(text).toContain("trigliserid 190");
     expect(text.toLowerCase()).not.toContain("synthetic");
+  });
+
+  it("uses cardiac care plan template instead of raw English treatment text", () => {
+    const item: ClinicalSummaryOverviewItem = {
+      key: "medication_treatment_follow_up",
+      severity: "info",
+      label: "Medication and follow-up",
+      message: "Blood pressure targets, lipid recheck in 3 months, and activity guidance",
+      message_key: "cardiac_care_plan_documented",
+      message_params: {},
+      trend_status: null,
+      source_count: 1,
+      data_window_start: null,
+      data_window_end: null,
+    };
+    const text = formatClinicalSummaryItemMessage(item, copy, "tr");
+    expect(text).toContain("Kan basıncı takibi");
+    expect(text).not.toContain("Blood pressure targets");
+  });
+
+  it("formats upcoming appointment date with locale formatter", () => {
+    const item: ClinicalSummaryOverviewItem = {
+      key: "upcoming_follow_up",
+      severity: "info",
+      label: "Upcoming follow-up",
+      message: "Next scheduled follow-up on 2026-10-15 (UTC date).",
+      message_key: "upcoming_follow_up_date",
+      message_params: { date: "2026-10-15" },
+      trend_status: null,
+      source_count: 1,
+      data_window_start: null,
+      data_window_end: null,
+    };
+    const text = formatClinicalSummaryItemMessage(item, copy, "tr", (value) => `FMT:${value}`);
+    expect(text).toBe("Yaklaşan kontrol randevusu: FMT:2026-10-15.");
   });
 
   it("localizes trend message from trend_status", () => {

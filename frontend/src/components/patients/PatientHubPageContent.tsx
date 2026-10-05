@@ -343,6 +343,7 @@ export function PatientHubPageContent({ patientId }: PatientHubPageContentProps)
         onRetry={() => void loadClinicalSummary()}
         retryLabel={content.common.retry}
         loadingLabel={content.common.loading}
+        formatDate={formatDate}
       />
 
       <section className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">

@@ -9,6 +9,7 @@ from app.application.analytics.clinical_summary_focus import SummaryFocus, infer
 from app.application.analytics.clinical_summary_record_presentation import (
     extract_lipid_panel_values,
     is_brain_imaging_record,
+    is_documented_cardiac_monitoring_care_plan,
     is_echocardiography_record,
     record_text_blob,
     sanitize_clinical_summary_text,
@@ -82,6 +83,10 @@ def build_clinical_summary_overview_items(
     return items[:max_items]
 
 
+def _has_upcoming_appointment(appointments: list[Appointment], *, as_of: datetime) -> bool:
+    return _upcoming_appointment_overview_item(appointments, as_of=as_of) is not None
+
+
 class _BuilderContext:
     def __init__(
         self,
@@ -101,26 +106,32 @@ class _BuilderContext:
 
 def _builders_for_focus(focus: SummaryFocus, ctx: _BuilderContext) -> list[ItemBuilder]:
     if focus == "cardiac":
-        return [
+        builders: list[ItemBuilder] = [
             lambda: _blood_pressure_overview_item(ctx.measurements),
             lambda: _heart_rate_overview_item(ctx.measurements, cardiac_focus=True),
             lambda: _lab_overview_item(ctx.records, cardiac_focus=True),
             lambda: _imaging_overview_item(ctx.records, cardiac_focus=True),
             lambda: _medication_treatment_overview_item(ctx.records),
             lambda: _upcoming_appointment_overview_item(ctx.appointments, as_of=ctx.as_of),
-            lambda: _glucose_overview_item(
-                key="fasting_glucose_trend",
-                label="Fasting blood glucose",
-                context="fasting",
-                group=ctx.glucose_groups.get("fasting", []),
-            ),
-            lambda: _glucose_overview_item(
-                key="post_meal_glucose_trend",
-                label="Post-meal blood glucose",
-                context="post_meal",
-                group=ctx.glucose_groups.get("post_meal", []),
-            ),
         ]
+        if not _has_upcoming_appointment(ctx.appointments, as_of=ctx.as_of):
+            builders.extend(
+                [
+                    lambda: _glucose_overview_item(
+                        key="fasting_glucose_trend",
+                        label="Fasting blood glucose",
+                        context="fasting",
+                        group=ctx.glucose_groups.get("fasting", []),
+                    ),
+                    lambda: _glucose_overview_item(
+                        key="post_meal_glucose_trend",
+                        label="Post-meal blood glucose",
+                        context="post_meal",
+                        group=ctx.glucose_groups.get("post_meal", []),
+                    ),
+                ],
+            )
+        return builders
     if focus == "stroke":
         return [
             lambda: _blood_pressure_overview_item(ctx.measurements),
@@ -499,6 +510,31 @@ def _medication_treatment_overview_item(
     if not with_meds:
         return None
     latest = max(with_meds, key=lambda row: (row.record_date, str(row.id)))
+    care_plan_blob = " ".join(
+        filter(
+            None,
+            [
+                (latest.treatment or "").strip(),
+                (latest.medications or "").strip(),
+                record_text_blob(latest),
+            ],
+        ),
+    )
+    if is_documented_cardiac_monitoring_care_plan(care_plan_blob):
+        return ClinicalSummaryOverviewItemDTO(
+            key="medication_treatment_follow_up",
+            severity="info",
+            label="Medication and follow-up",
+            message=(
+                "Blood pressure follow-up, lipid recheck within 3 months, and an activity "
+                "follow-up plan are documented."
+            ),
+            message_key="cardiac_care_plan_documented",
+            source_count=len(with_meds),
+            data_window_start=latest.record_date,
+            data_window_end=latest.record_date,
+        )
+
     detail = _truncate(sanitized_medication_or_treatment(latest))
     if not detail or _contains_internal_markers(detail):
         return ClinicalSummaryOverviewItemDTO(

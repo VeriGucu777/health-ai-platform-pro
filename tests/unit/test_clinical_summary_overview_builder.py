@@ -185,11 +185,21 @@ def test_cardiac_focus_orders_bp_hr_lab_imaging_medication_appointment() -> None
             description="Fictional demo imaging narrative for decision-support review only.",
         ),
         _record(
+            record_date=datetime(2026, 8, 10, tzinfo=UTC),
             record_type="visit",
             title="Medication adjustment (demo)",
             medications=(
                 "Antihypertensive and statin therapy reviewed; dose adjustment noted "
                 "(synthetic demo text only)."
+            ),
+        ),
+        _record(
+            record_date=datetime(2026, 9, 20, tzinfo=UTC),
+            record_type="visit",
+            title="Cardiac follow-up plan (demo)",
+            treatment=(
+                "Blood pressure targets, lipid recheck in 3 months, and activity guidance "
+                "(synthetic demo plan)."
             ),
         ),
     ]
@@ -246,9 +256,70 @@ def test_cardiac_focus_orders_bp_hr_lab_imaging_medication_appointment() -> None
     assert imaging.message_key == "echocardiography_on_file"
     assert "Synthetic" not in imaging.message
 
+    med = next(item for item in items if item.key == "medication_treatment_follow_up")
+    assert med.message_key == "cardiac_care_plan_documented"
+    assert "Blood pressure targets" not in med.message_params.get("detail", med.message)
+
     bp = next(item for item in items if item.key == "blood_pressure_trend")
     assert bp.trend_status == "decreasing"
     assert bp.source_count == 3
+
+
+def test_cardiac_excludes_glucose_when_scheduled_appointment_exists() -> None:
+    as_of = datetime(2026, 10, 1, tzinfo=UTC)
+    measurements = [
+        _measurement(
+            measured_at=datetime(2026, 9, 1, tzinfo=UTC),
+            systolic_pressure=130,
+            blood_glucose=Decimal("110"),
+            glucose_context="fasting",
+        ),
+    ]
+    records = [
+        _record(
+            record_type="lab_result",
+            title="Lipid panel",
+            diagnosis="LDL 156 mg/dL; HDL 42 mg/dL; triglycerides 190 mg/dL.",
+        ),
+    ]
+    appointments = [
+        Appointment(
+            owner_id=uuid4(),
+            patient_id=uuid4(),
+            appointment_date=as_of + timedelta(days=14),
+            appointment_type="Cardiac follow-up",
+            status="scheduled",
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(
+            health_measurements=measurements,
+            medical_records=records,
+            appointments=appointments,
+        ),
+        as_of=as_of,
+    )
+    keys = [item.key for item in items]
+    assert "upcoming_follow_up" in keys
+    assert "fasting_glucose_trend" not in keys
+
+
+def test_completed_appointment_is_not_upcoming_follow_up() -> None:
+    as_of = datetime(2026, 10, 1, tzinfo=UTC)
+    appointments = [
+        Appointment(
+            owner_id=uuid4(),
+            patient_id=uuid4(),
+            appointment_date=as_of + timedelta(days=5),
+            appointment_type="Cardiac follow-up",
+            status="completed",
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(appointments=appointments),
+        as_of=as_of,
+    )
+    assert not any(item.key == "upcoming_follow_up" for item in items)
 
 
 def test_cardiac_heart_rate_two_measurements_use_insufficient_trend_copy() -> None:
