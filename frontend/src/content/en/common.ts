@@ -160,6 +160,7 @@ export const commonContent: CommonContent = {
       clinical_visit_summary: "Clinical visit note",
       medication_treatment_follow_up: "Medication and follow-up",
       upcoming_follow_up: "Upcoming follow-up",
+      overdue_follow_up: "Overdue follow-up",
     },
     clinicalSummaryTrendMessages: {
       stable:
@@ -186,6 +187,8 @@ export const commonContent: CommonContent = {
         "Blood pressure follow-up, lipid recheck within 3 months, and an activity follow-up plan are documented.",
       medication_plan_on_file: "Medication and follow-up plan documented in clinical records.",
       upcoming_follow_up_date: "Upcoming follow-up appointment: {date}.",
+      overdue_follow_up_date:
+        "The planned follow-up dated {date} has no completion record in the system.",
       laboratory_on_file: "Laboratory results are documented in clinical records.",
       brain_imaging_summary: "{detail}",
       clinical_visit_summary: "{detail}",

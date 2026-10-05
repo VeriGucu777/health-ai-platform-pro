@@ -22,6 +22,8 @@ const copy = {
     cardiac_care_plan_documented:
       "Kan basıncı takibi, 3 ay içinde lipid kontrolü ve aktiviteye ilişkin takip planı kayıtlarda yer almaktadır.",
     upcoming_follow_up_date: "Yaklaşan kontrol randevusu: {date}.",
+    overdue_follow_up_date:
+      "{date} tarihli planlanmış kontrol için sistemde tamamlanma kaydı bulunmuyor.",
   },
 };
 
@@ -77,6 +79,24 @@ describe("clinical summary display", () => {
     const text = formatClinicalSummaryItemMessage(item, copy, "tr");
     expect(text).toContain("Kan basıncı takibi");
     expect(text).not.toContain("Blood pressure targets");
+  });
+
+  it("formats overdue follow-up date with locale formatter", () => {
+    const item: ClinicalSummaryOverviewItem = {
+      key: "overdue_follow_up",
+      severity: "info",
+      label: "Overdue follow-up",
+      message: "The planned follow-up dated 2026-08-10 has no completion record in the system.",
+      message_key: "overdue_follow_up_date",
+      message_params: { date: "2026-08-10" },
+      trend_status: null,
+      source_count: 1,
+      data_window_start: null,
+      data_window_end: null,
+    };
+    const text = formatClinicalSummaryItemMessage(item, copy, "tr", (value) => `FMT:${value}`);
+    expect(text).toContain("FMT:2026-08-10");
+    expect(text).toContain("tamamlanma kaydı bulunmuyor");
   });
 
   it("formats upcoming appointment date with locale formatter", () => {

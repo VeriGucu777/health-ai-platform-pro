@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from typing import Callable, Literal
 
 from app.application.analytics.clinical_summary_focus import SummaryFocus, infer_clinical_summary_focus
+from app.application.analytics.follow_up_status import is_follow_up_overdue
 from app.application.analytics.clinical_summary_record_presentation import (
     extract_lipid_panel_values,
     is_brain_imaging_record,
@@ -83,8 +84,15 @@ def build_clinical_summary_overview_items(
     return items[:max_items]
 
 
-def _has_upcoming_appointment(appointments: list[Appointment], *, as_of: datetime) -> bool:
-    return _upcoming_appointment_overview_item(appointments, as_of=as_of) is not None
+def _cardiac_follow_up_overview_item(
+    appointments: list[Appointment],
+    *,
+    as_of: datetime,
+) -> ClinicalSummaryOverviewItemDTO | None:
+    upcoming = _upcoming_appointment_overview_item(appointments, as_of=as_of)
+    if upcoming is not None:
+        return upcoming
+    return _overdue_follow_up_overview_item(appointments, as_of=as_of)
 
 
 class _BuilderContext:
@@ -112,25 +120,8 @@ def _builders_for_focus(focus: SummaryFocus, ctx: _BuilderContext) -> list[ItemB
             lambda: _lab_overview_item(ctx.records, cardiac_focus=True),
             lambda: _imaging_overview_item(ctx.records, cardiac_focus=True),
             lambda: _medication_treatment_overview_item(ctx.records),
-            lambda: _upcoming_appointment_overview_item(ctx.appointments, as_of=ctx.as_of),
+            lambda: _cardiac_follow_up_overview_item(ctx.appointments, as_of=ctx.as_of),
         ]
-        if not _has_upcoming_appointment(ctx.appointments, as_of=ctx.as_of):
-            builders.extend(
-                [
-                    lambda: _glucose_overview_item(
-                        key="fasting_glucose_trend",
-                        label="Fasting blood glucose",
-                        context="fasting",
-                        group=ctx.glucose_groups.get("fasting", []),
-                    ),
-                    lambda: _glucose_overview_item(
-                        key="post_meal_glucose_trend",
-                        label="Post-meal blood glucose",
-                        context="post_meal",
-                        group=ctx.glucose_groups.get("post_meal", []),
-                    ),
-                ],
-            )
         return builders
     if focus == "stroke":
         return [
@@ -587,6 +578,34 @@ def _upcoming_appointment_overview_item(
         source_count=len(upcoming),
         data_window_start=nearest.appointment_date,
         data_window_end=nearest.appointment_date,
+    )
+
+
+def _overdue_follow_up_overview_item(
+    appointments: list[Appointment],
+    *,
+    as_of: datetime,
+) -> ClinicalSummaryOverviewItemDTO | None:
+    overdue = [
+        appointment
+        for appointment in appointments
+        if is_follow_up_overdue(appointment, as_of=as_of)
+    ]
+    if not overdue:
+        return None
+    most_recent = max(overdue, key=lambda row: (row.appointment_date, str(row.id)))
+    when = most_recent.appointment_date.astimezone(UTC).date().isoformat()
+    message = f"The planned follow-up dated {when} has no completion record in the system."
+    return ClinicalSummaryOverviewItemDTO(
+        key="overdue_follow_up",
+        severity="info",
+        label="Overdue follow-up",
+        message=message,
+        message_key="overdue_follow_up_date",
+        message_params={"date": when},
+        source_count=len(overdue),
+        data_window_start=most_recent.appointment_date,
+        data_window_end=most_recent.appointment_date,
     )
 
 

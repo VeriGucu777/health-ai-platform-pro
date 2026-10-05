@@ -159,6 +159,7 @@ export const commonContent: CommonContent = {
       clinical_visit_summary: "Klinik muayene notu",
       medication_treatment_follow_up: "İlaç ve takip",
       upcoming_follow_up: "Yaklaşan kontrol",
+      overdue_follow_up: "Gecikmiş takip",
     },
     clinicalSummaryTrendMessages: {
       stable:
@@ -186,6 +187,8 @@ export const commonContent: CommonContent = {
         "Kan basıncı takibi, 3 ay içinde lipid kontrolü ve aktiviteye ilişkin takip planı kayıtlarda yer almaktadır.",
       medication_plan_on_file: "İlaç ve takip planı klinik kayıtlarda mevcut.",
       upcoming_follow_up_date: "Yaklaşan kontrol randevusu: {date}.",
+      overdue_follow_up_date:
+        "{date} tarihli planlanmış kontrol için sistemde tamamlanma kaydı bulunmuyor.",
       laboratory_on_file: "Laboratuvar sonuçları klinik kayıtlarda mevcut.",
       brain_imaging_summary: "{detail}",
       clinical_visit_summary: "{detail}",

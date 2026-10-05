@@ -29,7 +29,12 @@ export function formatClinicalSummaryItemMessage(
 ): string {
   if (item.message_key && copy.itemMessages[item.message_key]) {
     const params = { ...(item.message_params ?? {}) };
-    if (item.message_key === "upcoming_follow_up_date" && params.date && formatDate) {
+    if (
+      (item.message_key === "upcoming_follow_up_date" ||
+        item.message_key === "overdue_follow_up_date") &&
+      params.date &&
+      formatDate
+    ) {
       params.date = formatDate(params.date);
     }
     return applyTemplate(copy.itemMessages[item.message_key], params);

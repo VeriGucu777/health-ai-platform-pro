@@ -142,6 +142,32 @@ def test_diabetes_overview_includes_glucose_lab_and_follow_up() -> None:
     assert fasting.source_count == 3
 
 
+def test_cardiac_focus_never_includes_glucose_even_without_appointments() -> None:
+    as_of = datetime(2026, 10, 5, tzinfo=UTC)
+    measurements = [
+        _measurement(
+            measured_at=datetime(2026, 9, 1, tzinfo=UTC),
+            blood_glucose=Decimal("118"),
+            glucose_context="fasting",
+            systolic_pressure=130,
+        ),
+    ]
+    records = [
+        _record(
+            record_type="lab_result",
+            title="Lipid panel",
+            diagnosis="LDL 156 mg/dL; HDL 42 mg/dL; triglycerides 190 mg/dL.",
+        ),
+        _record(record_type="imaging", title="Echocardiography summary", diagnosis="On file"),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(health_measurements=measurements, medical_records=records),
+        as_of=as_of,
+    )
+    assert "fasting_glucose_trend" not in [item.key for item in items]
+    assert "post_meal_glucose_trend" not in [item.key for item in items]
+
+
 def test_cardiac_focus_orders_bp_hr_lab_imaging_medication_appointment() -> None:
     as_of = datetime(2026, 10, 1, 12, 0, tzinfo=UTC)
     measurements = [
@@ -263,6 +289,163 @@ def test_cardiac_focus_orders_bp_hr_lab_imaging_medication_appointment() -> None
     bp = next(item for item in items if item.key == "blood_pressure_trend")
     assert bp.trend_status == "decreasing"
     assert bp.source_count == 3
+
+
+def test_past_scheduled_appointment_produces_overdue_follow_up() -> None:
+    as_of = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
+    appointments = [
+        Appointment(
+            owner_id=uuid4(),
+            patient_id=uuid4(),
+            appointment_date=datetime(2026, 8, 10, 14, 0, tzinfo=UTC),
+            appointment_type="follow_up",
+            status="scheduled",
+        ),
+    ]
+    records = [
+        _record(
+            record_type="lab_result",
+            title="Lipid panel",
+            diagnosis="LDL 156 mg/dL; HDL 42 mg/dL; triglycerides 190 mg/dL.",
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(appointments=appointments, medical_records=records),
+        as_of=as_of,
+    )
+    overdue = next(item for item in items if item.key == "overdue_follow_up")
+    assert overdue.message_key == "overdue_follow_up_date"
+    assert overdue.message_params["date"] == "2026-08-10"
+
+
+def test_past_completed_appointment_does_not_produce_overdue() -> None:
+    as_of = datetime(2026, 10, 5, tzinfo=UTC)
+    appointments = [
+        Appointment(
+            owner_id=uuid4(),
+            patient_id=uuid4(),
+            appointment_date=datetime(2026, 8, 10, tzinfo=UTC),
+            appointment_type="follow_up",
+            status="completed",
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(appointments=appointments),
+        as_of=as_of,
+    )
+    assert not any(item.key == "overdue_follow_up" for item in items)
+
+
+def test_past_cancelled_appointment_does_not_produce_overdue() -> None:
+    as_of = datetime(2026, 10, 5, tzinfo=UTC)
+    for status in ("cancelled", "canceled"):
+        appointments = [
+            Appointment(
+                owner_id=uuid4(),
+                patient_id=uuid4(),
+                appointment_date=datetime(2026, 8, 10, tzinfo=UTC),
+                appointment_type="follow_up",
+                status=status,
+            ),
+        ]
+        items = build_clinical_summary_overview_items(
+            _bundle(appointments=appointments),
+            as_of=as_of,
+        )
+        assert not any(item.key == "overdue_follow_up" for item in items)
+
+
+def test_future_scheduled_prefers_upcoming_over_overdue() -> None:
+    as_of = datetime(2026, 10, 5, tzinfo=UTC)
+    appointments = [
+        Appointment(
+            owner_id=uuid4(),
+            patient_id=uuid4(),
+            appointment_date=datetime(2026, 8, 10, tzinfo=UTC),
+            appointment_type="follow_up",
+            status="scheduled",
+        ),
+        Appointment(
+            owner_id=uuid4(),
+            patient_id=uuid4(),
+            appointment_date=datetime(2026, 11, 15, tzinfo=UTC),
+            appointment_type="follow_up",
+            status="scheduled",
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(appointments=appointments),
+        as_of=as_of,
+    )
+    follow_up_items = [item for item in items if item.key in {"upcoming_follow_up", "overdue_follow_up"}]
+    assert len(follow_up_items) == 1
+    assert follow_up_items[0].key == "upcoming_follow_up"
+
+
+def test_cardiac_overdue_excludes_glucose_from_first_six() -> None:
+    as_of = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
+    measurements = [
+        _measurement(
+            measured_at=datetime(2026, 9, 1, tzinfo=UTC),
+            blood_glucose=Decimal("104"),
+            glucose_context="fasting",
+            systolic_pressure=130,
+        ),
+    ]
+    records = [
+        _record(
+            record_type="lab_result",
+            title="Lipid panel",
+            diagnosis="LDL 156 mg/dL; HDL 42 mg/dL; triglycerides 190 mg/dL.",
+        ),
+        _record(record_type="imaging", title="Echocardiography summary", diagnosis="On file"),
+    ]
+    appointments = [
+        Appointment(
+            owner_id=uuid4(),
+            patient_id=uuid4(),
+            appointment_date=datetime(2026, 8, 10, 14, 0, tzinfo=UTC),
+            appointment_type="follow_up",
+            status="scheduled",
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(
+            health_measurements=measurements,
+            medical_records=records,
+            appointments=appointments,
+        ),
+        as_of=as_of,
+    )
+    keys = [item.key for item in items]
+    assert keys[-1] == "overdue_follow_up"
+    assert "fasting_glucose_trend" not in keys
+
+
+def test_cardiac_no_appointment_does_not_force_glucose_filler() -> None:
+    as_of = datetime(2026, 10, 5, tzinfo=UTC)
+    measurements = [
+        _measurement(
+            measured_at=datetime(2026, 9, 1, tzinfo=UTC),
+            blood_glucose=Decimal("104"),
+            glucose_context="fasting",
+            systolic_pressure=130,
+        ),
+    ]
+    records = [
+        _record(
+            record_type="lab_result",
+            title="Lipid panel",
+            diagnosis="LDL 156 mg/dL; HDL 42 mg/dL; triglycerides 190 mg/dL.",
+        ),
+        _record(record_type="imaging", title="Echocardiography summary", diagnosis="On file"),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(health_measurements=measurements, medical_records=records),
+        as_of=as_of,
+    )
+    assert "fasting_glucose_trend" not in [item.key for item in items]
+    assert len(items) <= 5
 
 
 def test_cardiac_excludes_glucose_when_scheduled_appointment_exists() -> None:
