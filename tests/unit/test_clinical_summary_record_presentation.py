@@ -5,6 +5,7 @@ from app.application.analytics.clinical_summary_record_presentation import (
     extract_lipid_panel_values,
     is_documented_cardiac_monitoring_care_plan,
     is_documented_diabetes_monitoring_care_plan,
+    is_documented_stroke_rehabilitation_follow_up_plan,
     is_documented_stroke_secondary_prevention_plan,
     is_stroke_neurology_follow_up_record,
     sanitize_clinical_summary_text,
@@ -37,6 +38,14 @@ def test_detects_stroke_neurology_follow_up_record() -> None:
         diagnosis="Residual mild hemiparesis after stroke.",
     )
     assert is_stroke_neurology_follow_up_record(record) is True
+
+
+def test_detects_stroke_rehabilitation_follow_up_plan_text() -> None:
+    raw = (
+        "Neurology follow-up, blood pressure monitoring, and rehabilitation goals "
+        "(synthetic demo plan)."
+    )
+    assert is_documented_stroke_rehabilitation_follow_up_plan(raw) is True
 
 
 def test_detects_stroke_secondary_prevention_medication_plan() -> None:

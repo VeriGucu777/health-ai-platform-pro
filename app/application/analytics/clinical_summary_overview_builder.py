@@ -14,6 +14,7 @@ from app.application.analytics.clinical_summary_record_presentation import (
     is_documented_cardiac_monitoring_care_plan,
     is_documented_diabetes_medication_plan,
     is_documented_diabetes_monitoring_care_plan,
+    is_documented_stroke_rehabilitation_follow_up_plan,
     is_documented_stroke_secondary_prevention_plan,
     is_echocardiography_record,
     is_stroke_neurology_follow_up_record,
@@ -664,6 +665,21 @@ def _medication_treatment_overview_item(
             label="Medication and follow-up",
             message="Secondary stroke prevention and follow-up plan documented in clinical records.",
             message_key="stroke_secondary_prevention_documented",
+            source_count=len(with_meds),
+            data_window_start=latest.record_date,
+            data_window_end=latest.record_date,
+        )
+
+    if stroke_focus and is_documented_stroke_rehabilitation_follow_up_plan(care_plan_blob):
+        return ClinicalSummaryOverviewItemDTO(
+            key="medication_treatment_follow_up",
+            severity="info",
+            label="Medication and follow-up",
+            message=(
+                "Neurology follow-up, blood pressure monitoring, and rehabilitation goals "
+                "are documented in the follow-up plan."
+            ),
+            message_key="stroke_rehabilitation_follow_up_plan_documented",
             source_count=len(with_meds),
             data_window_start=latest.record_date,
             data_window_end=latest.record_date,

@@ -747,6 +747,45 @@ def test_stroke_overview_priority_order_and_localized_items() -> None:
     assert med.message_key == "stroke_secondary_prevention_documented"
 
 
+def test_stroke_rehabilitation_plan_uses_localized_message_not_raw_english() -> None:
+    as_of = datetime(2026, 10, 1, 12, 0, tzinfo=UTC)
+    records = [
+        _record(
+            record_type="visit",
+            title="Stroke follow-up",
+            treatment=(
+                "Neurology follow-up, blood pressure monitoring, and rehabilitation goals"
+            ),
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(
+            medical_records=records,
+            risk_assessment_history=[
+                RiskAssessmentHistory(
+                    patient_id=uuid4(),
+                    assessment_type=RiskAssessmentType.STROKE,
+                    assessment_status="complete",
+                    risk_level="moderate",
+                    score=50.0,
+                    probability=0.3,
+                    model_kind=RULE_BASED_MODEL_KIND,
+                    model_version="stroke_rule_based_v1",
+                    evaluated_by_user_id=uuid4(),
+                    evaluated_at=datetime(2026, 9, 1, tzinfo=UTC),
+                ),
+            ],
+        ),
+        as_of=as_of,
+    )
+    med = next(item for item in items if item.key == "medication_treatment_follow_up")
+    assert med.message_key == "stroke_rehabilitation_follow_up_plan_documented"
+    assert med.message.endswith("documented in the follow-up plan.")
+    assert med.message != (
+        "Neurology follow-up, blood pressure monitoring, and rehabilitation goals"
+    )
+
+
 def test_stroke_overdue_follow_up_is_sixth_item() -> None:
     as_of = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
     records = [

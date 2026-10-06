@@ -34,6 +34,8 @@ const copy = {
       "Diyabet ilaç ve takip planı klinik kayıtlarda belgelenmiştir.",
     diabetes_follow_up_plan_documented:
       "Evde kan şekeri takibi, üç aylık HbA1c kontrolü ve yaşam tarzı danışmanlığına ilişkin takip planı kayıtlarda yer almaktadır.",
+    stroke_rehabilitation_follow_up_plan_documented:
+      "Nöroloji takibi, kan basıncı izlemi ve rehabilitasyon hedeflerine ilişkin takip planı kayıtlarda yer almaktadır.",
     lipid_panel_with_triglycerides:
       "En güncel lipid paneli ({record_date}): LDL {ldl} mg/dL, HDL {hdl} mg/dL ve trigliserid {triglycerides} mg/dL kayıtlı.",
     echocardiography_on_file: "Ekokardiyografi raporu ({record_date}) kayıtlarda mevcut.",
@@ -240,6 +242,24 @@ describe("clinical summary display", () => {
     expect(
       formatClinicalSummaryOverviewSubtitle(null, null, (v) => v, "Fallback text", "suffix"),
     ).toBe("Fallback text");
+  });
+
+  it("uses localized stroke rehabilitation plan template instead of raw treatment text", () => {
+    const item: ClinicalSummaryOverviewItem = {
+      key: "medication_treatment_follow_up",
+      severity: "info",
+      label: "Medication and follow-up",
+      message: "Neurology follow-up, blood pressure monitoring, and rehabilitation goals",
+      message_key: "stroke_rehabilitation_follow_up_plan_documented",
+      message_params: {},
+      trend_status: null,
+      source_count: 1,
+      data_window_start: null,
+      data_window_end: null,
+    };
+    const text = formatClinicalSummaryItemMessage(item, copy, "tr");
+    expect(text).toContain("Nöroloji takibi");
+    expect(text).not.toContain("Neurology follow-up");
   });
 
   it("uses localized diabetes follow-up plan template instead of raw treatment text", () => {

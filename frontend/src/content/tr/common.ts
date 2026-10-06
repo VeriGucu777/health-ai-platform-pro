@@ -218,6 +218,8 @@ export const commonContent: CommonContent = {
       brain_imaging_on_file: "Beyin görüntüleme raporu ({record_date}) klinik kayıtlarda mevcut.",
       stroke_secondary_prevention_documented:
         "Sekonder korunma ve takip planı klinik kayıtlarda belgelenmiştir.",
+      stroke_rehabilitation_follow_up_plan_documented:
+        "Nöroloji takibi, kan basıncı izlemi ve rehabilitasyon hedeflerine ilişkin takip planı kayıtlarda yer almaktadır.",
       lipid_panel_summary:
         "En güncel lipid paneli ({record_date}): LDL {ldl} mg/dL ve HDL {hdl} mg/dL kayıtlı.",
       lipid_panel_with_triglycerides:

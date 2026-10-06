@@ -150,6 +150,19 @@ def is_documented_stroke_secondary_prevention_plan(record: MedicalRecord) -> boo
     )
 
 
+def is_documented_stroke_rehabilitation_follow_up_plan(text: str) -> bool:
+    """Detect neurology, blood pressure monitoring, and rehabilitation goal follow-up plans."""
+    cleaned = sanitize_clinical_summary_text(text).lower()
+    if not cleaned:
+        return False
+    has_neurology = "neurology" in cleaned or "nöroloji" in cleaned
+    has_blood_pressure = "blood pressure" in cleaned or "kan basınc" in cleaned
+    has_rehabilitation = (
+        "rehabilitation" in cleaned or "rehabilitasyon" in cleaned or "rehab" in cleaned
+    )
+    return has_neurology and has_blood_pressure and has_rehabilitation
+
+
 def is_documented_diabetes_monitoring_care_plan(text: str) -> bool:
     """Detect home glucose / HbA1c / lifestyle follow-up plans in recorded text."""
     cleaned = sanitize_clinical_summary_text(text).lower()
