@@ -13,6 +13,7 @@ from app.application.analytics.clinical_summary_record_presentation import (
     is_brain_imaging_record,
     is_documented_cardiac_monitoring_care_plan,
     is_documented_diabetes_medication_plan,
+    is_documented_diabetes_monitoring_care_plan,
     is_echocardiography_record,
     record_text_blob,
     sanitize_clinical_summary_text,
@@ -614,6 +615,21 @@ def _medication_treatment_overview_item(
             label="Medication and follow-up",
             message="Diabetes medication and follow-up plan documented in clinical records.",
             message_key="diabetes_medication_documented",
+            source_count=len(with_meds),
+            data_window_start=latest.record_date,
+            data_window_end=latest.record_date,
+        )
+
+    if diabetes_focus and is_documented_diabetes_monitoring_care_plan(care_plan_blob):
+        return ClinicalSummaryOverviewItemDTO(
+            key="medication_treatment_follow_up",
+            severity="info",
+            label="Medication and follow-up",
+            message=(
+                "Home glucose monitoring, quarterly HbA1c follow-up, and lifestyle "
+                "counseling are documented in the follow-up plan."
+            ),
+            message_key="diabetes_follow_up_plan_documented",
             source_count=len(with_meds),
             data_window_start=latest.record_date,
             data_window_end=latest.record_date,

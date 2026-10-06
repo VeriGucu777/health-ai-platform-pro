@@ -32,6 +32,8 @@ const copy = {
     hba1c_summary: "En güncel HbA1c ({record_date}): %{value} kayıtlı.",
     diabetes_medication_documented:
       "Diyabet ilaç ve takip planı klinik kayıtlarda belgelenmiştir.",
+    diabetes_follow_up_plan_documented:
+      "Evde kan şekeri takibi, üç aylık HbA1c kontrolü ve yaşam tarzı danışmanlığına ilişkin takip planı kayıtlarda yer almaktadır.",
     lipid_panel_with_triglycerides:
       "En güncel lipid paneli ({record_date}): LDL {ldl} mg/dL, HDL {hdl} mg/dL ve trigliserid {triglycerides} mg/dL kayıtlı.",
     echocardiography_on_file: "Ekokardiyografi raporu ({record_date}) kayıtlarda mevcut.",
@@ -238,6 +240,24 @@ describe("clinical summary display", () => {
     expect(
       formatClinicalSummaryOverviewSubtitle(null, null, (v) => v, "Fallback text", "suffix"),
     ).toBe("Fallback text");
+  });
+
+  it("uses localized diabetes follow-up plan template instead of raw treatment text", () => {
+    const item: ClinicalSummaryOverviewItem = {
+      key: "medication_treatment_follow_up",
+      severity: "info",
+      label: "Medication and follow-up",
+      message: "Continue home glucose logging, quarterly HbA1c, and lifestyle counseling",
+      message_key: "diabetes_follow_up_plan_documented",
+      message_params: {},
+      trend_status: null,
+      source_count: 1,
+      data_window_start: null,
+      data_window_end: null,
+    };
+    const text = formatClinicalSummaryItemMessage(item, copy, "tr");
+    expect(text).toContain("Evde kan şekeri takibi");
+    expect(text).not.toContain("Continue home glucose");
   });
 
   it("formats hba1c summary with localized percent value in TR", () => {

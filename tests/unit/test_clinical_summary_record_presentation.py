@@ -4,6 +4,7 @@ from app.application.analytics.clinical_summary_record_presentation import (
     extract_hba1c_value,
     extract_lipid_panel_values,
     is_documented_cardiac_monitoring_care_plan,
+    is_documented_diabetes_monitoring_care_plan,
     sanitize_clinical_summary_text,
 )
 
@@ -19,6 +20,14 @@ def test_sanitize_removes_synthetic_and_fictional_demo_phrases() -> None:
     assert "decision-support review only" not in cleaned.lower()
     assert "156" in cleaned
     assert "190" in cleaned
+
+
+def test_detects_diabetes_monitoring_care_plan_text() -> None:
+    raw = (
+        "Continue home glucose logging, quarterly HbA1c, and lifestyle counseling "
+        "(synthetic demo plan)."
+    )
+    assert is_documented_diabetes_monitoring_care_plan(raw) is True
 
 
 def test_detects_a2_cardiac_monitoring_care_plan_text() -> None:

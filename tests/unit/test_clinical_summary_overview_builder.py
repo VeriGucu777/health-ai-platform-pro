@@ -154,6 +154,41 @@ def test_diabetes_overview_includes_glucose_lab_and_follow_up() -> None:
     assert med.message_key == "diabetes_medication_documented"
 
 
+def test_diabetes_treatment_plan_uses_localized_message_key_not_raw_english() -> None:
+    as_of = datetime(2026, 10, 1, 12, 0, tzinfo=UTC)
+    records = [
+        _record(
+            record_type="lab_result",
+            title="Metabolic laboratory panel",
+            diagnosis="HbA1c 7.4%",
+        ),
+        _record(
+            record_date=datetime(2026, 9, 15, tzinfo=UTC),
+            record_type="visit",
+            title="Diabetes follow-up",
+            treatment=(
+                "Continue home glucose logging, quarterly HbA1c, and lifestyle counseling"
+            ),
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(
+            health_measurements=[
+                _measurement(
+                    measured_at=datetime(2026, 9, 1, 8, 0, tzinfo=UTC),
+                    blood_glucose=Decimal("112"),
+                    glucose_context="fasting",
+                ),
+            ],
+            medical_records=records,
+        ),
+        as_of=as_of,
+    )
+    med = next(item for item in items if item.key == "medication_treatment_follow_up")
+    assert med.message_key == "diabetes_follow_up_plan_documented"
+    assert "Continue home glucose logging" not in med.message
+
+
 def test_diabetes_focus_overdue_follow_up_is_sixth_item() -> None:
     as_of = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
     measurements = [

@@ -211,6 +211,8 @@ export const commonContent: CommonContent = {
         "Most recent metabolic laboratory panel ({record_date}) is documented in clinical records.",
       diabetes_medication_documented:
         "Diabetes medication and follow-up plan are documented in clinical records.",
+      diabetes_follow_up_plan_documented:
+        "Home glucose monitoring, quarterly HbA1c follow-up, and lifestyle counseling are documented in the follow-up plan.",
       lipid_panel_summary:
         "Most recent lipid panel ({record_date}): LDL {ldl} mg/dL and HDL {hdl} mg/dL on file.",
       lipid_panel_with_triglycerides:

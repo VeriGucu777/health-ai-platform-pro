@@ -114,6 +114,27 @@ def is_documented_diabetes_medication_plan(record: MedicalRecord) -> bool:
     )
 
 
+def is_documented_diabetes_monitoring_care_plan(text: str) -> bool:
+    """Detect home glucose / HbA1c / lifestyle follow-up plans in recorded text."""
+    cleaned = sanitize_clinical_summary_text(text).lower()
+    if not cleaned:
+        return False
+    has_glucose_monitoring = any(
+        token in cleaned
+        for token in (
+            "home glucose",
+            "glucose logging",
+            "evde kan şekeri",
+            "kan şekeri takibi",
+        )
+    )
+    has_hba1c_follow = "hba1c" in cleaned or "a1c" in cleaned or "quarterly" in cleaned
+    has_lifestyle = (
+        "lifestyle" in cleaned or "yaşam tarz" in cleaned or "counseling" in cleaned
+    )
+    return has_glucose_monitoring and has_hba1c_follow and has_lifestyle
+
+
 def is_documented_cardiac_monitoring_care_plan(text: str) -> bool:
     """Detect blood-pressure/lipid/activity follow-up plans without inventing new content."""
     cleaned = sanitize_clinical_summary_text(text).lower()

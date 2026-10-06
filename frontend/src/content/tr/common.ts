@@ -210,6 +210,8 @@ export const commonContent: CommonContent = {
         "En güncel metabolik laboratuvar paneli ({record_date}) kayıtlarda mevcut.",
       diabetes_medication_documented:
         "Diyabet ilaç ve takip planı klinik kayıtlarda belgelenmiştir.",
+      diabetes_follow_up_plan_documented:
+        "Evde kan şekeri takibi, üç aylık HbA1c kontrolü ve yaşam tarzı danışmanlığına ilişkin takip planı kayıtlarda yer almaktadır.",
       lipid_panel_summary:
         "En güncel lipid paneli ({record_date}): LDL {ldl} mg/dL ve HDL {hdl} mg/dL kayıtlı.",
       lipid_panel_with_triglycerides:
