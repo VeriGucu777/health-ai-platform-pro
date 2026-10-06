@@ -39,9 +39,9 @@ export const commonContent: CommonContent = {
   },
   landing: {
     badge: "Clinical decision-support platform",
-    heroTitle: "Smarter clinical workflows, built for care teams",
+    heroTitle: "Faster clinical assessment for healthcare teams",
     heroDescription:
-      "Coordinate patient records, health insights, and risk assessments in one secure workspace designed for healthcare professionals.",
+      "Summarizes patient history, measurements, laboratory, imaging, and follow-up records in one place to support clinical assessment.",
     primaryCta: "Get started",
     secondaryCta: "Sign in",
     secondaryCtaAuthenticated: "View my patients",
@@ -67,7 +67,7 @@ export const commonContent: CommonContent = {
     trustPoints: [
       "No patient identifiers in demo content",
       "Clear medical disclaimers on decision-support outputs",
-      "Secure API integration via environment configuration",
+      "Secure API and access controls",
     ],
   },
   auth: {

@@ -39,9 +39,9 @@ export const commonContent: CommonContent = {
   },
   landing: {
     badge: "Klinik karar destek platformu",
-    heroTitle: "Sağlık ekipleri için daha akıllı klinik iş akışları",
+    heroTitle: "Sağlık ekipleri için daha hızlı klinik değerlendirme",
     heroDescription:
-      "Sağlık profesyonelleri için tasarlanmış güvenli bir çalışma alanında hasta kayıtlarını, sağlık içgörülerini ve risk değerlendirmelerini yönetin.",
+      "Hasta geçmişini, ölçümleri, laboratuvar, görüntüleme ve takip kayıtlarını tek ekranda özetleyerek klinik değerlendirmeyi destekler.",
     primaryCta: "Başlayın",
     secondaryCta: "Giriş yap",
     secondaryCtaAuthenticated: "Hastalarımı görüntüle",
@@ -67,7 +67,7 @@ export const commonContent: CommonContent = {
     trustPoints: [
       "Demo içeriğinde hasta tanımlayıcı bilgisi yok",
       "Karar destek çıktılarında açık tıbbi uyarılar",
-      "Ortam yapılandırması üzerinden güvenli API entegrasyonu",
+      "Güvenli API ve erişim kontrolleri",
     ],
   },
   auth: {
