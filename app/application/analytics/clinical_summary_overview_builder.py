@@ -8,9 +8,11 @@ from typing import Callable, Literal
 from app.application.analytics.clinical_summary_focus import SummaryFocus, infer_clinical_summary_focus
 from app.application.analytics.follow_up_status import is_follow_up_overdue
 from app.application.analytics.clinical_summary_record_presentation import (
+    extract_hba1c_value,
     extract_lipid_panel_values,
     is_brain_imaging_record,
     is_documented_cardiac_monitoring_care_plan,
+    is_documented_diabetes_medication_plan,
     is_echocardiography_record,
     record_text_blob,
     sanitize_clinical_summary_text,
@@ -95,6 +97,14 @@ def _cardiac_follow_up_overview_item(
     return _overdue_follow_up_overview_item(appointments, as_of=as_of)
 
 
+def _diabetes_follow_up_overview_item(
+    appointments: list[Appointment],
+    *,
+    as_of: datetime,
+) -> ClinicalSummaryOverviewItemDTO | None:
+    return _cardiac_follow_up_overview_item(appointments, as_of=as_of)
+
+
 class _BuilderContext:
     def __init__(
         self,
@@ -157,13 +167,10 @@ def _builders_for_focus(focus: SummaryFocus, ctx: _BuilderContext) -> list[ItemB
                 context="post_meal",
                 group=ctx.glucose_groups.get("post_meal", []),
             ),
+            lambda: _lab_overview_item(ctx.records, cardiac_focus=False, diabetes_focus=True),
             lambda: _blood_pressure_overview_item(ctx.measurements),
-            lambda: _lab_overview_item(ctx.records, cardiac_focus=False),
-            lambda: _medication_treatment_overview_item(ctx.records),
-            lambda: _upcoming_appointment_overview_item(ctx.appointments, as_of=ctx.as_of),
-            lambda: _heart_rate_overview_item(ctx.measurements, cardiac_focus=False),
-            lambda: _imaging_overview_item(ctx.records, cardiac_focus=False),
-            lambda: _visit_diagnosis_overview_item(ctx.records),
+            lambda: _medication_treatment_overview_item(ctx.records, diabetes_focus=True),
+            lambda: _diabetes_follow_up_overview_item(ctx.appointments, as_of=ctx.as_of),
         ]
 
     return [
@@ -378,7 +385,8 @@ def _describe_trend(
 def _lab_overview_item(
     records: list[MedicalRecord],
     *,
-    cardiac_focus: bool,
+    cardiac_focus: bool = False,
+    diabetes_focus: bool = False,
 ) -> ClinicalSummaryOverviewItemDTO | None:
     lab_records = [
         record
@@ -387,6 +395,28 @@ def _lab_overview_item(
     ]
     if not lab_records:
         return None
+
+    if diabetes_focus:
+        hba1c_item = _latest_hba1c_overview_item(lab_records)
+        if hba1c_item is not None:
+            return hba1c_item
+        latest = max(lab_records, key=lambda row: (row.record_date, str(row.id)))
+        snippet = _safe_record_snippet(latest)
+        if snippet:
+            record_date = _record_date_param(latest.record_date)
+            return ClinicalSummaryOverviewItemDTO(
+                key="laboratory_summary",
+                severity="info",
+                label="Laboratory",
+                message=snippet,
+                message_key="diabetes_metabolic_lab_on_file",
+                message_params={"record_date": record_date},
+                source_count=len(lab_records),
+                data_window_start=latest.record_date,
+                data_window_end=latest.record_date,
+            )
+        return None
+
     latest = max(lab_records, key=lambda row: (row.record_date, str(row.id)))
     blob = record_text_blob(latest)
     lipids = extract_lipid_panel_values(blob)
@@ -529,8 +559,35 @@ def _visit_diagnosis_overview_item(
     )
 
 
+def _latest_hba1c_overview_item(
+    lab_records: list[MedicalRecord],
+) -> ClinicalSummaryOverviewItemDTO | None:
+    candidates: list[tuple[MedicalRecord, str]] = []
+    for record in lab_records:
+        value = extract_hba1c_value(record_text_blob(record))
+        if value is not None:
+            candidates.append((record, value))
+    if not candidates:
+        return None
+    record, hba1c_value = max(candidates, key=lambda row: (row[0].record_date, str(row[0].id)))
+    record_date = _record_date_param(record.record_date)
+    return ClinicalSummaryOverviewItemDTO(
+        key="laboratory_summary",
+        severity="info",
+        label="Laboratory",
+        message=f"HbA1c {hba1c_value}% on file ({record_date}).",
+        message_key="hba1c_summary",
+        message_params={"value": hba1c_value, "record_date": record_date},
+        source_count=len(lab_records),
+        data_window_start=record.record_date,
+        data_window_end=record.record_date,
+    )
+
+
 def _medication_treatment_overview_item(
     records: list[MedicalRecord],
+    *,
+    diabetes_focus: bool = False,
 ) -> ClinicalSummaryOverviewItemDTO | None:
     with_meds = [
         record
@@ -550,6 +607,18 @@ def _medication_treatment_overview_item(
             ],
         ),
     )
+    if diabetes_focus and is_documented_diabetes_medication_plan(latest):
+        return ClinicalSummaryOverviewItemDTO(
+            key="medication_treatment_follow_up",
+            severity="info",
+            label="Medication and follow-up",
+            message="Diabetes medication and follow-up plan documented in clinical records.",
+            message_key="diabetes_medication_documented",
+            source_count=len(with_meds),
+            data_window_start=latest.record_date,
+            data_window_end=latest.record_date,
+        )
+
     if is_documented_cardiac_monitoring_care_plan(care_plan_blob):
         return ClinicalSummaryOverviewItemDTO(
             key="medication_treatment_follow_up",

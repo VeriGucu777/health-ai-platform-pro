@@ -29,6 +29,9 @@ const copy = {
       "{period_date} tarihinde {count} karşılaştırılabilir {context} ölçümü kayıtlı; yönlü değerlendirme için yeterli veri bulunmuyor.",
     trend_hybrid_insufficient_in_range:
       "{period_range} arasında {count} karşılaştırılabilir {context} ölçümü kayıtlı; trend değerlendirilmedi.",
+    hba1c_summary: "En güncel HbA1c ({record_date}): %{value} kayıtlı.",
+    diabetes_medication_documented:
+      "Diyabet ilaç ve takip planı klinik kayıtlarda belgelenmiştir.",
     lipid_panel_with_triglycerides:
       "En güncel lipid paneli ({record_date}): LDL {ldl} mg/dL, HDL {hdl} mg/dL ve trigliserid {triglycerides} mg/dL kayıtlı.",
     echocardiography_on_file: "Ekokardiyografi raporu ({record_date}) kayıtlarda mevcut.",
@@ -235,6 +238,25 @@ describe("clinical summary display", () => {
     expect(
       formatClinicalSummaryOverviewSubtitle(null, null, (v) => v, "Fallback text", "suffix"),
     ).toBe("Fallback text");
+  });
+
+  it("formats hba1c summary with localized percent value in TR", () => {
+    const item: ClinicalSummaryOverviewItem = {
+      key: "laboratory_summary",
+      severity: "info",
+      label: "Laboratory",
+      message: "HbA1c 7.4% on file",
+      message_key: "hba1c_summary",
+      message_params: { value: "7.4", record_date: "2026-03-06" },
+      trend_status: null,
+      source_count: 1,
+      data_window_start: null,
+      data_window_end: null,
+    };
+    const text = formatClinicalSummaryItemMessage(item, copy, "tr", (value) => `FMT:${value}`);
+    expect(text).toContain("FMT:2026-03-06");
+    expect(text).toContain("%7,4");
+    expect(text).toContain("HbA1c");
   });
 
   it("formats compact period range for same-year windows", () => {

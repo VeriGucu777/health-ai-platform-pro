@@ -133,16 +133,74 @@ def test_diabetes_overview_includes_glucose_lab_and_follow_up() -> None:
         as_of=as_of,
     )
     keys = [item.key for item in items]
-    assert keys[:5] == [
+    assert keys == [
         "fasting_glucose_trend",
         "post_meal_glucose_trend",
-        "blood_pressure_trend",
         "laboratory_summary",
+        "blood_pressure_trend",
         "medication_treatment_follow_up",
+        "upcoming_follow_up",
     ]
     fasting = next(item for item in items if item.key == "fasting_glucose_trend")
     assert fasting.trend_status == "increasing"
     assert fasting.source_count == 3
+    assert fasting.message_key == "trend_hybrid_increasing"
+
+    lab = next(item for item in items if item.key == "laboratory_summary")
+    assert lab.message_key == "hba1c_summary"
+    assert lab.message_params["value"] == "7.2"
+
+    med = next(item for item in items if item.key == "medication_treatment_follow_up")
+    assert med.message_key == "diabetes_medication_documented"
+
+
+def test_diabetes_focus_overdue_follow_up_is_sixth_item() -> None:
+    as_of = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
+    measurements = [
+        _measurement(
+            measured_at=datetime(2026, 8, 1, 8, 0, tzinfo=UTC),
+            blood_glucose=Decimal("108"),
+            glucose_context="fasting",
+            systolic_pressure=128,
+        ),
+        _measurement(
+            measured_at=datetime(2026, 9, 1, 8, 0, tzinfo=UTC),
+            blood_glucose=Decimal("112"),
+            glucose_context="fasting",
+            systolic_pressure=130,
+        ),
+    ]
+    records = [
+        _record(
+            record_type="lab_result",
+            title="Metabolic laboratory panel",
+            diagnosis="HbA1c 7.4%",
+        ),
+        _record(
+            record_type="visit",
+            title="Diabetes follow-up",
+            medications="Metformin 1000 mg twice daily",
+        ),
+    ]
+    appointments = [
+        Appointment(
+            owner_id=uuid4(),
+            patient_id=uuid4(),
+            appointment_date=datetime(2026, 8, 10, 14, 0, tzinfo=UTC),
+            appointment_type="Diabetes follow-up",
+            status="scheduled",
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(
+            health_measurements=measurements,
+            medical_records=records,
+            appointments=appointments,
+        ),
+        as_of=as_of,
+    )
+    assert items[-1].key == "overdue_follow_up"
+    assert items[-1].message_key == "overdue_follow_up_date"
 
 
 def test_cardiac_focus_never_includes_glucose_even_without_appointments() -> None:

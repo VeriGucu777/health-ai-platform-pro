@@ -206,6 +206,11 @@ export const commonContent: CommonContent = {
         "Between {period_range}, {count} comparable {context} measurement(s) on file; trend not assessed.",
       trend_hybrid_insufficient_on_date:
         "{count} comparable {context} measurement(s) recorded on {period_date}; there is insufficient data for a directional assessment.",
+      hba1c_summary: "Most recent HbA1c ({record_date}): {value}% on file.",
+      diabetes_metabolic_lab_on_file:
+        "Most recent metabolic laboratory panel ({record_date}) is documented in clinical records.",
+      diabetes_medication_documented:
+        "Diabetes medication and follow-up plan are documented in clinical records.",
       lipid_panel_summary:
         "Most recent lipid panel ({record_date}): LDL {ldl} mg/dL and HDL {hdl} mg/dL on file.",
       lipid_panel_with_triglycerides:

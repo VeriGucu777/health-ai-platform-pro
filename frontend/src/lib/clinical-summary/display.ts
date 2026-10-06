@@ -169,6 +169,10 @@ function enrichMessageParams(
   if (enriched.record_date && formatDate) {
     enriched.record_date = formatDate(enriched.record_date);
   }
+  if (item.message_key === "hba1c_summary" && enriched.value) {
+    enriched.value =
+      locale === "tr" ? enriched.value.replace(".", ",") : enriched.value;
+  }
   if (item.message_key?.startsWith("trend_hybrid_")) {
     enriched.count = String(item.source_count);
     enriched.context = localizedContextForKey(item.key, locale);

@@ -26,6 +26,10 @@ _TG_PATTERN = re.compile(
     r"(?:triglycerides?|tg)\s*[:=]?\s*(\d+(?:\.\d+)?)\s*mg/dl",
     re.IGNORECASE,
 )
+_HBA1C_PATTERN = re.compile(
+    r"(?:hb\s*?a1c|hba1c|a1c)\s*[:=]?\s*(\d+(?:[.,]\d+)?)\s*%?",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -42,6 +46,14 @@ def sanitize_clinical_summary_text(value: str) -> str:
         cleaned = pattern.sub(" ", cleaned)
     cleaned = cleaned.replace(";;", ";").replace(" ;", ";")
     return " ".join(cleaned.split()).strip(" ;.")
+
+
+def extract_hba1c_value(text: str) -> str | None:
+    """Parse HbA1c percent when present in lab or visit text."""
+    match = _HBA1C_PATTERN.search(text)
+    if match is None:
+        return None
+    return match.group(1).replace(",", ".").strip()
 
 
 def extract_lipid_panel_values(text: str) -> LipidPanelValues | None:
@@ -82,6 +94,24 @@ def sanitized_medication_or_treatment(record: MedicalRecord) -> str:
     if meds and treatment and treatment not in meds:
         return sanitize_clinical_summary_text(f"{meds}; {treatment}")
     return meds or treatment
+
+
+def is_documented_diabetes_medication_plan(record: MedicalRecord) -> bool:
+    """Detect diabetes medication documentation without inventing new content."""
+    blob = sanitized_medication_or_treatment(record).lower()
+    if not blob:
+        return False
+    return any(
+        token in blob
+        for token in (
+            "metformin",
+            "insulin",
+            "glimepiride",
+            "sitagliptin",
+            "empagliflozin",
+            "semaglutide",
+        )
+    )
 
 
 def is_documented_cardiac_monitoring_care_plan(text: str) -> bool:

@@ -205,6 +205,11 @@ export const commonContent: CommonContent = {
         "{period_range} arasında {count} karşılaştırılabilir {context} ölçümü kayıtlı; trend değerlendirilmedi.",
       trend_hybrid_insufficient_on_date:
         "{period_date} tarihinde {count} karşılaştırılabilir {context} ölçümü kayıtlı; yönlü değerlendirme için yeterli veri bulunmuyor.",
+      hba1c_summary: "En güncel HbA1c ({record_date}): %{value} kayıtlı.",
+      diabetes_metabolic_lab_on_file:
+        "En güncel metabolik laboratuvar paneli ({record_date}) kayıtlarda mevcut.",
+      diabetes_medication_documented:
+        "Diyabet ilaç ve takip planı klinik kayıtlarda belgelenmiştir.",
       lipid_panel_summary:
         "En güncel lipid paneli ({record_date}): LDL {ldl} mg/dL ve HDL {hdl} mg/dL kayıtlı.",
       lipid_panel_with_triglycerides:
