@@ -114,6 +114,42 @@ def is_documented_diabetes_medication_plan(record: MedicalRecord) -> bool:
     )
 
 
+def is_stroke_neurology_follow_up_record(record: MedicalRecord) -> bool:
+    """Visit records that document neurological / post-stroke follow-up."""
+    blob = record_text_blob(record).lower()
+    return any(
+        token in blob
+        for token in (
+            "neurology",
+            "nöroloji",
+            "hemipares",
+            "stroke follow",
+            "inme",
+            "post-stroke",
+            "post stroke",
+        )
+    )
+
+
+def is_documented_stroke_secondary_prevention_plan(record: MedicalRecord) -> bool:
+    """Detect antiplatelet/statin or documented secondary stroke prevention plans."""
+    blob = sanitized_medication_or_treatment(record).lower()
+    if not blob:
+        return False
+    return any(
+        token in blob
+        for token in (
+            "antiplatelet",
+            "statin",
+            "secondary stroke",
+            "secondary prevention",
+            "sekonder",
+            "clopidogrel",
+            "aspirin",
+        )
+    )
+
+
 def is_documented_diabetes_monitoring_care_plan(text: str) -> bool:
     """Detect home glucose / HbA1c / lifestyle follow-up plans in recorded text."""
     cleaned = sanitize_clinical_summary_text(text).lower()

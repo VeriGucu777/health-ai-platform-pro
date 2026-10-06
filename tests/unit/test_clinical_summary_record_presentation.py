@@ -5,8 +5,13 @@ from app.application.analytics.clinical_summary_record_presentation import (
     extract_lipid_panel_values,
     is_documented_cardiac_monitoring_care_plan,
     is_documented_diabetes_monitoring_care_plan,
+    is_documented_stroke_secondary_prevention_plan,
+    is_stroke_neurology_follow_up_record,
     sanitize_clinical_summary_text,
 )
+from app.domain.entities.medical_record import MedicalRecord
+from uuid import uuid4
+from datetime import UTC, datetime
 
 
 def test_sanitize_removes_synthetic_and_fictional_demo_phrases() -> None:
@@ -20,6 +25,30 @@ def test_sanitize_removes_synthetic_and_fictional_demo_phrases() -> None:
     assert "decision-support review only" not in cleaned.lower()
     assert "156" in cleaned
     assert "190" in cleaned
+
+
+def test_detects_stroke_neurology_follow_up_record() -> None:
+    record = MedicalRecord(
+        owner_id=uuid4(),
+        patient_id=uuid4(),
+        record_date=datetime(2026, 5, 1, tzinfo=UTC),
+        record_type="visit",
+        title="Neurology follow-up",
+        diagnosis="Residual mild hemiparesis after stroke.",
+    )
+    assert is_stroke_neurology_follow_up_record(record) is True
+
+
+def test_detects_stroke_secondary_prevention_medication_plan() -> None:
+    record = MedicalRecord(
+        owner_id=uuid4(),
+        patient_id=uuid4(),
+        record_date=datetime(2026, 5, 1, tzinfo=UTC),
+        record_type="visit",
+        title="Stroke follow-up",
+        medications="Antiplatelet and statin therapy per recorded plan",
+    )
+    assert is_documented_stroke_secondary_prevention_plan(record) is True
 
 
 def test_detects_diabetes_monitoring_care_plan_text() -> None:

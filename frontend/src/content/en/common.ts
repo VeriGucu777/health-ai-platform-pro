@@ -159,6 +159,7 @@ export const commonContent: CommonContent = {
       laboratory_summary: "Laboratory",
       imaging_summary: "Imaging",
       clinical_visit_summary: "Clinical visit note",
+      neurological_follow_up_summary: "Neurological follow-up",
       medication_treatment_follow_up: "Medication and follow-up",
       upcoming_follow_up: "Upcoming follow-up",
       overdue_follow_up: "Overdue follow-up",
@@ -213,6 +214,12 @@ export const commonContent: CommonContent = {
         "Diabetes medication and follow-up plan are documented in clinical records.",
       diabetes_follow_up_plan_documented:
         "Home glucose monitoring, quarterly HbA1c follow-up, and lifestyle counseling are documented in the follow-up plan.",
+      stroke_neurological_follow_up_documented:
+        "Neurological follow-up and post-stroke clinical assessment ({record_date}) are documented in clinical records.",
+      brain_imaging_on_file:
+        "Brain imaging report ({record_date}) is documented in clinical records.",
+      stroke_secondary_prevention_documented:
+        "Secondary stroke prevention and follow-up plan are documented in clinical records.",
       lipid_panel_summary:
         "Most recent lipid panel ({record_date}): LDL {ldl} mg/dL and HDL {hdl} mg/dL on file.",
       lipid_panel_with_triglycerides:

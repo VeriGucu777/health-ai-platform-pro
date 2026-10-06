@@ -646,7 +646,7 @@ def test_cardiac_heart_rate_two_measurements_use_insufficient_trend_copy() -> No
     assert hr.source_count == 2
 
 
-def test_stroke_overview_includes_neurology_imaging_and_metabolic() -> None:
+def test_stroke_overview_priority_order_and_localized_items() -> None:
     as_of = datetime(2026, 10, 1, 12, 0, tzinfo=UTC)
     measurements = [
         _measurement(
@@ -657,37 +657,136 @@ def test_stroke_overview_includes_neurology_imaging_and_metabolic() -> None:
         ),
         _measurement(
             measured_at=datetime(2026, 7, 1, 8, 0, tzinfo=UTC),
-            systolic_pressure=142,
+            systolic_pressure=140,
             blood_glucose=Decimal("108"),
+            glucose_context="fasting",
+        ),
+        _measurement(
+            measured_at=datetime(2026, 8, 1, 8, 0, tzinfo=UTC),
+            systolic_pressure=145,
+            blood_glucose=Decimal("106"),
             glucose_context="fasting",
         ),
     ]
     records = [
         _record(
+            record_date=datetime(2026, 5, 10, tzinfo=UTC),
             record_type="visit",
             title="Neurology follow-up",
             diagnosis="Residual mild hemiparesis; secondary stroke prevention plan documented.",
         ),
         _record(
+            record_date=datetime(2026, 5, 12, tzinfo=UTC),
             record_type="imaging",
             title="Brain imaging report summary",
             diagnosis="Chronic ischemic changes without acute infarct on summary report.",
         ),
         _record(
+            record_date=datetime(2026, 5, 15, tzinfo=UTC),
             record_type="visit",
             medications="Antiplatelet and statin therapy per recorded plan",
         ),
     ]
+    appointments = [
+        Appointment(
+            owner_id=uuid4(),
+            patient_id=uuid4(),
+            appointment_date=as_of + timedelta(days=10),
+            appointment_type="Stroke follow-up",
+            status="scheduled",
+        ),
+    ]
+    risk_history = [
+        RiskAssessmentHistory(
+            patient_id=uuid4(),
+            assessment_type=RiskAssessmentType.STROKE,
+            assessment_status="complete",
+            risk_level="moderate",
+            score=52.0,
+            probability=0.35,
+            model_kind=RULE_BASED_MODEL_KIND,
+            model_version="stroke_rule_based_v1",
+            evaluated_by_user_id=uuid4(),
+            evaluated_at=datetime(2026, 9, 15, tzinfo=UTC),
+        ),
+    ]
     items = build_clinical_summary_overview_items(
-        _bundle(health_measurements=measurements, medical_records=records),
+        _bundle(
+            health_measurements=measurements,
+            medical_records=records,
+            appointments=appointments,
+            risk_assessment_history=risk_history,
+        ),
         as_of=as_of,
     )
     keys = [item.key for item in items]
-    assert "fasting_glucose_trend" in keys
-    assert "blood_pressure_trend" in keys
-    assert "clinical_visit_summary" in keys
-    assert "imaging_summary" in keys
-    assert "medication_treatment_follow_up" in keys
+    assert keys == [
+        "blood_pressure_trend",
+        "fasting_glucose_trend",
+        "neurological_follow_up_summary",
+        "imaging_summary",
+        "medication_treatment_follow_up",
+        "upcoming_follow_up",
+    ]
+    assert "post_meal_glucose_trend" not in keys
+
+    bp = next(item for item in items if item.key == "blood_pressure_trend")
+    assert bp.source_count == 3
+    assert bp.message_key in {"trend_hybrid_increasing", "trend_hybrid_stable", "trend_hybrid_decreasing"}
+    assert bp.message_params.get("window_start")
+
+    neuro = next(item for item in items if item.key == "neurological_follow_up_summary")
+    assert neuro.message_key == "stroke_neurological_follow_up_documented"
+    assert "hemiparesis" not in neuro.message.lower()
+
+    imaging = next(item for item in items if item.key == "imaging_summary")
+    assert imaging.message_key == "brain_imaging_on_file"
+    assert imaging.message_params["record_date"] == "2026-05-12"
+
+    med = next(item for item in items if item.key == "medication_treatment_follow_up")
+    assert med.message_key == "stroke_secondary_prevention_documented"
+
+
+def test_stroke_overdue_follow_up_is_sixth_item() -> None:
+    as_of = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
+    records = [
+        _record(
+            record_type="visit",
+            title="Neurology follow-up",
+            diagnosis="Stroke follow-up documented.",
+        ),
+    ]
+    appointments = [
+        Appointment(
+            owner_id=uuid4(),
+            patient_id=uuid4(),
+            appointment_date=datetime(2026, 8, 10, tzinfo=UTC),
+            appointment_type="Stroke follow-up",
+            status="scheduled",
+        ),
+    ]
+    items = build_clinical_summary_overview_items(
+        _bundle(
+            medical_records=records,
+            appointments=appointments,
+            risk_assessment_history=[
+                RiskAssessmentHistory(
+                    patient_id=uuid4(),
+                    assessment_type=RiskAssessmentType.STROKE,
+                    assessment_status="complete",
+                    risk_level="moderate",
+                    score=50.0,
+                    probability=0.3,
+                    model_kind=RULE_BASED_MODEL_KIND,
+                    model_version="stroke_rule_based_v1",
+                    evaluated_by_user_id=uuid4(),
+                    evaluated_at=datetime(2026, 9, 1, tzinfo=UTC),
+                ),
+            ],
+        ),
+        as_of=as_of,
+    )
+    assert items[-1].key == "overdue_follow_up"
 
 
 def test_insufficient_data_returns_empty_overview() -> None:

@@ -242,12 +242,37 @@ async def test_doctor_a_blocked_on_doctor_b_patient_clinical_endpoints(
     pid = str(setup["patient_b1"].id)
     paths = [
         f"/api/v1/patients/{pid}/clinical-timeline",
+        f"/api/v1/patients/{pid}/clinical-summary",
         f"/api/v1/patients/{pid}/risk-assessments/diabetes?{ASSESSMENT_RANGE}",
         f"/api/v1/patients/{pid}/reports/health-summary.pdf?{REPORT_RANGE}",
     ]
     for path in paths:
         response = await client.get(path, headers=headers)
         assert response.status_code == 404, path
+
+
+@pytest.mark.asyncio
+async def test_doctor_b_can_read_b2_clinical_summary_doctor_a_denied(
+    client: AsyncClient,
+    user_repository,
+    patient_repository,
+    membership_repository,
+    assignment_repository,
+) -> None:
+    setup = await _seed_multi_doctor_org(
+        user_repository=user_repository,
+        patient_repository=patient_repository,
+        membership_repository=membership_repository,
+        assignment_repository=assignment_repository,
+    )
+    b2_id = str(setup["patient_b2"].id)
+    headers_b = await _login(client, setup["doctor_b"].email)
+    allowed = await client.get(f"/api/v1/patients/{b2_id}/clinical-summary", headers=headers_b)
+    assert allowed.status_code == 200
+
+    headers_a = await _login(client, setup["doctor_a"].email)
+    denied = await client.get(f"/api/v1/patients/{b2_id}/clinical-summary", headers=headers_a)
+    assert denied.status_code == 404
 
 
 @pytest.mark.asyncio

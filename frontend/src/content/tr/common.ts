@@ -158,6 +158,7 @@ export const commonContent: CommonContent = {
       laboratory_summary: "Laboratuvar",
       imaging_summary: "Görüntüleme",
       clinical_visit_summary: "Klinik muayene notu",
+      neurological_follow_up_summary: "Nörolojik takip",
       medication_treatment_follow_up: "İlaç ve takip",
       upcoming_follow_up: "Yaklaşan kontrol",
       overdue_follow_up: "Gecikmiş takip",
@@ -212,6 +213,11 @@ export const commonContent: CommonContent = {
         "Diyabet ilaç ve takip planı klinik kayıtlarda belgelenmiştir.",
       diabetes_follow_up_plan_documented:
         "Evde kan şekeri takibi, üç aylık HbA1c kontrolü ve yaşam tarzı danışmanlığına ilişkin takip planı kayıtlarda yer almaktadır.",
+      stroke_neurological_follow_up_documented:
+        "Nörolojik takip ve inme sonrası klinik değerlendirme ({record_date}) kayıtlarda belgelenmiştir.",
+      brain_imaging_on_file: "Beyin görüntüleme raporu ({record_date}) klinik kayıtlarda mevcut.",
+      stroke_secondary_prevention_documented:
+        "Sekonder korunma ve takip planı klinik kayıtlarda belgelenmiştir.",
       lipid_panel_summary:
         "En güncel lipid paneli ({record_date}): LDL {ldl} mg/dL ve HDL {hdl} mg/dL kayıtlı.",
       lipid_panel_with_triglycerides:

@@ -14,7 +14,9 @@ from app.application.analytics.clinical_summary_record_presentation import (
     is_documented_cardiac_monitoring_care_plan,
     is_documented_diabetes_medication_plan,
     is_documented_diabetes_monitoring_care_plan,
+    is_documented_stroke_secondary_prevention_plan,
     is_echocardiography_record,
+    is_stroke_neurology_follow_up_record,
     record_text_blob,
     sanitize_clinical_summary_text,
     sanitized_medication_or_treatment,
@@ -106,6 +108,14 @@ def _diabetes_follow_up_overview_item(
     return _cardiac_follow_up_overview_item(appointments, as_of=as_of)
 
 
+def _stroke_follow_up_overview_item(
+    appointments: list[Appointment],
+    *,
+    as_of: datetime,
+) -> ClinicalSummaryOverviewItemDTO | None:
+    return _cardiac_follow_up_overview_item(appointments, as_of=as_of)
+
+
 class _BuilderContext:
     def __init__(
         self,
@@ -143,16 +153,10 @@ def _builders_for_focus(focus: SummaryFocus, ctx: _BuilderContext) -> list[ItemB
                 context="fasting",
                 group=ctx.glucose_groups.get("fasting", []),
             ),
-            lambda: _visit_diagnosis_overview_item(ctx.records),
-            lambda: _imaging_overview_item(ctx.records, cardiac_focus=False),
-            lambda: _medication_treatment_overview_item(ctx.records),
-            lambda: _upcoming_appointment_overview_item(ctx.appointments, as_of=ctx.as_of),
-            lambda: _glucose_overview_item(
-                key="post_meal_glucose_trend",
-                label="Post-meal blood glucose",
-                context="post_meal",
-                group=ctx.glucose_groups.get("post_meal", []),
-            ),
+            lambda: _stroke_neurological_follow_up_overview_item(ctx.records),
+            lambda: _imaging_overview_item(ctx.records, stroke_focus=True),
+            lambda: _medication_treatment_overview_item(ctx.records, stroke_focus=True),
+            lambda: _stroke_follow_up_overview_item(ctx.appointments, as_of=ctx.as_of),
         ]
     if focus == "diabetes":
         return [
@@ -461,10 +465,41 @@ def _lab_overview_item(
     )
 
 
+def _stroke_neurological_follow_up_overview_item(
+    records: list[MedicalRecord],
+) -> ClinicalSummaryOverviewItemDTO | None:
+    neuro_visits = [
+        record
+        for record in records
+        if record.record_type.strip().lower() in _VISIT_RECORD_TYPES
+        and is_stroke_neurology_follow_up_record(record)
+        and ((record.diagnosis or "").strip() or (record.title or "").strip())
+    ]
+    if not neuro_visits:
+        return None
+    latest = max(neuro_visits, key=lambda row: (row.record_date, str(row.id)))
+    record_date = _record_date_param(latest.record_date)
+    return ClinicalSummaryOverviewItemDTO(
+        key="neurological_follow_up_summary",
+        severity="info",
+        label="Neurological follow-up",
+        message=(
+            "Neurological follow-up and post-stroke clinical assessment are documented "
+            "in clinical records."
+        ),
+        message_key="stroke_neurological_follow_up_documented",
+        message_params={"record_date": record_date},
+        source_count=len(neuro_visits),
+        data_window_start=latest.record_date,
+        data_window_end=latest.record_date,
+    )
+
+
 def _imaging_overview_item(
     records: list[MedicalRecord],
     *,
-    cardiac_focus: bool,
+    cardiac_focus: bool = False,
+    stroke_focus: bool = False,
 ) -> ClinicalSummaryOverviewItemDTO | None:
     imaging_records = [
         record
@@ -490,6 +525,19 @@ def _imaging_overview_item(
         )
 
     if is_brain_imaging_record(latest):
+        record_date = _record_date_param(latest.record_date)
+        if stroke_focus:
+            return ClinicalSummaryOverviewItemDTO(
+                key="imaging_summary",
+                severity="info",
+                label="Imaging",
+                message="Brain imaging report is documented in clinical records.",
+                message_key="brain_imaging_on_file",
+                message_params={"record_date": record_date},
+                source_count=len(imaging_records),
+                data_window_start=latest.record_date,
+                data_window_end=latest.record_date,
+            )
         snippet = _safe_record_snippet(latest)
         if snippet and not _contains_internal_markers(snippet):
             return ClinicalSummaryOverviewItemDTO(
@@ -589,6 +637,7 @@ def _medication_treatment_overview_item(
     records: list[MedicalRecord],
     *,
     diabetes_focus: bool = False,
+    stroke_focus: bool = False,
 ) -> ClinicalSummaryOverviewItemDTO | None:
     with_meds = [
         record
@@ -608,6 +657,18 @@ def _medication_treatment_overview_item(
             ],
         ),
     )
+    if stroke_focus and is_documented_stroke_secondary_prevention_plan(latest):
+        return ClinicalSummaryOverviewItemDTO(
+            key="medication_treatment_follow_up",
+            severity="info",
+            label="Medication and follow-up",
+            message="Secondary stroke prevention and follow-up plan documented in clinical records.",
+            message_key="stroke_secondary_prevention_documented",
+            source_count=len(with_meds),
+            data_window_start=latest.record_date,
+            data_window_end=latest.record_date,
+        )
+
     if diabetes_focus and is_documented_diabetes_medication_plan(latest):
         return ClinicalSummaryOverviewItemDTO(
             key="medication_treatment_follow_up",
