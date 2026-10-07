@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health-ai-platform.local/schemas/clinical_policy_profile.schema.json",
+  "title": "ClinicalPolicyProfile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile_id",
+    "profile_status",
+    "jurisdiction",
+    "specialty_key",
+    "preferred_guideline_families",
+    "rule_set_version",
+    "conflict_strategy"
+  ],
+  "properties": {
+    "profile_id": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "profile_status": {
+      "type": "string",
+      "enum": ["draft", "active", "inactive"]
+    },
+    "jurisdiction": { "type": "string", "minLength": 2, "maxLength": 8 },
+    "specialty_key": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "preferred_guideline_families": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1, "maxLength": 64 }
+    },
+    "rule_set_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+    },
+    "conflict_strategy": {
+      "type": "string",
+      "enum": ["advisor_curated_only", "prefer_first_family", "show_both_labeled"]
+    },
+    "approved_by": { "type": "string", "maxLength": 128 },
+    "approved_at": { "type": "string", "format": "date-time" },
+    "active_from": { "type": "string", "format": "date-time" },
+    "active_until": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "profile_status": { "const": "active" } },
+        "required": ["profile_status"]
+      },
+      "then": {
+        "required": ["approved_by", "approved_at", "active_from"]
+      }
+    }
+  ]
+}

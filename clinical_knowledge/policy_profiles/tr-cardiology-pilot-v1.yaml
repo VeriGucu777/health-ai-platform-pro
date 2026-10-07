@@ -1,0 +1,8 @@
+profile_id: tr-cardiology-pilot-v1
+profile_status: draft
+jurisdiction: TR
+specialty_key: cardiology
+preferred_guideline_families:
+  - esc
+rule_set_version: "0.0.0"
+conflict_strategy: advisor_curated_only

@@ -28,6 +28,8 @@ dependencies = [
     "prometheus-client>=0.21.0",
     "pgvector>=0.3.6",
     "fastembed==0.6.1",
+    "PyYAML>=6.0.2",
+    "jsonschema>=4.23.0",
 ]
 
 [project.optional-dependencies]

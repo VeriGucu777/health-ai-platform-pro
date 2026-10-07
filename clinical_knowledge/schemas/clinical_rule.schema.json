@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health-ai-platform.local/schemas/clinical_rule.schema.json",
+  "title": "ClinicalRule",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "rule_id",
+    "specialty_key",
+    "topic_key",
+    "rule_type",
+    "status",
+    "rule_version",
+    "clinical_intent",
+    "input_requirements",
+    "trigger_conditions",
+    "exclusion_conditions",
+    "output_definition",
+    "severity",
+    "priority",
+    "explanation_key",
+    "rationale_key",
+    "source_refs",
+    "guideline_refs",
+    "evidence_refs",
+    "clinical_review_status"
+  ],
+  "properties": {
+    "rule_id": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[A-Z0-9][A-Z0-9_-]*$"
+    },
+    "specialty_key": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "topic_key": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "rule_type": {
+      "type": "string",
+      "enum": [
+        "differential_support",
+        "differential_against",
+        "next_best_question",
+        "missing_information",
+        "safety_alert",
+        "red_flag",
+        "workflow_guard",
+        "contraindication_check",
+        "medication_safety",
+        "reimbursement_check"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "source_linked",
+        "license_cleared",
+        "clinical_review",
+        "approved_demo",
+        "approved_prod",
+        "deprecated",
+        "retired"
+      ]
+    },
+    "rule_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+    },
+    "clinical_intent": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "input_requirements": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 128 }
+    },
+    "trigger_conditions": { "type": "object" },
+    "exclusion_conditions": { "type": "object" },
+    "output_definition": { "type": "object" },
+    "severity": {
+      "type": "string",
+      "enum": ["info", "warning", "urgent"]
+    },
+    "priority": { "type": "integer", "minimum": 0, "maximum": 1000 },
+    "explanation_key": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "rationale_key": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "source_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9:_-]*$"
+      }
+    },
+    "guideline_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source_id", "section_ref"],
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9:_-]*$"
+          },
+          "section_ref": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "recommendation_id": { "type": "string", "maxLength": 128 }
+        }
+      }
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "type": "string", "maxLength": 128 }
+    },
+    "clinical_review_status": {
+      "type": "string",
+      "enum": ["not_reviewed", "review_pending", "reviewed", "approved", "superseded"]
+    },
+    "reviewed_by": { "type": "string", "maxLength": 128 },
+    "reviewed_at": { "type": "string", "format": "date-time" },
+    "approved_by": { "type": "string", "maxLength": 128 },
+    "approved_at": { "type": "string", "format": "date-time" },
+    "effective_from": { "type": "string", "format": "date-time" },
+    "effective_until": { "type": "string", "format": "date-time" },
+    "supersedes_rule_id": {
+      "type": "string",
+      "pattern": "^[A-Z0-9][A-Z0-9_-]*$"
+    },
+    "superseded_by_rule_id": {
+      "type": "string",
+      "pattern": "^[A-Z0-9][A-Z0-9_-]*$"
+    },
+    "change_reason": { "type": "string", "maxLength": 2000 }
+  }
+}

@@ -48,6 +48,9 @@ jobs:
       - name: Python import check
         run: python -c "import app.main"
 
+      - name: Validate clinical knowledge catalog
+        run: python scripts/validate_clinical_knowledge.py
+
       - name: Whitespace and conflict marker check (pull request)
         if: github.event_name == 'pull_request'
         run: git diff --check "origin/${{ github.base_ref }}"...HEAD
