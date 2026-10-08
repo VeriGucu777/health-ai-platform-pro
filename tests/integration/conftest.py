@@ -17,6 +17,9 @@ from app.infrastructure.repositories.patient_repository import SQLAlchemyPatient
 from app.infrastructure.repositories.risk_assessment_history_repository import (
     SQLAlchemyRiskAssessmentHistoryRepository,
 )
+from app.infrastructure.repositories.clinical_encounter_repository import (
+    SQLAlchemyClinicalEncounterRepository,
+)
 from app.infrastructure.repositories.user_repository import SQLAlchemyUserRepository
 from tests.integration.support.database import (
     IntegrationDatabaseUrls,
@@ -139,3 +142,10 @@ def risk_assessment_history_repository(
     db_session: AsyncSession,
 ) -> SQLAlchemyRiskAssessmentHistoryRepository:
     return SQLAlchemyRiskAssessmentHistoryRepository(db_session)
+
+
+@pytest.fixture
+def clinical_encounter_repository(
+    db_session: AsyncSession,
+) -> SQLAlchemyClinicalEncounterRepository:
+    return SQLAlchemyClinicalEncounterRepository(db_session)

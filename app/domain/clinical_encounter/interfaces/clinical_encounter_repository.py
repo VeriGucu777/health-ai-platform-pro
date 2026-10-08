@@ -3,12 +3,20 @@
 from abc import abstractmethod
 from uuid import UUID
 
-from app.domain.clinical_encounter.entities import ClinicalEncounter
+from app.domain.clinical_encounter.entities import ClinicalEncounterAggregate
 from app.domain.interfaces.repository import Repository
 
 
-class ClinicalEncounterRepository(Repository[ClinicalEncounter]):
+class ClinicalEncounterRepository(Repository[ClinicalEncounterAggregate]):
     """Persistence contract for ClinicalEncounter aggregate (implementation in infrastructure)."""
+
+    @abstractmethod
+    async def add(self, aggregate: ClinicalEncounterAggregate) -> ClinicalEncounterAggregate:
+        """Persist a new encounter aggregate (flush only; caller owns commit)."""
+
+    @abstractmethod
+    async def save(self, aggregate: ClinicalEncounterAggregate) -> ClinicalEncounterAggregate:
+        """Persist aggregate changes with optimistic version checking."""
 
     @abstractmethod
     async def list_for_patient(
@@ -18,7 +26,7 @@ class ClinicalEncounterRepository(Repository[ClinicalEncounter]):
         organization_id: UUID | None = None,
         offset: int = 0,
         limit: int = 100,
-    ) -> list[ClinicalEncounter]:
+    ) -> list[ClinicalEncounterAggregate]:
         """List encounters for a patient, optionally scoped to an organization."""
 
     @abstractmethod
@@ -26,7 +34,7 @@ class ClinicalEncounterRepository(Repository[ClinicalEncounter]):
         self,
         patient_id: UUID,
         organization_id: UUID,
-    ) -> ClinicalEncounter | None:
+    ) -> ClinicalEncounterAggregate | None:
         """Return the active encounter for patient/org if one exists (DB-enforced uniqueness later)."""
 
     @abstractmethod

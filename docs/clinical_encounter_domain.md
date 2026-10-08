@@ -53,3 +53,11 @@ Finalized encounters are not silently edited. Future addendum/amendment workflow
 ## Persistence (Phase 1C.1)
 
 SQLAlchemy models under `app/infrastructure/database/models/clinical_encounter.py` map to `clinical_encounters` and child tables. Status and types are stored as **strings** (project convention). Partial unique indexes enforce one **active** encounter per `(patient_id, organization_id)`, one non-null `appointment_id`, one active primary complaint, and one active `(encounter_id, question_key)` response. `health_measurements.encounter_id` and `medical_records.encounter_id` are nullable optional links (`ON DELETE SET NULL`). Aggregate and child FKs use **RESTRICT** (no cascade delete of clinical rows). `summary_sections` is JSONB at persistence only; shape is validated in application/domain before write.
+
+## Repository (Phase 1C.2)
+
+- Port: `ClinicalEncounterRepository` operates on `ClinicalEncounterAggregate` (root + operational children + optional final summary).
+- SQL: `SQLAlchemyClinicalEncounterRepository` uses `flush()` only; **no commit** (application layer owns transactions).
+- Optimistic concurrency: `save()` updates encounter row with `WHERE version = expected`; mismatch raises `ClinicalEncounterConcurrencyError`.
+- Normal load returns **active** child rows only (`is_active` and `deleted_at IS NULL`), ordered by `sequence_no`.
+- In-memory fake: `tests/support/memory_clinical_encounter_repository.py` for unit tests (copy isolation + core invariants).

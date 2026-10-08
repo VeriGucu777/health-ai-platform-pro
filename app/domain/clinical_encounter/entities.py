@@ -355,3 +355,14 @@ class EncounterQuestionResponse:
 def assert_child_mutable_for_encounter(encounter: ClinicalEncounter) -> None:
     """Guard child mutations against terminal encounter states."""
     encounter.assert_mutable()
+
+
+@dataclass(frozen=True)
+class ClinicalEncounterAggregate:
+    """Loaded/persisted encounter root with operational child collections."""
+
+    encounter: ClinicalEncounter
+    complaints: tuple[EncounterComplaint, ...] = ()
+    findings: tuple[EncounterFinding, ...] = ()
+    question_responses: tuple[EncounterQuestionResponse, ...] = ()
+    final_summary: EncounterFinalSummary | None = None

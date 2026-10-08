@@ -2,6 +2,7 @@
 
 from app.domain.clinical_encounter.entities import (
     ClinicalEncounter,
+    ClinicalEncounterAggregate,
     EncounterComplaint,
     EncounterFinalSummary,
     EncounterFinding,
@@ -13,6 +14,7 @@ from app.domain.clinical_encounter.enums import EncounterStatus
 
 __all__ = [
     "ClinicalEncounter",
+    "ClinicalEncounterAggregate",
     "EncounterComplaint",
     "EncounterFinalSummary",
     "EncounterFinding",
