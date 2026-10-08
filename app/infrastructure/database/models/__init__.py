@@ -2,6 +2,13 @@
 
 from app.infrastructure.database.base import Base
 from app.infrastructure.database.models.appointment import AppointmentModel
+from app.infrastructure.database.models.clinical_encounter import (
+    ClinicalEncounterModel,
+    EncounterComplaintModel,
+    EncounterFinalSummaryModel,
+    EncounterFindingModel,
+    EncounterQuestionResponseModel,
+)
 from app.infrastructure.database.models.clinical_retrieval_vector import ClinicalRetrievalVectorModel
 from app.infrastructure.database.models.audit_log import AuditLogModel
 from app.infrastructure.database.models.email_verification_token import EmailVerificationTokenModel
@@ -19,6 +26,11 @@ from app.infrastructure.database.models.user_refresh_session import UserRefreshS
 __all__ = [
     "Base",
     "AppointmentModel",
+    "ClinicalEncounterModel",
+    "EncounterComplaintModel",
+    "EncounterFinalSummaryModel",
+    "EncounterFindingModel",
+    "EncounterQuestionResponseModel",
     "ClinicalRetrievalVectorModel",
     "AuditLogModel",
     "EmailVerificationTokenModel",

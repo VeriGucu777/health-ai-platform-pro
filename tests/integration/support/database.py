@@ -32,6 +32,11 @@ EXPECTED_TABLES = frozenset(
         "audit_logs",
         "risk_assessment_history",
         "clinical_retrieval_vectors",
+        "clinical_encounters",
+        "encounter_complaints",
+        "encounter_findings",
+        "encounter_question_responses",
+        "encounter_final_summaries",
         "alembic_version",
     }
 )
@@ -39,8 +44,13 @@ EXPECTED_TABLES = frozenset(
 TRUNCATE_TABLES = (
     "clinical_retrieval_vectors",
     "risk_assessment_history",
+    "encounter_final_summaries",
+    "encounter_question_responses",
+    "encounter_findings",
+    "encounter_complaints",
     "health_measurements",
     "medical_records",
+    "clinical_encounters",
     "appointments",
     "patient_assignments",
     "patient_consents",

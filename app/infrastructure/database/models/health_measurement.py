@@ -25,6 +25,11 @@ class HealthMeasurementModel(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         nullable=False,
         index=True,
     )
+    encounter_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("clinical_encounters.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     measured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     blood_glucose: Mapped[Decimal | None] = mapped_column(Numeric(8, 2), nullable=True)
     glucose_context: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
