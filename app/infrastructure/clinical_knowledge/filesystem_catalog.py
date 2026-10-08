@@ -12,7 +12,12 @@ from app.domain.clinical_knowledge.interfaces.source_registry import ClinicalKno
 from app.domain.clinical_knowledge.models import ClinicalKnowledgeSource, ClinicalRule
 from app.infrastructure.clinical_knowledge.mapping import rule_from_dict, source_from_dict
 from app.infrastructure.clinical_knowledge.paths import assert_safe_rule_id, assert_safe_source_id
-from app.infrastructure.clinical_knowledge.yaml_loader import iter_yaml_files, load_yaml_mapping
+from app.application.clinical_knowledge.exceptions import ClinicalKnowledgeCatalogIntegrityError
+from app.infrastructure.clinical_knowledge.yaml_loader import (
+    iter_manifest_yaml_files,
+    iter_manifest_yaml_files_recursive,
+    load_yaml_mapping,
+)
 
 
 class ClinicalKnowledgeLoadError(Exception):
@@ -43,14 +48,18 @@ def _validate_against_schema(
 
 def load_sources_from_root(knowledge_root: Path) -> tuple[ClinicalKnowledgeSource, ...]:
     """Load and validate all source manifests (fail closed)."""
-    schema_path = knowledge_root / "schemas" / "clinical_knowledge_source.schema.json"
+    root = knowledge_root.resolve()
+    schema_path = root / "schemas" / "clinical_knowledge_source.schema.json"
     validator = _schema_validator(schema_path)
-    sources_dir = knowledge_root / "sources"
+    sources_dir = root / "sources"
     seen: set[str] = set()
     loaded: list[ClinicalKnowledgeSource] = []
 
-    for path in iter_yaml_files(sources_dir):
-        data = load_yaml_mapping(path)
+    for path in iter_manifest_yaml_files(sources_dir):
+        try:
+            data = load_yaml_mapping(path, knowledge_root=root)
+        except (ValueError, ClinicalKnowledgeCatalogIntegrityError) as exc:
+            raise ClinicalKnowledgeLoadError(str(exc)) from exc
         _validate_against_schema(data, validator, manifest_path=path)
         source = source_from_dict(data)
         assert_safe_source_id(source.source_id)
@@ -69,18 +78,21 @@ def load_sources_from_root(knowledge_root: Path) -> tuple[ClinicalKnowledgeSourc
 
 def load_rules_from_root(knowledge_root: Path) -> tuple[ClinicalRule, ...]:
     """Load and validate all rule YAML files under rules/ (fail closed)."""
-    schema_path = knowledge_root / "schemas" / "clinical_rule.schema.json"
+    root = knowledge_root.resolve()
+    schema_path = root / "schemas" / "clinical_rule.schema.json"
     validator = _schema_validator(schema_path)
-    rules_dir = knowledge_root / "rules"
+    rules_dir = root / "rules"
     seen: set[str] = set()
     loaded: list[ClinicalRule] = []
 
     if not rules_dir.is_dir():
         return ()
 
-    yaml_paths = sorted(rules_dir.rglob("*.yaml"))
-    for path in yaml_paths:
-        data = load_yaml_mapping(path)
+    for path in iter_manifest_yaml_files_recursive(rules_dir):
+        try:
+            data = load_yaml_mapping(path, knowledge_root=root)
+        except (ValueError, ClinicalKnowledgeCatalogIntegrityError) as exc:
+            raise ClinicalKnowledgeLoadError(str(exc)) from exc
         _validate_against_schema(data, validator, manifest_path=path)
         rule = rule_from_dict(data)
         assert_safe_rule_id(rule.rule_id)

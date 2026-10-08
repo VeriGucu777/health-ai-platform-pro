@@ -2,22 +2,14 @@
 
 from __future__ import annotations
 
-import hashlib
 from dataclasses import dataclass
 
+from app.application.clinical_knowledge.manifest_hash import rule_set_manifest_hash
 from app.domain.clinical_decision.exceptions import ClinicalDecisionEngineUnavailableError
 from app.domain.clinical_knowledge.interfaces.rule_catalog import ClinicalRuleCatalog
-from app.domain.clinical_knowledge.models import ClinicalRule
 
-
-def rule_set_manifest_hash(rules: tuple[ClinicalRule, ...]) -> str:
-    """Deterministic identity for an approved-production rule set (empty set included)."""
-    if not rules:
-        payload = "approved_prod_rules:v1:empty"
-        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
-    parts = sorted(f"{rule.rule_id}:{rule.rule_version}" for rule in rules)
-    payload = "approved_prod_rules:v1:" + "|".join(parts)
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+# Re-export for existing imports.
+__all__ = ["RuleCatalogView", "rule_set_manifest_hash"]
 
 
 @dataclass(frozen=True)

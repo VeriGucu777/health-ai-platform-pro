@@ -46,6 +46,18 @@ The engine **does not**:
 
 **Draft policy profiles** (e.g. `tr-cardiology-pilot-v1`) are **not** presented as production-active; orchestrator emits `policy_profile_id=none` until a profile is explicitly production-active.
 
+## Validated rule catalog provider (Phase 0B.4)
+
+`ValidatedFilesystemClinicalRuleCatalogProvider` loads the git catalog under `clinical_knowledge/`, runs the same `DefaultRuleCatalogValidator` as CI, and builds an immutable `ValidatedProductionRuleCatalog` plus `RuleCatalogView` (manifest hash, `list_active_production_rules`).
+
+| Behavior | Detail |
+|----------|--------|
+| Fail-closed | Invalid YAML, duplicate IDs, bad license, or missing prod approval → load raises; no degraded prod view |
+| Prod filter | Only `approved_prod` rules that pass review, approval metadata, verified source licenses, and effective dates |
+| Demo separation | `list_approved_demo_rules` exists on the catalog; orchestrator prod path must not use demo rules |
+| Hash | `rule_set_manifest_hash` — SHA-256; empty prod rules → `SHA-256("approved_prod_rules:v1:empty")` |
+| Wiring | **Not** registered in FastAPI or startup; unit tests and scripts consume it directly |
+
 **Zero-clinical-claim guarantee:** With zero `approved_prod` rules, specialty modules return empty slices — no fake differentials, questions, or alerts.
 
 ## Specialty module boundary

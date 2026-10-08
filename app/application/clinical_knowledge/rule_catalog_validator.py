@@ -29,7 +29,7 @@ from app.infrastructure.clinical_knowledge.filesystem_catalog import (
 )
 from app.infrastructure.clinical_knowledge.mapping import policy_profile_from_dict
 from app.infrastructure.clinical_knowledge.paths import assert_safe_source_id
-from app.infrastructure.clinical_knowledge.yaml_loader import iter_yaml_files, load_yaml_mapping
+from app.infrastructure.clinical_knowledge.yaml_loader import iter_manifest_yaml_files, load_yaml_mapping
 
 
 def _schema_validator(schema_path: Path) -> Draft202012Validator:
@@ -148,9 +148,10 @@ class DefaultRuleCatalogValidator(RuleCatalogValidator):
                     )
 
         profile_validator = _schema_validator(root / "schemas" / "clinical_policy_profile.schema.json")
-        for path in iter_yaml_files(root / "policy_profiles"):
+        seen_profile_ids: set[str] = set()
+        for path in iter_manifest_yaml_files(root / "policy_profiles"):
             try:
-                data = load_yaml_mapping(path)
+                data = load_yaml_mapping(path, knowledge_root=root)
             except ValueError as exc:
                 result.issues.append(
                     RuleCatalogValidationIssue(
@@ -172,6 +173,16 @@ class DefaultRuleCatalogValidator(RuleCatalogValidator):
                 )
                 continue
             profile = policy_profile_from_dict(data)
+            if profile.profile_id in seen_profile_ids:
+                result.issues.append(
+                    RuleCatalogValidationIssue(
+                        code="duplicate_profile_id",
+                        message=f"duplicate profile_id {profile.profile_id!r} in {path}",
+                        path=str(path),
+                    ),
+                )
+                continue
+            seen_profile_ids.add(profile.profile_id)
             if profile.specialty_key not in KNOWN_SPECIALTY_KEYS:
                 result.issues.append(
                     RuleCatalogValidationIssue(
