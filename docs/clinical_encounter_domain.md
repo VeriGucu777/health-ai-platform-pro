@@ -61,3 +61,14 @@ SQLAlchemy models under `app/infrastructure/database/models/clinical_encounter.p
 - Optimistic concurrency: `save()` updates encounter row with `WHERE version = expected`; mismatch raises `ClinicalEncounterConcurrencyError`.
 - Normal load returns **active** child rows only (`is_active` and `deleted_at IS NULL`), ordered by `sequence_no`.
 - In-memory fake: `tests/support/memory_clinical_encounter_repository.py` for unit tests (copy isolation + core invariants).
+
+## Application service (Phase 1C.3)
+
+- `ClinicalEncounterService` extends `ClinicalPatientChildService` and reuses **PatientAccessPolicy** plus the existing **clinical consent gate** (`CLINICAL_DATA_PROCESSING` when enforced).
+- **Create** starts an encounter in **`active`** status immediately (explicit “start visit” semantics); `draft` remains available on the domain for future appointment pre-create flows.
+- **Mutations** (complaint/finding/response/finalize/cancel) require `UserRole.DOCTOR`, `PatientAccessAction.WRITE`, and `actor_id == encounter.clinician_user_id`. Clinic admin and system admin cannot mutate encounters (MVP).
+- **Reads/list** require `PatientAccessAction.READ` with standard org/assignment masking (`404` at HTTP layer later).
+- **One active encounter** per patient/org: application pre-check plus repository/DB conflict mapping to `ActiveClinicalEncounterAlreadyExists`.
+- **Transactions**: repository flush-only; `ApplicationTransaction` (`AsyncSessionApplicationTransaction` in infrastructure) commits once per use case.
+- **Audit**: optional `ClinicalEncounterAuditHook` (default no-op); concrete audit events deferred to Phase 1C.4/API wiring.
+- **No** Clinical Decision Engine, API routes, or frontend in this phase.
