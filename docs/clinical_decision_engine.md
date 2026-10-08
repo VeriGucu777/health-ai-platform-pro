@@ -27,7 +27,30 @@ The engine **does not**:
 
 ## NoOp engine
 
-`NoOpClinicalDecisionEngine` returns `evaluation_status=no_applicable_rules` with empty output arrays. It is **not** registered in FastAPI or `app.main` until a later phase.
+`NoOpClinicalDecisionEngine` returns `evaluation_status=no_applicable_rules` with empty output arrays. It does **not** resolve specialty modules or read a rule catalog. It is **not** registered in FastAPI or `app.main` until a later phase.
+
+## Orchestrator (Phase 0B.3)
+
+`ClinicalDecisionOrchestrator`:
+
+1. Validates/resolves the specialty via `SpecialtyDecisionModuleRegistry`
+2. Requires an available `RuleCatalogView` (validated `ClinicalRuleCatalog` port only)
+3. Delegates to a specialty module (e.g. `CardiologyNoRuleSpecialtyModule`)
+4. Wraps a `SpecialtyEvaluationSlice` into `ClinicalDecisionEvaluationResult`
+
+**Empty approved_prod rules:** `evaluation_status=no_applicable_rules` (valid state; not `unavailable`).
+
+**Unsupported specialty:** `UnsupportedSpecialtyError` (no silent fallback to cardiology or NoOp).
+
+**Catalog unavailable/corrupt:** `ClinicalDecisionEngineUnavailableError`.
+
+**Draft policy profiles** (e.g. `tr-cardiology-pilot-v1`) are **not** presented as production-active; orchestrator emits `policy_profile_id=none` until a profile is explicitly production-active.
+
+**Zero-clinical-claim guarantee:** With zero `approved_prod` rules, specialty modules return empty slices — no fake differentials, questions, or alerts.
+
+## Specialty module boundary
+
+Specialty modules consume **rules** via `ClinicalRuleCatalog`, not guideline PDFs or source YAML paths. Cardiology pack stubs may later add hypertension / ACS / CCS rule groups without new orchestrator logic.
 
 ## Outputs (MVP)
 
