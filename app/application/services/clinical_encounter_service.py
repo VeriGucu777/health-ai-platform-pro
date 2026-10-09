@@ -14,6 +14,7 @@ from app.application.clinical_encounter.aggregate_ops import (
     deactivate_complaint_by_id,
     record_question_response,
 )
+from app.application.clinical_encounter.audit_events import ClinicalEncounterAuditEvent
 from app.application.clinical_encounter.audit_hook import (
     ClinicalEncounterAuditHook,
     NoOpClinicalEncounterAuditHook,
@@ -86,7 +87,7 @@ class ClinicalEncounterService(ClinicalPatientChildService):
         self._appointments = appointment_repository
         self._transaction = transaction
         self._clock = clock or SystemUtcClock()
-        self._audit = audit_hook or NoOpClinicalEncounterAuditHook()
+        self._encounter_audit = audit_hook or NoOpClinicalEncounterAuditHook()
 
     async def create_encounter(
         self,
@@ -140,11 +141,19 @@ class ClinicalEncounterService(ClinicalPatientChildService):
                 created = await self._encounters.add(aggregate)
             except ClinicalEncounterConflictError as exc:
                 raise self._map_conflict(exc) from exc
-            await self._audit.encounter_created(
-                encounter_id=created.encounter.id,
-                patient_id=patient_id,
-                organization_id=organization_id,
-                actor_id=actor_id,
+            enc = created.encounter
+            await self._record_encounter_audit(
+                ClinicalEncounterAuditEvent(
+                    operation="encounter_created",
+                    actor_id=actor_id,
+                    actor_role=actor_role,
+                    organization_id=organization_id,
+                    patient_id=patient_id,
+                    encounter_id=enc.id,
+                    encounter_version=enc.version,
+                    encounter_status=enc.status.value,
+                    specialty_key=enc.specialty_key,
+                ),
             )
             return created
 
@@ -167,11 +176,18 @@ class ClinicalEncounterService(ClinicalPatientChildService):
         )
         if not self._organization_visible(aggregate.encounter.organization_id, actor_role):
             raise ClinicalEncounterNotFoundError()
-        await self._audit.encounter_viewed(
-            encounter_id=encounter_id,
-            patient_id=aggregate.encounter.patient_id,
-            organization_id=aggregate.encounter.organization_id,
-            actor_id=actor_id,
+        enc = aggregate.encounter
+        await self._record_encounter_audit(
+            ClinicalEncounterAuditEvent(
+                operation="encounter_viewed",
+                actor_id=actor_id,
+                actor_role=actor_role,
+                organization_id=enc.organization_id,
+                patient_id=enc.patient_id,
+                encounter_id=enc.id,
+                encounter_status=enc.status.value,
+                specialty_key=enc.specialty_key,
+            ),
         )
         return aggregate
 
@@ -196,12 +212,27 @@ class ClinicalEncounterService(ClinicalPatientChildService):
             if org_filter is not None and org_filter != ctx.organization_id:
                 raise NotFoundError("Patient not found")
             org_filter = ctx.organization_id
-        return await self._encounters.list_for_patient(
+        items = await self._encounters.list_for_patient(
             patient_id,
             organization_id=org_filter,
             offset=offset,
             limit=limit,
         )
+        org_id = org_filter or ctx.organization_id
+        if org_id is None:
+            raise NotFoundError("Patient not found")
+        await self._record_encounter_audit(
+            ClinicalEncounterAuditEvent(
+                operation="encounter_list_viewed",
+                actor_id=actor_id,
+                actor_role=actor_role,
+                organization_id=org_id,
+                patient_id=patient_id,
+                encounter_id=None,
+                result_count=len(items),
+            ),
+        )
+        return items
 
     async def add_complaint(
         self,
@@ -227,7 +258,21 @@ class ClinicalEncounterService(ClinicalPatientChildService):
                 recorded_at=now,
                 recorded_by=actor_id,
             )
-            return await self._save_aggregate(updated)
+            saved = await self._save_aggregate(updated)
+            complaint = saved.complaints[-1]
+            await self._record_encounter_audit(
+                self._mutation_audit_event(
+                    aggregate=saved,
+                    actor_id=actor_id,
+                    actor_role=actor_role,
+                    operation="complaint_added",
+                    child_kind="complaint",
+                    child_id=complaint.id,
+                    is_primary=is_primary,
+                    negated=negated,
+                ),
+            )
+            return saved
 
         return await self._run_unit_of_work(_persist)
 
@@ -262,7 +307,19 @@ class ClinicalEncounterService(ClinicalPatientChildService):
 
         async def _persist() -> ClinicalEncounterAggregate:
             updated = append_finding(aggregate, finding=finding)
-            return await self._save_aggregate(updated)
+            saved = await self._save_aggregate(updated)
+            finding_row = saved.findings[-1]
+            await self._record_encounter_audit(
+                self._mutation_audit_event(
+                    aggregate=saved,
+                    actor_id=actor_id,
+                    actor_role=actor_role,
+                    operation="finding_added",
+                    child_kind="finding",
+                    child_id=finding_row.id,
+                ),
+            )
+            return saved
 
         return await self._run_unit_of_work(_persist)
 
@@ -280,6 +337,11 @@ class ClinicalEncounterService(ClinicalPatientChildService):
     ) -> ClinicalEncounterAggregate:
         aggregate = await self._load_owned_for_mutation(actor_id, actor_role, encounter_id)
         now = self._clock.now_utc()
+        had_active = any(
+            r.question_key == question_key and r.is_active and r.deleted_at is None
+            for r in aggregate.question_responses
+        )
+        operation = "question_response_updated" if had_active else "question_response_recorded"
 
         async def _persist() -> ClinicalEncounterAggregate:
             updated = record_question_response(
@@ -292,7 +354,23 @@ class ClinicalEncounterService(ClinicalPatientChildService):
                 answered_at=now,
                 answered_by=actor_id,
             )
-            return await self._save_aggregate(updated)
+            saved = await self._save_aggregate(updated)
+            response = next(
+                r
+                for r in saved.question_responses
+                if r.question_key == question_key and r.is_active and r.deleted_at is None
+            )
+            await self._record_encounter_audit(
+                self._mutation_audit_event(
+                    aggregate=saved,
+                    actor_id=actor_id,
+                    actor_role=actor_role,
+                    operation=operation,
+                    child_kind="question_response",
+                    child_id=response.id,
+                ),
+            )
+            return saved
 
         return await self._run_unit_of_work(_persist)
 
@@ -308,7 +386,18 @@ class ClinicalEncounterService(ClinicalPatientChildService):
 
         async def _persist() -> ClinicalEncounterAggregate:
             updated = deactivate_complaint_by_id(aggregate, complaint_id, at=now)
-            return await self._save_aggregate(updated)
+            saved = await self._save_aggregate(updated)
+            await self._record_encounter_audit(
+                self._mutation_audit_event(
+                    aggregate=saved,
+                    actor_id=actor_id,
+                    actor_role=actor_role,
+                    operation="child_deactivated",
+                    child_kind="complaint",
+                    child_id=complaint_id,
+                ),
+            )
+            return saved
 
         return await self._run_unit_of_work(_persist)
 
@@ -344,9 +433,22 @@ class ClinicalEncounterService(ClinicalPatientChildService):
             )
             working = replace(working, final_summary=summary)
             try:
-                return await self._save_aggregate(working)
+                saved = await self._save_aggregate(working)
             except ClinicalEncounterFinalSummaryConflictError as exc:
                 raise ClinicalEncounterFinalizationError(str(exc)) from exc
+            summary = saved.final_summary
+            assert summary is not None
+            await self._record_encounter_audit(
+                self._mutation_audit_event(
+                    aggregate=saved,
+                    actor_id=actor_id,
+                    actor_role=actor_role,
+                    operation="encounter_finalized",
+                    child_kind="final_summary",
+                    child_id=summary.id,
+                ),
+            )
+            return saved
 
         return await self._run_unit_of_work(_persist)
 
@@ -364,7 +466,16 @@ class ClinicalEncounterService(ClinicalPatientChildService):
             expected_version = working.encounter.version
             working.encounter.cancel(at=now)
             working.encounter.version = expected_version
-            return await self._save_aggregate(working)
+            saved = await self._save_aggregate(working)
+            await self._record_encounter_audit(
+                self._mutation_audit_event(
+                    aggregate=saved,
+                    actor_id=actor_id,
+                    actor_role=actor_role,
+                    operation="encounter_cancelled",
+                ),
+            )
+            return saved
 
         return await self._run_unit_of_work(_persist)
 
@@ -398,6 +509,38 @@ class ClinicalEncounterService(ClinicalPatientChildService):
             raise ClinicalEncounterStaleVersionError() from exc
         except ClinicalEncounterConflictError as exc:
             raise self._map_conflict(exc) from exc
+
+    async def _record_encounter_audit(self, event: ClinicalEncounterAuditEvent) -> None:
+        await self._encounter_audit.record_event(event)
+
+    @staticmethod
+    def _mutation_audit_event(
+        *,
+        aggregate: ClinicalEncounterAggregate,
+        actor_id: UUID,
+        actor_role: UserRole,
+        operation: str,
+        child_kind: str | None = None,
+        child_id: UUID | None = None,
+        is_primary: bool | None = None,
+        negated: bool | None = None,
+    ) -> ClinicalEncounterAuditEvent:
+        enc = aggregate.encounter
+        return ClinicalEncounterAuditEvent(
+            operation=operation,
+            actor_id=actor_id,
+            actor_role=actor_role,
+            organization_id=enc.organization_id,
+            patient_id=enc.patient_id,
+            encounter_id=enc.id,
+            child_kind=child_kind,
+            child_id=child_id,
+            encounter_version=enc.version,
+            encounter_status=enc.status.value,
+            specialty_key=enc.specialty_key,
+            is_primary=is_primary,
+            negated=negated,
+        )
 
     async def _validate_appointment_link(
         self,

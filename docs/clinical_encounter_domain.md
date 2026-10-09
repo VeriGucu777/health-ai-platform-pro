@@ -70,5 +70,5 @@ SQLAlchemy models under `app/infrastructure/database/models/clinical_encounter.p
 - **Reads/list** require `PatientAccessAction.READ` with standard org/assignment masking (`404` at HTTP layer later).
 - **One active encounter** per patient/org: application pre-check plus repository/DB conflict mapping to `ActiveClinicalEncounterAlreadyExists`.
 - **Transactions**: repository flush-only; `ApplicationTransaction` (`AsyncSessionApplicationTransaction` in infrastructure) commits once per use case.
-- **Audit**: optional `ClinicalEncounterAuditHook` (default no-op); concrete audit events deferred to Phase 1C.4/API wiring.
-- **No** Clinical Decision Engine, API routes, or frontend in this phase.
+- **Audit (Phase 1C.4)**: `ClinicalEncounterAuditRecorder` appends to existing `audit_logs` via `AuditService` (`AuditResourceType.CLINICAL_ENCOUNTER`). Metadata is PHI-scrubbed (`operation`, `child_kind`, `child_id`, `version`, `status`, etc. only — no complaint/finding/answer text). Mutations are **fail-closed**: audit persistence failure aborts the unit-of-work and rolls back encounter changes. Reads (`get_encounter`, `list_patient_encounters`) also fail closed if audit cannot be recorded. List emits **one** `encounter_list_viewed` audit per call (not per row). API `AuthAuditContext`/request correlation deferred until HTTP wiring.
+- **No** Clinical Decision Engine or frontend in this phase.

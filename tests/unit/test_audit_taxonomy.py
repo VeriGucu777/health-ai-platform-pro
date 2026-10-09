@@ -11,7 +11,8 @@ def test_audit_resource_type_values() -> None:
     assert AuditResourceType.PATIENT_CLINICAL_SUMMARY == "patient_clinical_summary"
     assert AuditResourceType.CLINICAL_RETRIEVAL == "clinical_retrieval"
     assert AuditResourceType.CLINICAL_NARRATIVE == "clinical_narrative"
-    assert len(AuditResourceType) == 10
+    assert AuditResourceType.CLINICAL_ENCOUNTER == "clinical_encounter"
+    assert len(AuditResourceType) == 11
 
 
 def test_audit_action_values() -> None:

@@ -43,6 +43,10 @@ ALLOWED_METADATA_KEYS = frozenset(
         "fallback_used",
         "language",
         "max_evidence",
+        "operation",
+        "negated",
+        "specialty_key",
+        "result_count",
     }
 )
 

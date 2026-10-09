@@ -1,36 +1,18 @@
-"""Optional audit hook for clinical encounter lifecycle (Phase 1C.4 wiring)."""
+"""Clinical encounter audit hook port (Phase 1C.4 concrete recorder in services)."""
 
 from typing import Protocol
-from uuid import UUID
+
+from app.application.clinical_encounter.audit_events import ClinicalEncounterAuditEvent
 
 
 class ClinicalEncounterAuditHook(Protocol):
-    """Record encounter lifecycle events without coupling to AuditService yet."""
+    """Record encounter lifecycle events; failures must propagate for mutations."""
 
-    async def encounter_created(
-        self,
-        *,
-        encounter_id: UUID,
-        patient_id: UUID,
-        organization_id: UUID,
-        actor_id: UUID,
-    ) -> None: ...
-
-    async def encounter_viewed(
-        self,
-        *,
-        encounter_id: UUID,
-        patient_id: UUID,
-        organization_id: UUID,
-        actor_id: UUID,
-    ) -> None: ...
+    async def record_event(self, event: ClinicalEncounterAuditEvent) -> None: ...
 
 
 class NoOpClinicalEncounterAuditHook:
-    """Default hook until API layer records audit events."""
+    """Default until composition wires ClinicalEncounterAuditRecorder."""
 
-    async def encounter_created(self, **kwargs: object) -> None:
-        return None
-
-    async def encounter_viewed(self, **kwargs: object) -> None:
+    async def record_event(self, event: ClinicalEncounterAuditEvent) -> None:
         return None

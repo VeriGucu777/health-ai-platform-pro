@@ -133,6 +133,7 @@ def _service(
     consent=None,
     transaction=None,
     clock=None,
+    audit_hook=None,
 ) -> ClinicalEncounterService:
     svc = build_clinical_encounter_service(
         encounter_repository=encounters or InMemoryClinicalEncounterRepository(),
@@ -142,6 +143,7 @@ def _service(
         settings=settings,
         consent_repository=consent,
         transaction=transaction,
+        audit_hook=audit_hook,
     )
     if clock is not None:
         svc._clock = clock  # noqa: SLF001 — test seam

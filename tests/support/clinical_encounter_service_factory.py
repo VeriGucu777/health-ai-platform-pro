@@ -23,6 +23,7 @@ def build_clinical_encounter_service(
     settings: Settings | None = None,
     consent_repository: PatientConsentRepository | None = None,
     transaction=None,
+    audit_hook=None,
 ) -> ClinicalEncounterService:
     assignments = assignment_repository or InMemoryPatientAssignmentRepository()
     memberships = membership_repository or InMemoryOrganizationMembershipRepository()
@@ -36,4 +37,5 @@ def build_clinical_encounter_service(
         settings=settings,
         consent_repository=consent_repository,
         transaction=transaction,
+        audit_hook=audit_hook,
     )

@@ -15,6 +15,7 @@ class AuditResourceType(StrEnum):
     HEALTH_REPORT = "health_report"
     PATIENT_ASSIGNMENT = "patient_assignment"
     PATIENT_CONSENT = "patient_consent"
+    CLINICAL_ENCOUNTER = "clinical_encounter"
     AUTH = "auth"
 
 
