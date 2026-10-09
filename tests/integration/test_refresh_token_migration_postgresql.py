@@ -10,6 +10,7 @@ from sqlalchemy.pool import NullPool
 
 from tests.integration.support.database import (
     assert_safe_integration_url,
+    get_repository_alembic_head,
     run_alembic_current,
     run_alembic_downgrade,
     run_alembic_upgrade,
@@ -53,6 +54,7 @@ def test_user_refresh_sessions_migration(refresh_migration_db: str) -> None:
         )
 
     run_alembic_upgrade(refresh_migration_db, REFRESH_SESSIONS_REVISION)
+    assert run_alembic_current(refresh_migration_db) == REFRESH_SESSIONS_REVISION
 
     with engine.connect() as conn:
         user_columns = {
@@ -116,4 +118,5 @@ def test_user_refresh_sessions_migration(refresh_migration_db: str) -> None:
         assert "user_refresh_sessions" not in tables
 
     run_alembic_upgrade(refresh_migration_db, "head")
-    assert run_alembic_current(refresh_migration_db) == REFRESH_SESSIONS_REVISION
+    expected_head = get_repository_alembic_head()
+    assert run_alembic_current(refresh_migration_db) == expected_head

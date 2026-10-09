@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from sqlalchemy.pool import NullPool
@@ -148,6 +149,26 @@ def build_alembic_config(sync_url: str) -> Config:
     cfg = Config(str(BACKEND_ROOT / "alembic.ini"))
     cfg.attributes["integration_database_url"] = sync_url
     return cfg
+
+
+def get_repository_alembic_heads() -> tuple[str, ...]:
+    """Return revision ids at the tip of the repository migration graph (no DB)."""
+    cfg = Config(str(BACKEND_ROOT / "alembic.ini"))
+    script = ScriptDirectory.from_config(cfg)
+    return tuple(script.get_heads())
+
+
+def get_repository_alembic_head() -> str:
+    """Return the single Alembic head revision id for this repository."""
+    heads = get_repository_alembic_heads()
+    if not heads:
+        raise RuntimeError("Alembic migration graph has no head revision")
+    if len(heads) > 1:
+        raise RuntimeError(
+            "Alembic migration graph has multiple heads "
+            f"({len(heads)}): {', '.join(sorted(heads))}",
+        )
+    return heads[0]
 
 
 def run_alembic_upgrade(sync_url: str, revision: str = "head") -> None:
