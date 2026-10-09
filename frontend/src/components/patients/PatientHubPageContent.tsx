@@ -13,6 +13,7 @@ import {
 } from "@/lib/api/clinical-summary";
 import { fetchPatient, type Patient } from "@/lib/api/patients";
 import { ClinicalSummaryCard } from "@/components/patients/ClinicalSummaryCard";
+import { EncountersSection } from "@/components/patients/EncountersSection";
 import { formatClinicalSummaryOverviewSubtitle } from "@/lib/clinical-summary/display";
 import {
   fetchRiskAssessmentHistory,
@@ -360,6 +361,34 @@ export function PatientHubPageContent({ patientId }: PatientHubPageContentProps)
         retryLabel={content.common.retry}
         loadingLabel={content.common.loading}
         formatDate={formatDate}
+      />
+
+      <EncountersSection
+        patientId={patientId}
+        accessToken={accessToken}
+        locale={effectiveLocale}
+        formatDateTime={formatDateTime}
+        onUnauthorized={handleUnauthorized}
+        labels={{
+          sectionTitle: hub.encounters.sectionTitle,
+          startNew: hub.encounters.startNew,
+          startPending: hub.encounters.startPending,
+          viewDetail: hub.encounters.viewDetail,
+          listEmpty: hub.encounters.listEmpty,
+          listLoadError: hub.encounters.listLoadError,
+          createConflict: hub.encounters.createConflict,
+          createError: hub.encounters.createError,
+          openActiveEncounter: hub.encounters.openActiveEncounter,
+          statusLabels: hub.encounters.statusLabels,
+          specialtyLabel: hub.encounters.specialtyLabel,
+          startedAt: hub.encounters.startedAt,
+          endedAt: hub.encounters.endedAt,
+          notFoundOrDenied: hub.encounters.notFoundOrDenied,
+          genericError: hub.encounters.genericError,
+          accessDenied: hub.encounters.accessDenied,
+          loadingLabel: content.common.loading,
+          retryLabel: content.common.retry,
+        }}
       />
 
       <section className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">

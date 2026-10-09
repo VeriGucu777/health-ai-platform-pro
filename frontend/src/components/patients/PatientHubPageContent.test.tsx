@@ -54,6 +54,36 @@ const hubFixture = {
     systolic_blood_pressure:
       "Seçilen tarih aralığında sistolik tansiyon ölçümü bulunmuyor.",
   },
+  encounters: {
+    sectionTitle: "Encounters",
+    startNew: "Start new encounter",
+    startPending: "Starting…",
+    viewDetail: "View details",
+    listEmpty: "No encounters yet.",
+    listLoadError: "Encounters failed",
+    createConflict: "Active exists",
+    createError: "Create failed",
+    openActiveEncounter: "Open active",
+    statusLabels: { draft: "Draft", active: "Active", finalized: "Finalized", cancelled: "Cancelled" },
+    specialtyLabel: "Specialty",
+    startedAt: "Started",
+    endedAt: "Ended",
+    backToPatient: "Back",
+    detailTitle: "Detail",
+    complaintsHeading: "Complaints",
+    findingsHeading: "Findings",
+    responsesHeading: "Responses",
+    finalSummaryHeading: "Summary",
+    complaintsEmpty: "No complaints",
+    findingsEmpty: "No findings",
+    responsesEmpty: "No responses",
+    detailNotFound: "Not found",
+    detailLoadError: "Load failed",
+    notFoundOrDenied: "Not found",
+    genericError: "Error",
+    accessDenied: "Denied",
+    clinicianNoteLabel: "Note",
+  },
 };
 
 const localeFixture = {
@@ -96,6 +126,17 @@ vi.mock("@/lib/api/health-report", () => ({
   triggerBlobDownload: (...args: unknown[]) => triggerBlobDownload(...args),
 }));
 
+const fetchPatientEncounters = vi.fn();
+
+vi.mock("@/lib/api/clinical-encounters", () => ({
+  fetchPatientEncounters: (...args: unknown[]) => fetchPatientEncounters(...args),
+  createClinicalEncounter: vi.fn(),
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 describe("PatientHubPageContent", () => {
   beforeEach(() => {
     fetchPatient.mockReset();
@@ -106,6 +147,8 @@ describe("PatientHubPageContent", () => {
       overview_clinical_period_end: null,
     });
     fetchRiskAssessmentHistory.mockReset();
+    fetchPatientEncounters.mockReset();
+    fetchPatientEncounters.mockResolvedValue({ items: [], total: 0, limit: 50, offset: 0 });
     fetchHealthSummaryPdf.mockReset();
     triggerBlobDownload.mockReset();
     handleUnauthorized.mockReset();

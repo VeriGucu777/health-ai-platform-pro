@@ -138,6 +138,36 @@ export type CommonContent = {
     riskLevels: Record<string, string>;
     missingInputLabels: Record<string, string>;
     missingInputReasons: Record<string, string>;
+    encounters: {
+      sectionTitle: string;
+      startNew: string;
+      startPending: string;
+      viewDetail: string;
+      listEmpty: string;
+      listLoadError: string;
+      createConflict: string;
+      createError: string;
+      openActiveEncounter: string;
+      statusLabels: Record<string, string>;
+      specialtyLabel: string;
+      startedAt: string;
+      endedAt: string;
+      backToPatient: string;
+      detailTitle: string;
+      complaintsHeading: string;
+      findingsHeading: string;
+      responsesHeading: string;
+      finalSummaryHeading: string;
+      complaintsEmpty: string;
+      findingsEmpty: string;
+      responsesEmpty: string;
+      detailNotFound: string;
+      detailLoadError: string;
+      notFoundOrDenied: string;
+      genericError: string;
+      accessDenied: string;
+      clinicianNoteLabel: string;
+    };
   };
   timeline: {
     title: string;
