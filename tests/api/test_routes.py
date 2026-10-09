@@ -29,6 +29,14 @@ EXPECTED_OPENAPI_PATHS = {
     "/api/v1/health-measurements/analytics/summary",
     "/api/v1/health-measurements/analytics/trends",
     "/api/v1/health-measurements/analytics/insights",
+    "/api/v1/patients/{patient_id}/encounters",
+    "/api/v1/encounters/{encounter_id}",
+    "/api/v1/encounters/{encounter_id}/complaints",
+    "/api/v1/encounters/{encounter_id}/findings",
+    "/api/v1/encounters/{encounter_id}/question-responses/{question_key}",
+    "/api/v1/encounters/{encounter_id}/complaints/{complaint_id}",
+    "/api/v1/encounters/{encounter_id}/finalize",
+    "/api/v1/encounters/{encounter_id}/cancel",
 }
 
 

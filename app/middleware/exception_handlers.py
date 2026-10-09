@@ -7,6 +7,13 @@ from app.api.schemas.common import ErrorResponse
 from app.core.exceptions import AppException
 from app.core.logging import get_logger
 from app.core.request_context import get_request_id
+from app.domain.clinical_encounter.exceptions import (
+    ClinicalEncounterDomainError,
+    EncounterAlreadyFinalizedError,
+    EncounterCancelledError,
+    EncounterImmutableError,
+    InvalidEncounterTransitionError,
+)
 
 logger = get_logger(__name__)
 
@@ -35,6 +42,28 @@ def _error_response(
 
 def register_exception_handlers(app: FastAPI) -> None:
     """Attach application exception handlers to the FastAPI instance."""
+
+    @app.exception_handler(ClinicalEncounterDomainError)
+    async def clinical_encounter_domain_handler(
+        request: Request,
+        exc: ClinicalEncounterDomainError,
+    ) -> JSONResponse:
+        status_code = 409
+        if not isinstance(
+            exc,
+            (
+                EncounterAlreadyFinalizedError,
+                EncounterCancelledError,
+                EncounterImmutableError,
+                InvalidEncounterTransitionError,
+            ),
+        ):
+            status_code = 422
+        return _error_response(
+            message=str(exc),
+            status_code=status_code,
+            request=request,
+        )
 
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:

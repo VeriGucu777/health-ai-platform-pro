@@ -38,7 +38,12 @@ from app.domain.clinical_encounter.entities import (
     EncounterFinding,
     EncounterSummarySection,
 )
-from app.domain.clinical_encounter.enums import EncounterStatus, FindingType, QuestionAnswerType
+from app.domain.clinical_encounter.enums import (
+    ClinicalInputSource,
+    EncounterStatus,
+    FindingType,
+    QuestionAnswerType,
+)
 from app.domain.clinical_encounter.interfaces.clinical_encounter_repository import (
     ClinicalEncounterRepository,
 )
@@ -95,7 +100,7 @@ class ClinicalEncounterService(ClinicalPatientChildService):
         actor_role: UserRole,
         *,
         patient_id: UUID,
-        organization_id: UUID,
+        organization_id: UUID | None = None,
         specialty_key: str,
         locale: str = "en",
         appointment_id: UUID | None = None,
@@ -108,12 +113,15 @@ class ClinicalEncounterService(ClinicalPatientChildService):
             PatientAccessAction.WRITE,
         )
         patient = ctx.patient
-        if patient.organization_id is None or patient.organization_id != organization_id:
+        org_id = organization_id if organization_id is not None else patient.organization_id
+        if org_id is None:
             raise NotFoundError("Patient not found")
-        if ctx.organization_id != organization_id:
+        if patient.organization_id != org_id:
+            raise NotFoundError("Patient not found")
+        if ctx.organization_id is not None and ctx.organization_id != org_id:
             raise NotFoundError("Patient not found")
 
-        if await self._encounters.exists_active_for_patient(patient_id, organization_id):
+        if await self._encounters.exists_active_for_patient(patient_id, org_id):
             raise ActiveClinicalEncounterAlreadyExists()
 
         if appointment_id is not None:
@@ -127,7 +135,7 @@ class ClinicalEncounterService(ClinicalPatientChildService):
         now = self._clock.now_utc()
         encounter = ClinicalEncounter.create_draft(
             patient_id=patient_id,
-            organization_id=organization_id,
+            organization_id=org_id,
             clinician_user_id=actor_id,
             specialty_key=specialty_key,
             locale=locale,
@@ -147,7 +155,7 @@ class ClinicalEncounterService(ClinicalPatientChildService):
                     operation="encounter_created",
                     actor_id=actor_id,
                     actor_role=actor_role,
-                    organization_id=organization_id,
+                    organization_id=org_id,
                     patient_id=patient_id,
                     encounter_id=enc.id,
                     encounter_version=enc.version,
@@ -289,6 +297,7 @@ class ClinicalEncounterService(ClinicalPatientChildService):
         unit: str | None = None,
         negated: bool = False,
         onset_code: str | None = None,
+        source: ClinicalInputSource | None = None,
     ) -> ClinicalEncounterAggregate:
         aggregate = await self._load_owned_for_mutation(actor_id, actor_role, encounter_id)
         now = self._clock.now_utc()
@@ -301,6 +310,7 @@ class ClinicalEncounterService(ClinicalPatientChildService):
             unit=unit,
             negated=negated,
             onset_code=onset_code,
+            source=source or ClinicalInputSource.CLINICIAN_OBSERVED,
             recorded_at=now,
             recorded_by=actor_id,
         )
@@ -409,8 +419,11 @@ class ClinicalEncounterService(ClinicalPatientChildService):
         *,
         summary_sections: tuple[EncounterSummarySection, ...],
         clinician_note: str | None = None,
+        expected_version: int | None = None,
     ) -> ClinicalEncounterAggregate:
         aggregate = await self._load_owned_for_mutation(actor_id, actor_role, encounter_id)
+        if expected_version is not None and aggregate.encounter.version != expected_version:
+            raise ClinicalEncounterStaleVersionError()
         if aggregate.final_summary is not None:
             raise ClinicalEncounterFinalizationError("final summary already exists")
         if aggregate.encounter.status != EncounterStatus.ACTIVE:
@@ -457,15 +470,19 @@ class ClinicalEncounterService(ClinicalPatientChildService):
         actor_id: UUID,
         actor_role: UserRole,
         encounter_id: UUID,
+        *,
+        expected_version: int | None = None,
     ) -> ClinicalEncounterAggregate:
         aggregate = await self._load_owned_for_mutation(actor_id, actor_role, encounter_id)
+        if expected_version is not None and aggregate.encounter.version != expected_version:
+            raise ClinicalEncounterStaleVersionError()
         now = self._clock.now_utc()
 
         async def _persist() -> ClinicalEncounterAggregate:
             working = deepcopy(aggregate)
-            expected_version = working.encounter.version
+            version_at_save = working.encounter.version
             working.encounter.cancel(at=now)
-            working.encounter.version = expected_version
+            working.encounter.version = version_at_save
             saved = await self._save_aggregate(working)
             await self._record_encounter_audit(
                 self._mutation_audit_event(

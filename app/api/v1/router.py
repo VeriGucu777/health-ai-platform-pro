@@ -6,6 +6,7 @@ from app.api.clinical_rbac_guard import enforce_clinical_role_with_audit
 from app.api.v1.endpoints import (
     appointments,
     auth,
+    clinical_encounters,
     diabetes_risk_assessment,
     health,
     heart_disease_risk_assessment,
@@ -125,6 +126,18 @@ def create_api_v1_router(prefix: str = "/api/v1") -> APIRouter:
         health_measurements.router,
         prefix="/health-measurements",
         tags=["Health Measurements"],
+        dependencies=_clinical,
+    )
+    api_v1_router.include_router(
+        clinical_encounters.patient_encounters_router,
+        prefix="/patients",
+        tags=["Clinical Encounters"],
+        dependencies=_clinical,
+    )
+    api_v1_router.include_router(
+        clinical_encounters.encounters_router,
+        prefix="/encounters",
+        tags=["Clinical Encounters"],
         dependencies=_clinical,
     )
     api_v1_router.include_router(

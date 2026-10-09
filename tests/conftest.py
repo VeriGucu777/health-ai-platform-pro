@@ -16,6 +16,7 @@ from app.api.deps import (
     get_health_measurement_analytics_service,
     get_health_measurement_service,
     get_medical_record_service,
+    get_clinical_encounter_service,
     get_clinical_narrative_service,
     get_clinical_retrieval_service,
     get_patient_clinical_summary_service,
@@ -51,6 +52,7 @@ from app.application.services.patient_clinical_timeline_service import (
 )
 from app.application.services.patient_health_report_service import PatientHealthReportService
 from app.application.services.patient_service import PatientService
+from app.application.services.clinical_encounter_service import ClinicalEncounterService
 from app.application.services.stroke_risk_assessment_service import StrokeRiskAssessmentService
 from app.core.config import Settings, get_settings
 from app.infrastructure.database.session import reset_database_engine
@@ -92,6 +94,8 @@ from tests.support.clinical_child_service_factory import (
     build_health_measurement_service,
     build_medical_record_service,
 )
+from tests.support.clinical_encounter_service_factory import build_clinical_encounter_service
+from tests.support.memory_clinical_encounter_repository import InMemoryClinicalEncounterRepository
 from tests.support.patient_service_factory import build_policy_patient_service
 from tests.support.test_auth_service import AuthServiceWithDoctorMembership
 
@@ -209,6 +213,12 @@ def risk_assessment_history_repository() -> InMemoryRiskAssessmentHistoryReposit
 
 
 @pytest.fixture
+def clinical_encounter_repository() -> InMemoryClinicalEncounterRepository:
+    """Fresh in-memory clinical encounter store for each test."""
+    return InMemoryClinicalEncounterRepository()
+
+
+@pytest.fixture
 def app(test_settings: Settings):
     """Create a test FastAPI application."""
     get_settings.cache_clear()
@@ -237,6 +247,7 @@ async def client(
     medical_record_repository: InMemoryMedicalRecordRepository,
     health_measurement_repository: InMemoryHealthMeasurementRepository,
     risk_assessment_history_repository: InMemoryRiskAssessmentHistoryRepository,
+    clinical_encounter_repository: InMemoryClinicalEncounterRepository,
 ):
     """Async HTTP client with in-memory backends for all business modules."""
     clinical_vector_store = InMemoryClinicalVectorStore()
@@ -441,6 +452,17 @@ async def client(
             **clinical_access,
         )
 
+    def override_clinical_encounter_service(_request: Request) -> ClinicalEncounterService:
+        return build_clinical_encounter_service(
+            encounter_repository=clinical_encounter_repository,
+            patient_repository=patient_repository,
+            membership_repository=membership_repository,
+            assignment_repository=assignment_repository,
+            settings=test_settings,
+            consent_repository=consent_repository,
+            audit_log_repository=audit_log_repository,
+        )
+
     app.dependency_overrides[get_audit_service] = override_audit_service
     app.dependency_overrides[get_email_verification_service] = override_email_verification_service
     app.dependency_overrides[get_auth_service] = override_auth_service
@@ -478,6 +500,7 @@ async def client(
     app.dependency_overrides[get_risk_assessment_history_service] = (
         override_risk_assessment_history_service
     )
+    app.dependency_overrides[get_clinical_encounter_service] = override_clinical_encounter_service
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac

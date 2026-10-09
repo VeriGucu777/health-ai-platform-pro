@@ -31,6 +31,8 @@ from app.application.services.clinic_admin_organization_service import (
 from app.application.services.patient_consent_service import PatientConsentService
 from app.application.services.clinical_evidence_service import ClinicalEvidenceService
 from app.application.services.clinical_retrieval_index_service import ClinicalRetrievalIndexService
+from app.application.services.clinical_encounter_audit_recorder import ClinicalEncounterAuditRecorder
+from app.application.services.clinical_encounter_service import ClinicalEncounterService
 from app.application.services.clinical_narrative_service import ClinicalNarrativeService
 from app.application.services.clinical_retrieval_service import ClinicalRetrievalService
 from app.application.services.patient_clinical_summary_service import (
@@ -48,7 +50,12 @@ from app.domain.entities.user import UserRole
 from app.infrastructure.database.session import get_db_session
 from app.infrastructure.embeddings.embedding_factory import get_embedding_provider, require_rag_enabled
 from app.infrastructure.llm.narrative_generator_factory import get_clinical_narrative_generator
+from app.infrastructure.database.application_transaction import AsyncSessionApplicationTransaction
 from app.infrastructure.repositories.appointment_repository import SQLAlchemyAppointmentRepository
+from app.infrastructure.repositories.audit_log_repository import SQLAlchemyAuditLogRepository
+from app.infrastructure.repositories.clinical_encounter_repository import (
+    SQLAlchemyClinicalEncounterRepository,
+)
 from app.infrastructure.repositories.clinical_retrieval_vector_repository import (
     SQLAlchemyClinicalVectorStore,
 )
@@ -378,6 +385,32 @@ def get_patient_clinical_timeline_service(
         access_policy,
         settings=settings,
         consent_repository=consent_repository,
+    )
+
+
+def get_clinical_encounter_service(
+    session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
+) -> ClinicalEncounterService:
+    """Request-scoped encounter service with shared-session audit and transactions."""
+    (
+        patient_repository,
+        membership_repository,
+        _assignment_repository,
+        access_policy,
+    ) = _patient_access_policy_bundle(session)
+    audit_service = AuditService(SQLAlchemyAuditLogRepository(session))
+    audit_recorder = ClinicalEncounterAuditRecorder(audit_service)
+    return ClinicalEncounterService(
+        SQLAlchemyClinicalEncounterRepository(session),
+        patient_repository,
+        access_policy=access_policy,
+        membership_repository=membership_repository,
+        settings=settings,
+        consent_repository=_patient_consent_repository(session),
+        appointment_repository=SQLAlchemyAppointmentRepository(session),
+        transaction=AsyncSessionApplicationTransaction(session),
+        audit_hook=audit_recorder,
     )
 
 

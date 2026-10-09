@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.application.services.audit_service import AuditService
+from app.application.services.clinical_encounter_audit_recorder import ClinicalEncounterAuditRecorder
 from app.application.services.clinical_encounter_service import ClinicalEncounterService
 from app.application.services.patient_access_policy_service import DefaultPatientAccessPolicy
 from app.core.config import Settings
@@ -24,11 +26,15 @@ def build_clinical_encounter_service(
     consent_repository: PatientConsentRepository | None = None,
     transaction=None,
     audit_hook=None,
+    audit_log_repository=None,
 ) -> ClinicalEncounterService:
     assignments = assignment_repository or InMemoryPatientAssignmentRepository()
     memberships = membership_repository or InMemoryOrganizationMembershipRepository()
     patients = patient_repository or InMemoryPatientRepository(assignment_repository=assignments)
     policy = DefaultPatientAccessPolicy(patients, memberships, assignments)
+    hook = audit_hook
+    if hook is None and audit_log_repository is not None:
+        hook = ClinicalEncounterAuditRecorder(AuditService(audit_log_repository))
     return ClinicalEncounterService(
         encounter_repository or InMemoryClinicalEncounterRepository(),
         patients,
@@ -37,5 +43,5 @@ def build_clinical_encounter_service(
         settings=settings,
         consent_repository=consent_repository,
         transaction=transaction,
-        audit_hook=audit_hook,
+        audit_hook=hook,
     )
