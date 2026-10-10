@@ -94,6 +94,52 @@ export type CreateClinicalEncounterBody = {
   locale: string;
 };
 
+export type FindingType =
+  | "symptom"
+  | "physical_exam"
+  | "history_item"
+  | "risk_factor"
+  | "negative_finding"
+  | "other";
+
+export type ClinicalInputSource =
+  | "patient_reported"
+  | "clinician_observed"
+  | "historical_record"
+  | "device"
+  | "other";
+
+export type QuestionAnswerType = "boolean" | "single_choice" | "number" | "text";
+
+export type EncounterComplaintCreateBody = {
+  complaint_key?: string | null;
+  clinician_display_text?: string | null;
+  is_primary?: boolean;
+  negated?: boolean;
+};
+
+export type EncounterFindingCreateBody = {
+  finding_type: FindingType;
+  finding_key: string;
+  value_code?: string | null;
+  value_numeric?: number | string | null;
+  unit?: string | null;
+  negated?: boolean;
+  onset_code?: string | null;
+  source?: ClinicalInputSource;
+};
+
+export type EncounterQuestionResponseUpsertBody = {
+  answer_type: QuestionAnswerType;
+  answer_code?: string | null;
+  answer_numeric?: number | string | null;
+  clinician_note?: string | null;
+};
+
+export type EncounterComplaintRecord = EncounterComplaint;
+export type EncounterFindingRecord = EncounterFinding;
+export type EncounterQuestionResponseRecord = EncounterQuestionResponse;
+
 export async function fetchPatientEncounters(
   authToken: string,
   patientId: string,
@@ -130,6 +176,51 @@ export async function fetchClinicalEncounterDetail(
   encounterId: string,
 ): Promise<ClinicalEncounterDetail> {
   return apiClient.get<ClinicalEncounterDetail>(`/encounters/${encounterId}`, {
+    authToken,
+  });
+}
+
+export async function addEncounterComplaint(
+  authToken: string,
+  encounterId: string,
+  body: EncounterComplaintCreateBody,
+): Promise<EncounterComplaint> {
+  return apiClient.post<EncounterComplaint>(`/encounters/${encounterId}/complaints`, {
+    authToken,
+    body,
+  });
+}
+
+export async function addEncounterFinding(
+  authToken: string,
+  encounterId: string,
+  body: EncounterFindingCreateBody,
+): Promise<EncounterFinding> {
+  return apiClient.post<EncounterFinding>(`/encounters/${encounterId}/findings`, {
+    authToken,
+    body,
+  });
+}
+
+export async function upsertEncounterQuestionResponse(
+  authToken: string,
+  encounterId: string,
+  questionKey: string,
+  body: EncounterQuestionResponseUpsertBody,
+): Promise<EncounterQuestionResponse> {
+  const encodedKey = encodeURIComponent(questionKey);
+  return apiClient.put<EncounterQuestionResponse>(
+    `/encounters/${encounterId}/question-responses/${encodedKey}`,
+    { authToken, body },
+  );
+}
+
+export async function deactivateEncounterComplaint(
+  authToken: string,
+  encounterId: string,
+  complaintId: string,
+): Promise<void> {
+  await apiClient.delete<void>(`/encounters/${encounterId}/complaints/${complaintId}`, {
     authToken,
   });
 }

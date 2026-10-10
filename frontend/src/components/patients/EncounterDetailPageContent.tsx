@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import {
+  EncounterDetailWriteWorkspace,
+  type EncounterWorkspaceLabels,
+} from "@/components/patients/EncounterDetailWriteWorkspace";
 import { ApiClientError } from "@/lib/api/client";
 import {
   fetchClinicalEncounterDetail,
@@ -18,13 +22,7 @@ export type EncounterDetailLabels = {
   specialtyLabel: string;
   startedAt: string;
   endedAt: string;
-  complaintsHeading: string;
-  findingsHeading: string;
-  responsesHeading: string;
   finalSummaryHeading: string;
-  complaintsEmpty: string;
-  findingsEmpty: string;
-  responsesEmpty: string;
   detailNotFound: string;
   detailLoadError: string;
   notFoundOrDenied: string;
@@ -33,6 +31,7 @@ export type EncounterDetailLabels = {
   loadingLabel: string;
   retryLabel: string;
   clinicianNoteLabel: string;
+  workspace: EncounterWorkspaceLabels;
 };
 
 type EncounterDetailPageContentProps = {
@@ -57,49 +56,60 @@ export function EncounterDetailPageContent({
   const [detail, setDetail] = useState<ClinicalEncounterDetail | null>(null);
   const [loadState, setLoadState] = useState<DetailLoadState>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  const loadDetail = useCallback(async () => {
-    if (!accessToken) {
-      return;
-    }
-
-    setLoadState("loading");
-    setLoadError(null);
-
-    try {
-      const data = await fetchClinicalEncounterDetail(accessToken, encounterId);
-      setDetail(data);
-      setLoadState("ready");
-    } catch (err) {
-      if (err instanceof ApiClientError && err.status === 401) {
-        onUnauthorized();
+  const loadDetail = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!accessToken) {
         return;
       }
-      if (err instanceof ApiClientError && err.status === 404) {
+
+      if (!options?.silent) {
+        setLoadState("loading");
+        setLoadError(null);
+      }
+
+      try {
+        const data = await fetchClinicalEncounterDetail(accessToken, encounterId);
+        setDetail(data);
+        setLoadState("ready");
+      } catch (err) {
+        if (err instanceof ApiClientError && err.status === 401) {
+          onUnauthorized();
+          return;
+        }
+        if (err instanceof ApiClientError && err.status === 404) {
+          setDetail(null);
+          setLoadState("not_found");
+          return;
+        }
+        if (options?.silent) {
+          setStatusMessage(labels.workspace.mutationErrors.generic);
+          return;
+        }
         setDetail(null);
-        setLoadState("not_found");
-        return;
+        setLoadState("error");
+        setLoadError(
+          resolveEncounterClientErrorMessage(err, {
+            notFoundOrDenied: labels.detailNotFound,
+            activeConflict: labels.genericError,
+            generic: labels.detailLoadError,
+            accessDenied: labels.accessDenied,
+          }),
+        );
       }
-      setDetail(null);
-      setLoadState("error");
-      setLoadError(
-        resolveEncounterClientErrorMessage(err, {
-          notFoundOrDenied: labels.detailNotFound,
-          activeConflict: labels.genericError,
-          generic: labels.detailLoadError,
-          accessDenied: labels.accessDenied,
-        }),
-      );
-    }
-  }, [
-    accessToken,
-    encounterId,
-    labels.accessDenied,
-    labels.detailLoadError,
-    labels.detailNotFound,
-    labels.genericError,
-    onUnauthorized,
-  ]);
+    },
+    [
+      accessToken,
+      encounterId,
+      labels.accessDenied,
+      labels.detailLoadError,
+      labels.detailNotFound,
+      labels.genericError,
+      labels.workspace.mutationErrors.generic,
+      onUnauthorized,
+    ],
+  );
 
   useEffect(() => {
     void loadDetail();
@@ -156,64 +166,22 @@ export function EncounterDetailPageContent({
         ) : null}
       </header>
 
-      <section aria-labelledby="enc-complaints-heading">
-        <h2 id="enc-complaints-heading" className="text-lg font-semibold text-text-primary">
-          {labels.complaintsHeading}
-        </h2>
-        {detail.complaints.length === 0 ? (
-          <p className="mt-3 text-sm text-text-secondary">{labels.complaintsEmpty}</p>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {detail.complaints.map((item) => (
-              <li key={item.id} className="rounded-lg border border-border bg-white px-4 py-3 text-sm text-text-secondary">
-                {item.clinician_display_text ?? item.complaint_key ?? "—"}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {statusMessage ? (
+        <p className="rounded-lg border border-brand-200 bg-brand-50 px-4 py-2 text-sm text-brand-900" role="status">
+          {statusMessage}
+        </p>
+      ) : null}
 
-      <section aria-labelledby="enc-findings-heading">
-        <h2 id="enc-findings-heading" className="text-lg font-semibold text-text-primary">
-          {labels.findingsHeading}
-        </h2>
-        {detail.findings.length === 0 ? (
-          <p className="mt-3 text-sm text-text-secondary">{labels.findingsEmpty}</p>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {detail.findings.map((item) => (
-              <li key={item.id} className="rounded-lg border border-border bg-white px-4 py-3 text-sm text-text-secondary">
-                {item.finding_key}
-                {item.value_code ? ` · ${item.value_code}` : ""}
-                {item.value_numeric != null ? ` · ${item.value_numeric}` : ""}
-                {item.unit ? ` ${item.unit}` : ""}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section aria-labelledby="enc-responses-heading">
-        <h2 id="enc-responses-heading" className="text-lg font-semibold text-text-primary">
-          {labels.responsesHeading}
-        </h2>
-        {detail.question_responses.length === 0 ? (
-          <p className="mt-3 text-sm text-text-secondary">{labels.responsesEmpty}</p>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {detail.question_responses.map((item) => (
-              <li key={item.id} className="rounded-lg border border-border bg-white px-4 py-3 text-sm text-text-secondary">
-                <span className="font-medium text-text-primary">{item.question_key}</span>
-                {item.answer_code ? `: ${item.answer_code}` : ""}
-                {item.answer_numeric != null ? `: ${item.answer_numeric}` : ""}
-                {item.clinician_note ? (
-                  <p className="mt-1 text-text-secondary">{item.clinician_note}</p>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <EncounterDetailWriteWorkspace
+        encounterId={encounterId}
+        accessToken={accessToken ?? ""}
+        detail={detail}
+        labels={labels.workspace}
+        formatDateTime={formatDateTime}
+        onRefresh={() => loadDetail({ silent: true })}
+        onUnauthorized={onUnauthorized}
+        onStatusMessage={setStatusMessage}
+      />
 
       {detail.final_summary ? (
         <section aria-labelledby="enc-final-summary-heading">

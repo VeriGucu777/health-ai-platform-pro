@@ -1,33 +1,9 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  EncounterDetailPageContent,
-  type EncounterDetailLabels,
-} from "@/components/patients/EncounterDetailPageContent";
+import { EncounterDetailPageContent } from "@/components/patients/EncounterDetailPageContent";
+import { makeEncounterDetailTestLabels } from "@/components/patients/encounter-test-labels";
 
-const labels: EncounterDetailLabels = {
-  detailTitle: "Encounter details",
-  backToPatient: "Back to patient",
-  statusLabels: { finalized: "Finalized", active: "Active", draft: "Draft", cancelled: "Cancelled" },
-  specialtyLabel: "Specialty",
-  startedAt: "Started",
-  endedAt: "Ended",
-  complaintsHeading: "Complaints",
-  findingsHeading: "Findings",
-  responsesHeading: "Responses",
-  finalSummaryHeading: "Final summary",
-  complaintsEmpty: "No complaints",
-  findingsEmpty: "No findings",
-  responsesEmpty: "No responses",
-  detailNotFound: "Not found or denied",
-  detailLoadError: "Load failed",
-  notFoundOrDenied: "Not found",
-  genericError: "Generic",
-  accessDenied: "Denied",
-  loadingLabel: "Loading…",
-  retryLabel: "Retry",
-  clinicianNoteLabel: "Note",
-};
+const labels = makeEncounterDetailTestLabels();
 
 const fetchClinicalEncounterDetail = vi.fn();
 
@@ -90,6 +66,7 @@ describe("EncounterDetailPageContent", () => {
     expect(await screen.findByText("Stable summary text")).toBeInTheDocument();
     expect(screen.getByText("Finalized")).toBeInTheDocument();
     expect(container.innerHTML).not.toContain("dangerouslySetInnerHTML");
+    expect(screen.queryByRole("button", { name: "Add complaint" })).not.toBeInTheDocument();
   });
 
   it("shows safe 404 masking message", async () => {
