@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health-ai-platform.local/schemas/controlled_vocabulary_manifest.schema.json",
+  "title": "ControlledVocabularyManifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "vocabulary_id",
+    "vocabulary_version",
+    "specialty",
+    "pilot_scope",
+    "manifest_clinical_review_status",
+    "terms"
+  ],
+  "properties": {
+    "vocabulary_id": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "vocabulary_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "specialty": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "pilot_scope": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "manifest_clinical_review_status": {
+      "type": "string",
+      "enum": [
+        "not_reviewed",
+        "proposed_by_product",
+        "clinically_reviewed",
+        "clinically_approved"
+      ]
+    },
+    "terms": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/vocabulary_term" }
+    }
+  },
+  "$defs": {
+    "vocabulary_term": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "category",
+        "status",
+        "version_added",
+        "display_key",
+        "clinical_review_status"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128,
+          "pattern": "^card\\.(complaint|finding|question|answer_code|vital|unit|onset)\\.[a-z][a-z0-9_]*$"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "complaint",
+            "finding",
+            "question",
+            "answer_code",
+            "vital",
+            "unit",
+            "onset"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "review_pending",
+            "approved_demo",
+            "approved_prod",
+            "deprecated",
+            "retired"
+          ]
+        },
+        "version_added": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "display_key": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128
+        },
+        "description_key": { "type": "string", "minLength": 3, "maxLength": 128 },
+        "labels": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["en", "tr"],
+          "properties": {
+            "en": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "tr": { "type": "string", "minLength": 1, "maxLength": 256 }
+          }
+        },
+        "synonyms": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "en": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1, "maxLength": 128 }
+            },
+            "tr": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1, "maxLength": 128 }
+            }
+          }
+        },
+        "clinical_review_status": {
+          "type": "string",
+          "enum": [
+            "not_reviewed",
+            "proposed_by_product",
+            "clinically_reviewed",
+            "clinically_approved"
+          ]
+        },
+        "replacement_key": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128,
+          "pattern": "^card\\.(complaint|finding|question|answer_code|vital|unit|onset)\\.[a-z][a-z0-9_]*$"
+        },
+        "external_system": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "external_code": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "allowed_answer_codes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^card\\.answer_code\\.[a-z][a-z0-9_]*$"
+          }
+        },
+        "default_unit_key": {
+          "type": "string",
+          "pattern": "^card\\.unit\\.[a-z][a-z0-9_]*$"
+        }
+      }
+    }
+  }
+}

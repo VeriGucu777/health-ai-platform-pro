@@ -1,0 +1,283 @@
+vocabulary_id: cardiology
+vocabulary_version: "1.0.0"
+specialty: cardiology
+pilot_scope: minimal_mvp_pilot
+manifest_clinical_review_status: proposed_by_product
+terms:
+  - key: card.complaint.chest_pain
+    category: complaint
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.complaint.chest_pain
+    clinical_review_status: proposed_by_product
+    labels: { en: "Chest pain", tr: "Göğüs ağrısı" }
+    synonyms: { en: ["chest pain"], tr: ["göğüs ağrısı", "göğüste ağrı"] }
+  - key: card.complaint.dyspnea
+    category: complaint
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.complaint.dyspnea
+    clinical_review_status: proposed_by_product
+    labels: { en: "Dyspnea", tr: "Dispne" }
+    synonyms: { en: ["shortness of breath"], tr: ["nefes darlığı"] }
+  - key: card.complaint.palpitations
+    category: complaint
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.complaint.palpitations
+    clinical_review_status: proposed_by_product
+    labels: { en: "Palpitations", tr: "Çarpıntı" }
+  - key: card.complaint.syncope
+    category: complaint
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.complaint.syncope
+    clinical_review_status: proposed_by_product
+    labels: { en: "Syncope", tr: "Senkop" }
+  - key: card.complaint.dizziness
+    category: complaint
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.complaint.dizziness
+    clinical_review_status: proposed_by_product
+    labels: { en: "Dizziness", tr: "Baş dönmesi" }
+  - key: card.complaint.fatigue
+    category: complaint
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.complaint.fatigue
+    clinical_review_status: proposed_by_product
+    labels: { en: "Fatigue", tr: "Yorgunluk" }
+  - key: card.complaint.peripheral_edema
+    category: complaint
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.complaint.peripheral_edema
+    clinical_review_status: proposed_by_product
+    labels: { en: "Peripheral edema", tr: "Periferik ödem" }
+
+  - key: card.finding.exertional_symptoms
+    category: finding
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.finding.exertional_symptoms
+    clinical_review_status: proposed_by_product
+    labels: { en: "Exertional symptoms", tr: "Eforla ilişkili semptomlar" }
+  - key: card.finding.orthopnea
+    category: finding
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.finding.orthopnea
+    clinical_review_status: proposed_by_product
+    labels: { en: "Orthopnea", tr: "Ortopne" }
+  - key: card.finding.paroxysmal_nocturnal_dyspnea
+    category: finding
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.finding.paroxysmal_nocturnal_dyspnea
+    clinical_review_status: proposed_by_product
+    labels: { en: "Paroxysmal nocturnal dyspnea", tr: "Paroksismal nokturnal dispne" }
+  - key: card.finding.irregular_pulse
+    category: finding
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.finding.irregular_pulse
+    clinical_review_status: proposed_by_product
+    labels: { en: "Irregular pulse", tr: "Düzensiz nabız" }
+  - key: card.finding.lower_extremity_edema
+    category: finding
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.finding.lower_extremity_edema
+    clinical_review_status: proposed_by_product
+    labels: { en: "Lower extremity edema", tr: "Alt ekstremite ödemi" }
+  - key: card.finding.smoking_history
+    category: finding
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.finding.smoking_history
+    clinical_review_status: proposed_by_product
+    labels: { en: "Smoking history", tr: "Sigara öyküsü" }
+  - key: card.finding.diabetes_history
+    category: finding
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.finding.diabetes_history
+    clinical_review_status: proposed_by_product
+    labels: { en: "Diabetes history", tr: "Diyabet öyküsü" }
+  - key: card.finding.hypertension_history
+    category: finding
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.finding.hypertension_history
+    clinical_review_status: proposed_by_product
+    labels: { en: "Hypertension history", tr: "Hipertansiyon öyküsü" }
+  - key: card.finding.family_cardiovascular_history
+    category: finding
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.finding.family_cardiovascular_history
+    clinical_review_status: proposed_by_product
+    labels: { en: "Family cardiovascular history", tr: "Ailede kardiyovasküler öykü" }
+
+  - key: card.question.chest_pain_on_exertion
+    category: question
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.question.chest_pain_on_exertion
+    clinical_review_status: proposed_by_product
+    labels: { en: "Chest pain on exertion", tr: "Eforla göğüs ağrısı" }
+    allowed_answer_codes:
+      - card.answer_code.yes
+      - card.answer_code.no
+      - card.answer_code.unknown
+  - key: card.question.chest_pain_duration
+    category: question
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.question.chest_pain_duration
+    clinical_review_status: proposed_by_product
+    labels: { en: "Chest pain duration", tr: "Göğüs ağrısı süresi" }
+    allowed_answer_codes:
+      - card.answer_code.yes
+      - card.answer_code.no
+      - card.answer_code.unknown
+  - key: card.question.dyspnea_on_exertion
+    category: question
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.question.dyspnea_on_exertion
+    clinical_review_status: proposed_by_product
+    labels: { en: "Dyspnea on exertion", tr: "Eforla dispne" }
+    allowed_answer_codes:
+      - card.answer_code.yes
+      - card.answer_code.no
+      - card.answer_code.unknown
+  - key: card.question.syncope_with_exertion
+    category: question
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.question.syncope_with_exertion
+    clinical_review_status: proposed_by_product
+    labels: { en: "Syncope with exertion", tr: "Eforla senkop" }
+    allowed_answer_codes:
+      - card.answer_code.yes
+      - card.answer_code.no
+      - card.answer_code.unknown
+  - key: card.question.palpitations_duration
+    category: question
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.question.palpitations_duration
+    clinical_review_status: proposed_by_product
+    labels: { en: "Palpitations duration", tr: "Çarpıntı süresi" }
+    allowed_answer_codes:
+      - card.answer_code.yes
+      - card.answer_code.no
+      - card.answer_code.unknown
+
+  - key: card.answer_code.yes
+    category: answer_code
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.answer_code.yes
+    clinical_review_status: proposed_by_product
+    labels: { en: "Yes", tr: "Evet" }
+  - key: card.answer_code.no
+    category: answer_code
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.answer_code.no
+    clinical_review_status: proposed_by_product
+    labels: { en: "No", tr: "Hayır" }
+  - key: card.answer_code.unknown
+    category: answer_code
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.answer_code.unknown
+    clinical_review_status: proposed_by_product
+    labels: { en: "Unknown", tr: "Bilinmiyor" }
+
+  - key: card.vital.systolic_blood_pressure
+    category: vital
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.vital.systolic_blood_pressure
+    clinical_review_status: proposed_by_product
+    labels: { en: "Systolic blood pressure", tr: "Sistolik kan basıncı" }
+    default_unit_key: card.unit.mm_hg
+  - key: card.vital.diastolic_blood_pressure
+    category: vital
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.vital.diastolic_blood_pressure
+    clinical_review_status: proposed_by_product
+    labels: { en: "Diastolic blood pressure", tr: "Diyastolik kan basıncı" }
+    default_unit_key: card.unit.mm_hg
+  - key: card.vital.heart_rate
+    category: vital
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.vital.heart_rate
+    clinical_review_status: proposed_by_product
+    labels: { en: "Heart rate", tr: "Kalp hızı" }
+    default_unit_key: card.unit.beats_per_minute
+  - key: card.vital.oxygen_saturation
+    category: vital
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.vital.oxygen_saturation
+    clinical_review_status: proposed_by_product
+    labels: { en: "Oxygen saturation", tr: "Oksijen satürasyonu" }
+    default_unit_key: card.unit.percent
+
+  - key: card.unit.mm_hg
+    category: unit
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.unit.mm_hg
+    clinical_review_status: proposed_by_product
+    labels: { en: "mmHg", tr: "mmHg" }
+  - key: card.unit.beats_per_minute
+    category: unit
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.unit.beats_per_minute
+    clinical_review_status: proposed_by_product
+    labels: { en: "beats/min", tr: "atım/dk" }
+  - key: card.unit.percent
+    category: unit
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.unit.percent
+    clinical_review_status: proposed_by_product
+    labels: { en: "Percent", tr: "Yüzde" }
+
+  - key: card.onset.acute
+    category: onset
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.onset.acute
+    clinical_review_status: proposed_by_product
+    labels: { en: "Acute", tr: "Akut" }
+  - key: card.onset.subacute
+    category: onset
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.onset.subacute
+    clinical_review_status: proposed_by_product
+    labels: { en: "Subacute", tr: "Subakut" }
+  - key: card.onset.chronic
+    category: onset
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.onset.chronic
+    clinical_review_status: proposed_by_product
+    labels: { en: "Chronic", tr: "Kronik" }
+  - key: card.onset.unknown
+    category: onset
+    status: approved_demo
+    version_added: "1.0.0"
+    display_key: vocab.card.onset.unknown
+    clinical_review_status: proposed_by_product
+    labels: { en: "Unknown onset", tr: "Başlangıç bilinmiyor" }
