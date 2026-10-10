@@ -3,9 +3,11 @@ import {
   addEncounterComplaint,
   addEncounterFinding,
   createClinicalEncounter,
+  cancelClinicalEncounter,
   deactivateEncounterComplaint,
   fetchClinicalEncounterDetail,
   fetchPatientEncounters,
+  finalizeClinicalEncounter,
   upsertEncounterQuestionResponse,
 } from "@/lib/api/clinical-encounters";
 
@@ -118,5 +120,34 @@ describe("clinical-encounters API", () => {
     del.mockResolvedValue(undefined);
     await deactivateEncounterComplaint("token", "enc-1", "complaint-1");
     expect(del).toHaveBeenCalledWith("/encounters/enc-1/complaints/complaint-1", { authToken: "token" });
+  });
+
+  it("finalizeClinicalEncounter sends expected_version and summary sections only", async () => {
+    post.mockResolvedValue({ encounter: { id: "enc-1" } });
+    await finalizeClinicalEncounter("token", "enc-1", {
+      expected_version: 3,
+      summary_sections: [{ section_key: "assessment", clinician_text: "Stable" }],
+      clinician_note: "Note",
+    });
+    expect(post).toHaveBeenCalledWith("/encounters/enc-1/finalize", {
+      authToken: "token",
+      body: {
+        expected_version: 3,
+        summary_sections: [{ section_key: "assessment", clinician_text: "Stable" }],
+        clinician_note: "Note",
+      },
+    });
+    const body = post.mock.calls.at(-1)?.[1].body as Record<string, unknown>;
+    expect(body).not.toHaveProperty("finalized_by");
+    expect(body).not.toHaveProperty("status");
+  });
+
+  it("cancelClinicalEncounter sends expected_version only", async () => {
+    post.mockResolvedValue({ id: "enc-1", status: "cancelled" });
+    await cancelClinicalEncounter("token", "enc-1", { expected_version: 2 });
+    expect(post).toHaveBeenCalledWith("/encounters/enc-1/cancel", {
+      authToken: "token",
+      body: { expected_version: 2 },
+    });
   });
 });

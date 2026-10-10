@@ -1,5 +1,6 @@
 import type { EncounterDetailLabels } from "@/components/patients/EncounterDetailPageContent";
 import type { EncounterWorkspaceLabels } from "@/components/patients/EncounterDetailWriteWorkspace";
+import type { EncounterTerminalLabels } from "@/components/patients/EncounterTerminalActions";
 
 export function makeEncounterWorkspaceTestLabels(): EncounterWorkspaceLabels {
   return {
@@ -91,6 +92,42 @@ export function makeEncounterWorkspaceTestLabels(): EncounterWorkspaceLabels {
   };
 }
 
+export function makeEncounterTerminalTestLabels(): EncounterTerminalLabels {
+  return {
+    sectionHeading: "Complete encounter",
+    finalizeEncounter: "Complete encounter",
+    cancelEncounter: "Cancel encounter",
+    finalizePending: "Completing…",
+    cancelPending: "Cancelling…",
+    finalizeSuccess: "Encounter completed.",
+    cancelSuccess: "Encounter cancelled.",
+    finalizeConfirmTitle: "Complete this encounter",
+    finalizeConfirmBody: "Confirm finalize body",
+    finalizeConfirmAction: "Confirm completion",
+    finalizeConfirmCancel: "Go back",
+    cancelConfirmTitle: "Cancel this encounter",
+    cancelConfirmBody: "Confirm cancel body",
+    cancelConfirmAction: "Confirm cancellation",
+    cancelConfirmCancel: "Go back",
+    summarySectionKeyLabel: "Section key",
+    summaryContentKeyLabel: "Content key",
+    summaryClinicianTextLabel: "Encounter summary",
+    summaryClinicianNoteLabel: "Clinician note",
+    validationSectionKeyRequired: "Section key required",
+    validationSummaryTextRequired: "Summary text required",
+    finalizeValidation: "Finalize validation",
+    mutationErrors: {
+      notFoundOrDenied: "Not found",
+      validation: "Validation",
+      conflictStale: "Conflict stale",
+      terminalEdit: "Terminal",
+      server: "Server",
+      accessDenied: "Denied",
+      generic: "Generic",
+    },
+  };
+}
+
 export function makeEncounterDetailTestLabels(): EncounterDetailLabels {
   return {
     detailTitle: "Encounter details",
@@ -109,5 +146,6 @@ export function makeEncounterDetailTestLabels(): EncounterDetailLabels {
     retryLabel: "Retry",
     clinicianNoteLabel: "Note",
     workspace: makeEncounterWorkspaceTestLabels(),
+    terminal: makeEncounterTerminalTestLabels(),
   };
 }

@@ -16,6 +16,7 @@ export default function PatientEncounterDetailPage() {
   const hub = content.patientHub;
   const enc = hub.encounters;
   const ws = enc.workspace;
+  const tm = enc.terminal;
 
   return (
     <PageContainer className="py-8 sm:py-10">
@@ -114,6 +115,39 @@ export default function PatientEncounterDetailPage() {
               conflictStale: ws.mutationConflictStale,
               terminalEdit: ws.mutationTerminalEdit,
               server: ws.mutationServer,
+              accessDenied: enc.accessDenied,
+              generic: enc.genericError,
+            },
+          },
+          terminal: {
+            sectionHeading: tm.sectionHeading,
+            finalizeEncounter: tm.finalizeEncounter,
+            cancelEncounter: tm.cancelEncounter,
+            finalizePending: tm.finalizePending,
+            cancelPending: tm.cancelPending,
+            finalizeSuccess: tm.finalizeSuccess,
+            cancelSuccess: tm.cancelSuccess,
+            finalizeConfirmTitle: tm.finalizeConfirmTitle,
+            finalizeConfirmBody: tm.finalizeConfirmBody,
+            finalizeConfirmAction: tm.finalizeConfirmAction,
+            finalizeConfirmCancel: tm.finalizeConfirmCancel,
+            cancelConfirmTitle: tm.cancelConfirmTitle,
+            cancelConfirmBody: tm.cancelConfirmBody,
+            cancelConfirmAction: tm.cancelConfirmAction,
+            cancelConfirmCancel: tm.cancelConfirmCancel,
+            summarySectionKeyLabel: tm.summarySectionKeyLabel,
+            summaryContentKeyLabel: tm.summaryContentKeyLabel,
+            summaryClinicianTextLabel: tm.summaryClinicianTextLabel,
+            summaryClinicianNoteLabel: tm.summaryClinicianNoteLabel,
+            validationSectionKeyRequired: tm.validationSectionKeyRequired,
+            validationSummaryTextRequired: tm.validationSummaryTextRequired,
+            finalizeValidation: tm.finalizeValidation,
+            mutationErrors: {
+              notFoundOrDenied: enc.notFoundOrDenied,
+              validation: ws.mutationValidation,
+              conflictStale: ws.mutationConflictStale,
+              terminalEdit: ws.mutationTerminalEdit,
+              server: tm.mutationServer,
               accessDenied: enc.accessDenied,
               generic: enc.genericError,
             },

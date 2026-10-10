@@ -225,6 +225,31 @@ export type CommonContent = {
         findingSources: Record<string, string>;
         answerTypes: Record<string, string>;
       };
+      terminal: {
+        sectionHeading: string;
+        finalizeEncounter: string;
+        cancelEncounter: string;
+        finalizePending: string;
+        cancelPending: string;
+        finalizeSuccess: string;
+        cancelSuccess: string;
+        finalizeConfirmTitle: string;
+        finalizeConfirmBody: string;
+        finalizeConfirmAction: string;
+        finalizeConfirmCancel: string;
+        cancelConfirmTitle: string;
+        cancelConfirmBody: string;
+        cancelConfirmAction: string;
+        cancelConfirmCancel: string;
+        summarySectionKeyLabel: string;
+        summaryContentKeyLabel: string;
+        summaryClinicianTextLabel: string;
+        summaryClinicianNoteLabel: string;
+        validationSectionKeyRequired: string;
+        validationSummaryTextRequired: string;
+        finalizeValidation: string;
+        mutationServer: string;
+      };
     };
   };
   timeline: {

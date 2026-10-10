@@ -136,6 +136,22 @@ export type EncounterQuestionResponseUpsertBody = {
   clinician_note?: string | null;
 };
 
+export type EncounterSummarySectionInput = {
+  section_key: string;
+  content_key?: string | null;
+  clinician_text?: string | null;
+};
+
+export type FinalizeClinicalEncounterBody = {
+  expected_version: number;
+  summary_sections: EncounterSummarySectionInput[];
+  clinician_note?: string | null;
+};
+
+export type CancelClinicalEncounterBody = {
+  expected_version: number;
+};
+
 export type EncounterComplaintRecord = EncounterComplaint;
 export type EncounterFindingRecord = EncounterFinding;
 export type EncounterQuestionResponseRecord = EncounterQuestionResponse;
@@ -222,5 +238,27 @@ export async function deactivateEncounterComplaint(
 ): Promise<void> {
   await apiClient.delete<void>(`/encounters/${encounterId}/complaints/${complaintId}`, {
     authToken,
+  });
+}
+
+export async function finalizeClinicalEncounter(
+  authToken: string,
+  encounterId: string,
+  body: FinalizeClinicalEncounterBody,
+): Promise<ClinicalEncounterDetail> {
+  return apiClient.post<ClinicalEncounterDetail>(`/encounters/${encounterId}/finalize`, {
+    authToken,
+    body,
+  });
+}
+
+export async function cancelClinicalEncounter(
+  authToken: string,
+  encounterId: string,
+  body: CancelClinicalEncounterBody,
+): Promise<ClinicalEncounterListItem> {
+  return apiClient.post<ClinicalEncounterListItem>(`/encounters/${encounterId}/cancel`, {
+    authToken,
+    body,
   });
 }

@@ -7,6 +7,10 @@ import {
   EncounterDetailWriteWorkspace,
   type EncounterWorkspaceLabels,
 } from "@/components/patients/EncounterDetailWriteWorkspace";
+import {
+  EncounterTerminalActions,
+  type EncounterTerminalLabels,
+} from "@/components/patients/EncounterTerminalActions";
 import { ApiClientError } from "@/lib/api/client";
 import {
   fetchClinicalEncounterDetail,
@@ -32,6 +36,7 @@ export type EncounterDetailLabels = {
   retryLabel: string;
   clinicianNoteLabel: string;
   workspace: EncounterWorkspaceLabels;
+  terminal: EncounterTerminalLabels;
 };
 
 type EncounterDetailPageContentProps = {
@@ -171,6 +176,20 @@ export function EncounterDetailPageContent({
           {statusMessage}
         </p>
       ) : null}
+
+      <EncounterTerminalActions
+        encounterId={encounterId}
+        accessToken={accessToken ?? ""}
+        detail={detail}
+        labels={labels.terminal}
+        onRefresh={() => loadDetail({ silent: true })}
+        onDetailUpdated={(updated) => {
+          setDetail(updated);
+          setLoadState("ready");
+        }}
+        onUnauthorized={onUnauthorized}
+        onStatusMessage={setStatusMessage}
+      />
 
       <EncounterDetailWriteWorkspace
         encounterId={encounterId}
