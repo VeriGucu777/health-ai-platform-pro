@@ -69,3 +69,11 @@ Specialty modules consume **rules** via `ClinicalRuleCatalog`, not guideline PDF
 Only: differential **considerations**, suggested questions, missing information, safety alerts — all via i18n keys, with provenance for rule-derived items in future phases.
 
 No probability, diagnosis confidence, medication, or reimbursement fields.
+
+## Encounter evaluation context assembly (Phase 2C)
+
+Before any future `evaluate()` call, structured encounter data must be assembled into `EncounterEvaluationContext` via the application mapper (`encounter_context_mapper.py`).
+
+See **[Encounter evaluation context assembly](encounter_evaluation_context_assembly.md)** for PHI boundaries, vocabulary validation, vital mapping, and exclusions.
+
+The mapper is **not** wired to HTTP, startup, or the orchestrator in Phase 2C.
