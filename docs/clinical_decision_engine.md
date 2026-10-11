@@ -77,3 +77,7 @@ Before any future `evaluate()` call, structured encounter data must be assembled
 See **[Encounter evaluation context assembly](encounter_evaluation_context_assembly.md)** for PHI boundaries, vocabulary validation, vital mapping, and exclusions.
 
 The mapper is **not** wired to HTTP, startup, or the orchestrator in Phase 2C.
+
+## Evaluation context snapshot (Phase 2D)
+
+Deterministic semantic hash and `sha256:` `input_snapshot_id` for structured replay provenance — see **[Evaluation context snapshot](evaluation_context_snapshot.md)**. Rule-set hash remains a separate dimension.

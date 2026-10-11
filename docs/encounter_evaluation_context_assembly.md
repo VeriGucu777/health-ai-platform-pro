@@ -97,6 +97,12 @@ Same vocabulary key with `negated=true` on complaints/findings; no separate `no_
 
 Boolean answers are stored on the encounter as `yes` / `no` / `unknown`. Vocabulary validation resolves these to `card.answer_code.*` keys; the evaluation context keeps the encounter-native short codes.
 
+## Snapshot identity (Phase 2D)
+
+Semantic `input_snapshot_id` (`sha256:…`) and metadata envelope: **[Evaluation context snapshot](evaluation_context_snapshot.md)**.
+
+Phase 2C mapper may still set legacy `input_snapshot_id` until wired to snapshot helper in a later phase.
+
 ## Related
 
 - [Clinical Decision Engine](clinical_decision_engine.md)
