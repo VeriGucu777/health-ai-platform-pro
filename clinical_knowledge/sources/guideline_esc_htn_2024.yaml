@@ -13,9 +13,12 @@ specialty:
 topic_tags:
   - hypertension
   - blood_pressure
-license_status: unknown
-ai_usage_status: unknown
-commercial_usage_status: unknown
+license_status: permission_required
+ai_usage_status: permission_required
+commercial_usage_status: permission_required
 content_ingestion_allowed: false
 citation_required: true
 clinical_review_status: not_reviewed
+license_type: esc_copyright_oup_ehj_personal_educational_only
+last_license_reviewed_at: "2026-10-12T12:00:00+00:00"
+license_reviewed_by: product-legal-review-pending

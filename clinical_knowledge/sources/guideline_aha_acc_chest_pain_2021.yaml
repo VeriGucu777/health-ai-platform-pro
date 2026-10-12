@@ -1,0 +1,30 @@
+source_id: guideline:aha-acc:chest-pain:2021
+source_type: guideline
+title: >-
+  2021 AHA/ACC/ASE/CHEST/SAEM/SCCT/SCMR Guideline for the Evaluation and
+  Diagnosis of Chest Pain
+publisher_or_organization: American Heart Association / American College of Cardiology
+edition_or_version: "2021"
+publication_year: 2021
+publication_date: "2021-10-28"
+official_url: https://www.ahajournals.org/doi/10.1161/CIR.0000000000001029
+jurisdiction:
+  - US
+  - international
+specialty:
+  - cardiology
+  - emergency_medicine
+topic_tags:
+  - chest_pain
+  - evaluation
+  - diagnosis
+  - pilot_chest_pain_primary_framing
+license_status: permission_required
+ai_usage_status: unknown
+commercial_usage_status: unknown
+content_ingestion_allowed: false
+citation_required: true
+clinical_review_status: not_reviewed
+license_type: publisher_copyright_acc_aha_circulation_jacc
+last_license_reviewed_at: "2026-10-12T12:00:00+00:00"
+license_reviewed_by: product-legal-review-pending

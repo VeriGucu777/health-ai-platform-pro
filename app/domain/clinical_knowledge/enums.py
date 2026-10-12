@@ -28,6 +28,7 @@ class LicenseStatus(StrEnum):
 class AiUsageStatus(StrEnum):
     ALLOWED = "allowed"
     RESTRICTED = "restricted"
+    PERMISSION_REQUIRED = "permission_required"
     PROHIBITED = "prohibited"
     UNKNOWN = "unknown"
 
@@ -35,6 +36,7 @@ class AiUsageStatus(StrEnum):
 class CommercialUsageStatus(StrEnum):
     ALLOWED = "allowed"
     RESTRICTED = "restricted"
+    PERMISSION_REQUIRED = "permission_required"
     PROHIBITED = "prohibited"
     UNKNOWN = "unknown"
 

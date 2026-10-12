@@ -150,6 +150,15 @@ def test_fail_ai_prohibited_with_ingestion(tmp_path: Path) -> None:
     assert not result.ok
 
 
+def test_fail_ai_permission_required_with_ingestion(tmp_path: Path) -> None:
+    body = ESC_SOURCE_YAML.replace("ai_usage_status: unknown", "ai_usage_status: permission_required")
+    body = body.replace("content_ingestion_allowed: false", "content_ingestion_allowed: true")
+    body = body.replace("license_status: unknown", "license_status: verified_open")
+    root = _write_minimal_catalog(tmp_path, sources={"esc.yaml": body})
+    result = DefaultRuleCatalogValidator().validate_catalog(root)
+    assert not result.ok
+
+
 def test_fail_invalid_semver(tmp_path: Path) -> None:
     rule = DRAFT_RULE_YAML.replace('rule_version: "1.0.0"', 'rule_version: "not-semver"')
     root = _write_minimal_catalog(

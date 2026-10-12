@@ -71,8 +71,11 @@ def _load_real_catalog_snapshot():
 
 def test_real_repo_catalog_orchestrator_no_applicable_rules() -> None:
     snapshot = _load_real_catalog_snapshot()
-    assert "guideline:esc:htn:2024" in snapshot.loaded_source_ids
-    assert snapshot.loaded_source_ids == ("guideline:esc:htn:2024",)
+    assert snapshot.loaded_source_ids == (
+        "guideline:aha-acc:chest-pain:2021",
+        "guideline:esc:acs:2023",
+        "guideline:esc:htn:2024",
+    )
     assert snapshot.loaded_rule_ids == ()
     assert snapshot.active_production_rule_ids == ()
 

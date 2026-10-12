@@ -76,11 +76,11 @@
     },
     "ai_usage_status": {
       "type": "string",
-      "enum": ["allowed", "restricted", "prohibited", "unknown"]
+      "enum": ["allowed", "restricted", "permission_required", "prohibited", "unknown"]
     },
     "commercial_usage_status": {
       "type": "string",
-      "enum": ["allowed", "restricted", "prohibited", "unknown"]
+      "enum": ["allowed", "restricted", "permission_required", "prohibited", "unknown"]
     },
     "content_ingestion_allowed": { "type": "boolean" },
     "citation_required": { "type": "boolean" },
