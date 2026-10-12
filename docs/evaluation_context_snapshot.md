@@ -93,6 +93,16 @@ Canonical hash input must never include display names, notes, addresses, or fina
 Neutral helpers: `tests/support/evaluation_context_fixtures.py`  
 (Vocabulary keys only; no disease scenarios.)
 
+## Assembly wiring (Phase 2E)
+
+`assemble_encounter_evaluation_context_with_snapshot(request)`:
+
+1. Assembles `EncounterEvaluationContext` (fail-closed on validation errors — no snapshot on failure).
+2. Sets `input_snapshot_id` via `input_snapshot_id_from_context` (reuses Phase 2D hash).
+3. Builds metadata with `encounter_version` separate from semantic hash.
+
+Optional `request.vocabulary_manifest_hash` + registry port → vocabulary fields on metadata only (not semantic hash).
+
 ## Related
 
 - [Encounter evaluation context assembly](encounter_evaluation_context_assembly.md)

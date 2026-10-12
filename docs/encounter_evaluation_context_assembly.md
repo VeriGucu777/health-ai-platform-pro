@@ -97,11 +97,14 @@ Same vocabulary key with `negated=true` on complaints/findings; no separate `no_
 
 Boolean answers are stored on the encounter as `yes` / `no` / `unknown`. Vocabulary validation resolves these to `card.answer_code.*` keys; the evaluation context keeps the encounter-native short codes.
 
-## Snapshot identity (Phase 2D)
+## Snapshot identity (Phase 2D / 2E)
 
-Semantic `input_snapshot_id` (`sha256:…`) and metadata envelope: **[Evaluation context snapshot](evaluation_context_snapshot.md)**.
+- **`assemble_encounter_evaluation_context`** — legacy envelope id `{encounter_id}:v{version}` on `input_snapshot_id` (backward compatible).
+- **`assemble_encounter_evaluation_context_with_snapshot`** — returns `EncounterEvaluationContextAssemblyResult` with semantic `sha256:…` on `context.input_snapshot_id` plus `EvaluationContextSnapshotMetadata`.
 
-Phase 2C mapper may still set legacy `input_snapshot_id` until wired to snapshot helper in a later phase.
+Optional vocabulary identity on metadata when `vocabulary_registry` and `vocabulary_manifest_hash` are supplied on the request (port only; no filesystem reads in mapper).
+
+Details: **[Evaluation context snapshot](evaluation_context_snapshot.md)**.
 
 ## Related
 

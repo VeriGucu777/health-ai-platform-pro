@@ -12,6 +12,13 @@ from app.application.clinical_decision.exceptions import (
     EncounterContextAssemblyValidationError,
     UnknownClinicalVocabularyKeyError,
 )
+from app.application.clinical_decision.evaluation_context_snapshot import (
+    EvaluationContextSnapshotMetadata,
+    VocabularySnapshotIdentity,
+    build_evaluation_context_snapshot_metadata,
+    input_snapshot_id_from_context,
+    vocabulary_identity_from_manifest,
+)
 from app.application.clinical_decision.vocabulary_eligibility import (
     VocabularyEligibilityMode,
     term_eligible_for_assembly,
@@ -62,8 +69,17 @@ class EncounterContextAssemblyRequest:
     locale: Literal["tr", "en"] | None = None
     reference_at: datetime | None = None
     vocabulary_registry: ClinicalVocabularyRegistry | None = None
+    vocabulary_manifest_hash: str | None = None
     vocabulary_mode: VocabularyEligibilityMode = VocabularyEligibilityMode.DEMO
     validate_vocabulary_keys: bool = True
+
+
+@dataclass(frozen=True, slots=True)
+class EncounterEvaluationContextAssemblyResult:
+    """Assembled evaluation context plus deterministic snapshot metadata."""
+
+    context: EncounterEvaluationContext
+    snapshot: EvaluationContextSnapshotMetadata
 
 
 def _is_active_child(*, is_active: bool, deleted_at: datetime | None) -> bool:
@@ -259,10 +275,23 @@ def _map_health_measurements(
     return tuple(vitals)
 
 
-def assemble_encounter_evaluation_context(
+def _vocabulary_snapshot_identity(
     request: EncounterContextAssemblyRequest,
+) -> VocabularySnapshotIdentity | None:
+    if request.vocabulary_registry is None or not request.vocabulary_manifest_hash:
+        return None
+    return vocabulary_identity_from_manifest(
+        request.vocabulary_registry.manifest(),
+        request.vocabulary_manifest_hash,
+    )
+
+
+def _assemble_encounter_evaluation_context(
+    request: EncounterContextAssemblyRequest,
+    *,
+    input_snapshot_id: str | None,
 ) -> EncounterEvaluationContext:
-    """Build a frozen evaluation context from encounter structured inputs only."""
+    """Shared assembly body (single pass); snapshot id supplied by caller."""
     encounter = request.aggregate.encounter
     if encounter.locale not in ("tr", "en"):
         raise EncounterContextAssemblyValidationError(
@@ -296,8 +325,6 @@ def assemble_encounter_evaluation_context(
     if created_at.tzinfo is None:
         raise EncounterContextAssemblyValidationError("reference_at must be timezone-aware")
 
-    snapshot_id = f"{encounter.id}:v{encounter.version}"
-
     return EncounterEvaluationContext(
         encounter_id=encounter.id,
         patient_id=encounter.patient_id,
@@ -313,8 +340,39 @@ def assemble_encounter_evaluation_context(
         historical_context=request.historical_context,
         context_version=_CONTEXT_VERSION,
         created_at=created_at,
-        input_snapshot_id=snapshot_id,
+        input_snapshot_id=input_snapshot_id,
     )
+
+
+def assemble_encounter_evaluation_context(
+    request: EncounterContextAssemblyRequest,
+) -> EncounterEvaluationContext:
+    """Build a frozen evaluation context from encounter structured inputs only."""
+    encounter = request.aggregate.encounter
+    legacy_snapshot_id = f"{encounter.id}:v{encounter.version}"
+    return _assemble_encounter_evaluation_context(
+        request,
+        input_snapshot_id=legacy_snapshot_id,
+    )
+
+
+def assemble_encounter_evaluation_context_with_snapshot(
+    request: EncounterContextAssemblyRequest,
+) -> EncounterEvaluationContextAssemblyResult:
+    """
+    Assemble context once, then attach semantic input_snapshot_id and metadata.
+
+    Snapshot is produced only after successful assembly (fail-closed on validation errors).
+    """
+    context = _assemble_encounter_evaluation_context(request, input_snapshot_id=None)
+    semantic_snapshot_id = input_snapshot_id_from_context(context)
+    context = context.model_copy(update={"input_snapshot_id": semantic_snapshot_id})
+    snapshot = build_evaluation_context_snapshot_metadata(
+        context,
+        encounter_version=request.aggregate.encounter.version,
+        vocabulary=_vocabulary_snapshot_identity(request),
+    )
+    return EncounterEvaluationContextAssemblyResult(context=context, snapshot=snapshot)
 
 
 def context_contains_forbidden_phi_markers(context: EncounterEvaluationContext) -> bool:
