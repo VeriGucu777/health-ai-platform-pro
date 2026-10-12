@@ -558,12 +558,13 @@ All clinical decisions: **UNREVIEWED** / **PROPOSED** until cardiologist worksho
 
 - **Role:** Primary chest-pain **evaluation framework** source for the pilot pack.  
 - **Potential future applicability (design only):** presentation characterization concepts; diagnostic pathway framing; structured assessment dimensions — **only after** exact sections are verified and clinically reviewed.  
-- **Do not** claim specific recommendation support until `section_ref` ≠ `TO_VERIFY`.
+- **Section anchors:** verified at TOC level in [`docs/chest_pain_verified_source_references.md`](chest_pain_verified_source_references.md) (Phase 2I). **Recommendation-level** refs remain `TO_VERIFY` until row-level verification.
 
 **`guideline:esc:acs:2023`**
 
 - **Role:** **ACS-specific** supporting source — acute coronary syndrome evaluation/management context.  
 - **Potential future applicability:** ACS-specific safety/risk framing; ACS-scoped considerations — **not** generic outpatient chest pain workup.  
+- **Section anchors:** verified in [`docs/chest_pain_verified_source_references.md`](chest_pain_verified_source_references.md); **§3.3.4.1** biomarker algorithms flagged **CORRECTION_REVIEW_REQUIRED** (DOI **ehad870**).  
 - **Do not** use as the primary source for non-ACS chest pain rules.
 
 **`guideline:esc:htn:2024`**
@@ -572,32 +573,32 @@ All clinical decisions: **UNREVIEWED** / **PROPOSED** until cardiologist worksho
 
 ### 34.2 Rule family → source role matrix
 
-Exact guideline sections are **not verified** — all `exact_section_required` values are **`TO_VERIFY`**.  
+**Phase 2I:** Official **section-level** anchors verified (TOC only) — see [`chest_pain_verified_source_references.md`](chest_pain_verified_source_references.md).  
+**Recommendation rows / Class-LOE IDs** remain **`TO_VERIFY`**.  
 `implementation_allowed_now` is **NO** for all clinical families (license + clinical gates closed).
 
-| rule_family | primary_source_id | secondary_source_id | source_role | exact_section_required | license_gate | clinical_review_gate | implementation_allowed_now |
-|-------------|-------------------|---------------------|-------------|------------------------|--------------|----------------------|----------------------------|
-| `differential_support` | `guideline:aha-acc:chest-pain:2021` | `guideline:esc:acs:2023` (ACS-scoped rules only) | Consideration support must cite verified guideline section; not probability/diagnosis | TO_VERIFY | CLOSED | CLOSED | NO |
-| `differential_against` | `guideline:aha-acc:chest-pain:2021` | `guideline:esc:acs:2023` (when ACS-specific) | Opposing evidence for considerations | TO_VERIFY | CLOSED | CLOSED | NO |
-| `missing_information` | `guideline:aha-acc:chest-pain:2021` | — | Clinical *necessity* of a field requires source + review; technical “field empty” alone is insufficient for clinical claims | TO_VERIFY | CLOSED | CLOSED | NO |
-| `next_best_question` | `guideline:aha-acc:chest-pain:2021` | `guideline:esc:acs:2023` (ACS-scoped NBQ only) | Vocabulary question key ≠ permission to recommend; NBQ needs source + branching review | TO_VERIFY | CLOSED | CLOSED | NO |
-| `safety_alert` | `guideline:aha-acc:chest-pain:2021` | `guideline:esc:acs:2023` | Highest governance; no “obvious” alert without verified source + review + golden cases | TO_VERIFY | CLOSED | CLOSED | NO |
-| `workflow_guard` | *(none for clinical guards)* | — | **Technical** guards (e.g. do not re-ask answered questions) may not need medical source; **clinical** guards (e.g. “must document X before Y”) require source + review | TO_VERIFY (clinical only) | CLOSED (clinical) | CLOSED (clinical) | NO (clinical); technical-only guards out of scope for 2G |
+| rule_family | primary_source_id | secondary_source_id | source_role | exact_section_required (verified § / rec) | license_gate | clinical_review_gate | implementation_allowed_now |
+|-------------|-------------------|---------------------|-------------|---------------------------------------------|--------------|----------------------|----------------------------|
+| `differential_support` | `guideline:aha-acc:chest-pain:2021` | `guideline:esc:acs:2023` (ACS-scoped only) | Consideration support — not probability/diagnosis | AHA **§2.1**, **§1.4.2**; ESC **§3.1.1**; rec **TO_VERIFY** | CLOSED | CLOSED | NO |
+| `differential_against` | `guideline:aha-acc:chest-pain:2021` | `guideline:esc:acs:2023` (ACS-scoped) | Opposing evidence for considerations | AHA **§2.1**; ESC **§3.5**; rec **TO_VERIFY** | CLOSED | CLOSED | NO |
+| `missing_information` | `guideline:aha-acc:chest-pain:2021` | — | Clinical *necessity* needs source + review | AHA **§2.1**, **§2.2**; rec **TO_VERIFY** | CLOSED | CLOSED | NO |
+| `next_best_question` | `guideline:aha-acc:chest-pain:2021` | `guideline:esc:acs:2023` (ACS-scoped NBQ) | Vocabulary key ≠ permission to recommend | AHA **§2.1**; ESC **§3.1.2**; rec **TO_VERIFY** | CLOSED | CLOSED | NO |
+| `safety_alert` | `guideline:aha-acc:chest-pain:2021` | `guideline:esc:acs:2023` | Highest governance | AHA **§4.1**; ESC **§3**, **§4.2.1**; ESC **§3.3.4.1** = **CORRECTION_REVIEW_REQUIRED**; rec **TO_VERIFY** | CLOSED | CLOSED | NO |
+| `workflow_guard` | *(clinical guards)* | — | Technical dedup guards may omit source; clinical sequencing requires source | Clinical: AHA **§2.3**, **§3**; ESC **§3.2**; rec **TO_VERIFY** | CLOSED (clinical) | CLOSED (clinical) | NO (clinical) |
 
 ### 34.3 Section and citation convention (future rule YAML)
 
 Align with `clinical_rule.schema.json` → `guideline_refs[]`: required `source_id`, `section_ref`; optional `recommendation_id`.
 
-**Until independently verified from official publications:**
+| Field | Phase 2I value | Notes |
+|-------|----------------|--------|
+| `source_id` | Catalog ID | Unchanged |
+| `section_ref` | **VERIFIED** anchors in reference doc (e.g. `"2.1"`, `"3.1.1"`) or **`TO_VERIFY`** | Official TOC only — see [`chest_pain_verified_source_references.md`](chest_pain_verified_source_references.md) |
+| `recommendation_id` | **`TO_VERIFY`** (omit in YAML until verified) | Table *titles* verified; rows not extracted |
+| `verification_status` | `VERIFIED` \| `TO_VERIFY` \| `CORRECTION_REVIEW_REQUIRED` | ESC **§3.3.4.1** / Table S4 path per correction DOI **ehad870** |
+| `source_role` (design) | `primary_framing` \| `acs_specific` \| `out_of_pack` | Unchanged |
 
-| Field | Phase 2G value | Future stable pattern (examples) |
-|-------|----------------|----------------------------------|
-| `source_id` | Verified catalog ID | unchanged |
-| `section_ref` | **`TO_VERIFY`** | `section:<official-section-id>` or society-specific stable ID |
-| `recommendation_id` | omit or **`TO_VERIFY`** | `rec:<table-or-rec-id>` when verified |
-| `source_role` (design / provenance extension) | `primary_framing` \| `acs_specific` \| `out_of_pack` | documents why source is attached |
-
-**Do not invent** section numbers, table numbers, class/level, or page numbers in this phase.
+**Do not copy** recommendation bodies, class/level text, or algorithm tables into the repo.
 
 ### 34.4 Dual-gate model
 
@@ -728,6 +729,7 @@ No real rule record in Phase 2G.
 | `clinical_knowledge/rules/cardiology/chest_pain/README.md` | Inert pointer — dual-gate summary |
 | `docs/chest_pain_source_license_matrix.md` | Verified source license metadata |
 | `docs/technical_synthetic_evaluation_scenarios.md` | Phase 2H technical fixtures (not clinical golden set) |
+| `docs/chest_pain_verified_source_references.md` | Phase 2I verified section anchors (not rules) |
 | `clinical_knowledge/README.md` | Catalog lifecycle |
 | `app/domain/clinical_decision/models.py` | Output contracts |
 
