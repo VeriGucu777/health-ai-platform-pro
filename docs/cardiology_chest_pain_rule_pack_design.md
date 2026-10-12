@@ -727,6 +727,7 @@ No real rule record in Phase 2G.
 | `docs/cardiology_controlled_vocabulary.md` | Vocabulary governance |
 | `clinical_knowledge/rules/cardiology/chest_pain/README.md` | Inert pointer — dual-gate summary |
 | `docs/chest_pain_source_license_matrix.md` | Verified source license metadata |
+| `docs/technical_synthetic_evaluation_scenarios.md` | Phase 2H technical fixtures (not clinical golden set) |
 | `clinical_knowledge/README.md` | Catalog lifecycle |
 | `app/domain/clinical_decision/models.py` | Output contracts |
 
