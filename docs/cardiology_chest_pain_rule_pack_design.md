@@ -1,8 +1,8 @@
-# Cardiology Chest Pain Pilot Rule-Pack — Design & Clinical Review Plan (Phase 2B)
+# Cardiology Chest Pain Pilot Rule-Pack — Design & Clinical Review Plan (Phase 2B + 2G)
 
-**Status:** PROPOSED / UNREVIEWED (no cardiologist sign-off)  
-**Design version (not a rule manifest):** `cardiology-chest-pain-v0.1.0-design`  
-**Repository main at design time:** `e88d702` (controlled vocabulary foundation)  
+**Status:** PROPOSED / UNREVIEWED (no cardiologist sign-off) · **Source metadata linked (Phase 2G)**  
+**Design version (not a rule manifest):** `cardiology-chest-pain-v0.1.1-design`  
+**Repository main at last governance update:** `7a57f86` (chest pain source license metadata)  
 **Scope:** Documentation and governance only — **zero executable clinical rules**
 
 ---
@@ -261,40 +261,39 @@ Reuse `ClinicalDecisionProvenance` and existing catalog provenance:
 
 ---
 
-## 15. Source requirements
+## 15. Verified clinical sources (Phase 2F registry)
 
-### Existing ESC HTN source
+Metadata-only records live under `clinical_knowledge/sources/`. Full license matrix: [`docs/chest_pain_source_license_matrix.md`](chest_pain_source_license_matrix.md).
 
-`guideline:esc:htn:2024` (`clinical_knowledge/sources/guideline_esc_htn_2024.yaml`) is **hypertension** metadata.
+| `source_id` | Chest-pain pack role | In-pack? |
+|-------------|----------------------|----------|
+| `guideline:aha-acc:chest-pain:2021` | **Primary** chest-pain evaluation / diagnostic workflow framing | YES (primary) |
+| `guideline:esc:acs:2023` | **ACS-specific** supporting evidence (not generic chest pain) | YES (secondary / ACS-scoped) |
+| `guideline:esc:htn:2024` | Hypertension only | **NO** — out of scope unless a future HTN module |
 
-**NOT SUFFICIENT FOR CHEST PAIN RULE PACK** — do not cite as chest-pain evidence because it shares “ESC”.
+**Do not treat AHA chest-pain and ESC ACS as interchangeable.** ESC HTN must not be cited as chest-pain evidence.
 
-### Source requirement matrix (defaults: UNKNOWN / deny ingestion until verified)
+### Current permission state (no licenses obtained)
 
-| Clinical area | Source type needed | Candidate org (TO VERIFY EXTERNALLY) | License status | AI/commercial use | Ingestion allowed | Review status |
-|---------------|-------------------|--------------------------------------|----------------|---------------------|-------------------|---------------|
-| Acute chest pain / ACS assessment | Society guideline | ESC, AHA/ACC, etc. | UNKNOWN | UNKNOWN | NO until cleared | UNREVIEWED |
-| Stable chest pain / outpatient cardiology | Society / national | ESC, Turkish Cardiology Assoc. if applicable | UNKNOWN | UNKNOWN | NO | UNREVIEWED |
-| Pulmonary embolism (if in scope) | Society guideline | ESC, ACCP, etc. | UNKNOWN | UNKNOWN | NO | UNREVIEWED |
-| Aortic syndromes (if in scope) | Society guideline | ESC, AHA | UNKNOWN | UNKNOWN | NO | UNREVIEWED |
-| Emergency triage context (if in scope) | Emergency guideline | IFEM, national ED protocols | UNKNOWN | UNKNOWN | NO | UNREVIEWED |
-| Vital sign documentation | Standards / device | LOINC (mapping only, no bulk) | UNKNOWN | N/A | NO bulk | UNREVIEWED |
-| ECG interpretation | Society statement | ESC/AHA | UNKNOWN | UNKNOWN | NO raw ECG AI in v1 | UNREVIEWED |
+| Source | `license_status` | AI/CDS | Commercial | `content_ingestion_allowed` |
+|--------|------------------|--------|------------|-------------------------------|
+| AHA chest pain 2021 | `permission_required` | `unknown` | `unknown` | **false** |
+| ESC ACS 2023 | `permission_required` | `permission_required` | `permission_required` | **false** |
+| ESC HTN 2024 | `permission_required` | `permission_required` | `permission_required` | **false** |
 
-**License verification required:** YES before any `source_linked` → `license_cleared` promotion.
+Rule implementation that depends on protected guideline use remains **blocked** until formal clearance.
 
-### Source acquisition process (future)
+### Turkish / national sources
 
-1. Identify official source  
-2. Verify publication/version/date  
-3. Verify license / redistribution / AI use  
-4. Register metadata in `clinical_knowledge/sources/`  
-5. Clinician selects recommendation areas  
-6. Product translates to **deterministic rule proposal** (IDs + refs only)  
-7. Clinician review  
-8. Technical validation (schema, tests)  
-9. `approved_demo`  
-10. `approved_prod` (later)
+**No verified Turkish national source** is in the catalog (Phase 2F). Future candidates must follow the same metadata → license → clinical review → source-role process.
+
+### Source acquisition process (unchanged intent)
+
+1. Official source verified → metadata in `clinical_knowledge/sources/` (**done for AHA + ESC ACS**)  
+2. License / AI / CDS / commercial clearance recorded in source metadata  
+3. Clinician identifies **exact** section/recommendation (not `TO_VERIFY`)  
+4. Deterministic rule proposal (IDs + refs only — no guideline body)  
+5. Dual gates (license + clinical review) → `approved_demo` → later `approved_prod`
 
 **Copyright:** Rule YAML stores `source_id`, `section_ref`, `recommendation_id` — never full guideline paragraphs.
 
@@ -302,14 +301,20 @@ Reuse `ClinicalDecisionProvenance` and existing catalog provenance:
 
 ## 16. Rule lifecycle — first chest pain pack
 
-Proposed lifecycle (aligned with `clinical_knowledge/README.md`):
+Aligned with `clinical_knowledge/README.md` and `ClinicalRuleStatus`:
 
-`draft` → `source_linked` → `license_cleared` → `clinical_review` → `approved_demo` → `approved_prod`
+`draft` → `source_linked` → `license_cleared` → `clinical_review` → `approved_demo` → `approved_prod` → `deprecated` → `retired`
 
-**Maximum ceiling before cardiologist review:** **`license_cleared`** at most for internal engineering fixtures; prefer **`draft`** or **`source_linked`** until clinical review completes.  
-**Never** `approved_demo` / `approved_prod` / `clinically_approved` without documented cardiologist review.
+**Phase 2G lifecycle ceiling for this pack:** **`source_linked` maximum** — verified `source_id`s and design linkage exist; **no** rule YAML; **no** `license_cleared`, **no** `clinical_review`, **no** `approved_demo` / `approved_prod`.
 
-Pack design version SemVer: **`cardiology-chest-pain-v0.1.0-design`** (0.x = pre-implementation design); implementation manifest might become `cardiology-chest-pain-v1.0.0` after review.
+| Gate | State | Effect |
+|------|--------|--------|
+| License / usage (Gate A) | **CLOSED** | AHA and ESC not cleared for ingestion or AI/CDS rule encoding |
+| Clinical review (Gate B) | **CLOSED** | No cardiologist review record |
+
+**License approval ≠ clinical approval.** Clearing one gate does not clear the other.
+
+Pack design version: **`cardiology-chest-pain-v0.1.1-design`** (0.x = pre-implementation); executable manifest might become `cardiology-chest-pain-v1.0.0` after review.
 
 ---
 
@@ -543,24 +548,185 @@ All clinical decisions: **UNREVIEWED** / **PROPOSED** until cardiologist worksho
 
 ---
 
-## 34. Phase 2B deliverables checklist
+## 34. Phase 2G — Source linkage, provenance, and dual-gate governance
+
+**Phase 2G scope:** Link this design to Phase 2F verified sources; define citation conventions, rule-family roles, and governance — **no rule YAML, no runtime**.
+
+### 34.1 Source role assignment (detailed)
+
+**`guideline:aha-acc:chest-pain:2021`**
+
+- **Role:** Primary chest-pain **evaluation framework** source for the pilot pack.  
+- **Potential future applicability (design only):** presentation characterization concepts; diagnostic pathway framing; structured assessment dimensions — **only after** exact sections are verified and clinically reviewed.  
+- **Do not** claim specific recommendation support until `section_ref` ≠ `TO_VERIFY`.
+
+**`guideline:esc:acs:2023`**
+
+- **Role:** **ACS-specific** supporting source — acute coronary syndrome evaluation/management context.  
+- **Potential future applicability:** ACS-specific safety/risk framing; ACS-scoped considerations — **not** generic outpatient chest pain workup.  
+- **Do not** use as the primary source for non-ACS chest pain rules.
+
+**`guideline:esc:htn:2024`**
+
+- **Role:** **NONE** for chest-pain rule pack. Reserved for a future hypertension module only.
+
+### 34.2 Rule family → source role matrix
+
+Exact guideline sections are **not verified** — all `exact_section_required` values are **`TO_VERIFY`**.  
+`implementation_allowed_now` is **NO** for all clinical families (license + clinical gates closed).
+
+| rule_family | primary_source_id | secondary_source_id | source_role | exact_section_required | license_gate | clinical_review_gate | implementation_allowed_now |
+|-------------|-------------------|---------------------|-------------|------------------------|--------------|----------------------|----------------------------|
+| `differential_support` | `guideline:aha-acc:chest-pain:2021` | `guideline:esc:acs:2023` (ACS-scoped rules only) | Consideration support must cite verified guideline section; not probability/diagnosis | TO_VERIFY | CLOSED | CLOSED | NO |
+| `differential_against` | `guideline:aha-acc:chest-pain:2021` | `guideline:esc:acs:2023` (when ACS-specific) | Opposing evidence for considerations | TO_VERIFY | CLOSED | CLOSED | NO |
+| `missing_information` | `guideline:aha-acc:chest-pain:2021` | — | Clinical *necessity* of a field requires source + review; technical “field empty” alone is insufficient for clinical claims | TO_VERIFY | CLOSED | CLOSED | NO |
+| `next_best_question` | `guideline:aha-acc:chest-pain:2021` | `guideline:esc:acs:2023` (ACS-scoped NBQ only) | Vocabulary question key ≠ permission to recommend; NBQ needs source + branching review | TO_VERIFY | CLOSED | CLOSED | NO |
+| `safety_alert` | `guideline:aha-acc:chest-pain:2021` | `guideline:esc:acs:2023` | Highest governance; no “obvious” alert without verified source + review + golden cases | TO_VERIFY | CLOSED | CLOSED | NO |
+| `workflow_guard` | *(none for clinical guards)* | — | **Technical** guards (e.g. do not re-ask answered questions) may not need medical source; **clinical** guards (e.g. “must document X before Y”) require source + review | TO_VERIFY (clinical only) | CLOSED (clinical) | CLOSED (clinical) | NO (clinical); technical-only guards out of scope for 2G |
+
+### 34.3 Section and citation convention (future rule YAML)
+
+Align with `clinical_rule.schema.json` → `guideline_refs[]`: required `source_id`, `section_ref`; optional `recommendation_id`.
+
+**Until independently verified from official publications:**
+
+| Field | Phase 2G value | Future stable pattern (examples) |
+|-------|----------------|----------------------------------|
+| `source_id` | Verified catalog ID | unchanged |
+| `section_ref` | **`TO_VERIFY`** | `section:<official-section-id>` or society-specific stable ID |
+| `recommendation_id` | omit or **`TO_VERIFY`** | `rec:<table-or-rec-id>` when verified |
+| `source_role` (design / provenance extension) | `primary_framing` \| `acs_specific` \| `out_of_pack` | documents why source is attached |
+
+**Do not invent** section numbers, table numbers, class/level, or page numbers in this phase.
+
+### 34.4 Dual-gate model
+
+**Gate A — License / usage**
+
+| Check | AHA chest pain | ESC ACS |
+|-------|----------------|---------|
+| Metadata verified in catalog | YES | YES |
+| Intended use permitted for AI/CDS / commercial rule encoding | NO (`permission_required` / unknown) | NO (`permission_required`) |
+| Content ingestion allowed | NO | NO |
+| Formal permission/license on file | NO | NO |
+
+**Gate A status: CLOSED** for clinical rule production authoring that relies on protected source content.
+
+**Gate B — Clinical review**
+
+Requires: named cardiologist reviewer; review date; scope; rule version; outcome; wording/trigger review; false-positive and false-negative concern review; source interpretation review.
+
+**Gate B status: CLOSED** — no clinician review record exists.
+
+### 34.5 Rule authoring policy (future)
+
+A **clinical** rule may move beyond structural draft only when:
+
+1. Source metadata exists in registry  
+2. Source **role** for the rule family is documented  
+3. Exact `section_ref` / recommendation identifier is verified (not `TO_VERIFY`)  
+4. Gate A permits the intended use (ingestion if needed, AI/CDS, commercial as applicable)  
+5. Gate B completes with documented outcome  
+6. Then: technical schema validation and neutral synthetic tests  
+7. **`approved_demo`** only after both gates + engineering checks  
+8. **`approved_prod`** requires additional production validation (existing catalog policy)
+
+### 34.6 Future `guideline_refs` linkage object (conceptual)
+
+```yaml
+# Illustrative — NOT a rule file; do not commit as executable YAML
+guideline_refs:
+  - source_id: guideline:aha-acc:chest-pain:2021
+    section_ref: TO_VERIFY
+    recommendation_id: null
+    source_role: primary_framing
+```
+
+### 34.7 Evaluation provenance chain (replay / audit)
+
+Future evaluate artifacts should chain (design target, not wired in 2G):
+
+1. `input_snapshot_id` (encounter evaluation context snapshot)  
+2. `vocabulary_manifest_hash`  
+3. `rule_set_manifest_hash` / `rule_manifest_hash`  
+4. `rule_id` + `rule_version` per fired rule  
+5. `source_ids` + verified `section_ref` / recommendation refs from `guideline_refs`  
+6. `engine_version` + specialty module version  
+7. `policy_profile_id`
+
+Enables deterministic replay and post-hoc clinical audit without storing guideline body text.
+
+### 34.8 Family-specific governance notes
+
+- **Missing information:** Detecting an empty field is technical; asserting clinical importance requires verified source + Gate B.  
+- **Next-best question:** Question keys in vocabulary do not authorize NBQ output without source linkage, branching review, and Gate B.  
+- **Safety alert:** Requires exact source verification, license clearance, cardiologist review, synthetic golden cases, FN/FP burden review — never `approved_demo` from intuition alone.  
+- **Differential support / against:** Outputs remain **consideration support/opposition** — not probability, diagnosis, or rule-out.  
+- **Workflow guard:** Distinguish technical deduplication guards (may be engineering-only) from clinical sequencing guards (require source + review).
+
+### 34.9 Cardiologist rule review checklist (per future rule)
+
+- Is the input concept appropriate for the pilot scope?  
+- Is the trigger clinically reasonable?  
+- Are important exceptions missing?  
+- Is output wording acceptable (TR/EN templates)?  
+- Could this create **false reassurance** or **alert fatigue**?  
+- Should the rule remain demo-only?  
+- Does it belong in the **first** chest-pain MVP?  
+- Which **verified** source section supports it (not `TO_VERIFY`)?  
+- Any contraindication to displaying it in Copilot?
+
+Reviewers judge clinical acceptability — not code internals.
+
+### 34.10 Rule clinical review record template (documentation only)
+
+| Field | Value (future) |
+|-------|----------------|
+| `rule_id` | |
+| `rule_version` | |
+| `reviewer` | |
+| `review_date` | |
+| `review_scope` | |
+| `source_ids` | |
+| `section_refs` | |
+| `license_status_at_review` | |
+| `clinical_review_outcome` | |
+| `limitations` | |
+| `approved_for` | e.g. none \| demo \| prod |
+| `notes` | |
+
+No real rule record in Phase 2G.
+
+### 34.11 Allowed vs blocked now
+
+| Allowed now | Blocked now |
+|-------------|-------------|
+| Source metadata + design docs | Executable clinical rule YAML with guideline-derived triggers |
+| Rule schemas / governance docs | Guideline body ingestion, PDFs, RAG/vectors |
+| Neutral synthetic fixtures | `approved_prod` / `approved_demo` clinical rules |
+| Technical engine & provenance infrastructure tests | Production CDS without license + clinical gates |
+
+---
+
+## 35. Phase 2B / 2G deliverables checklist
 
 - [x] Chest pain pilot scope defined  
 - [x] Rule families designed  
 - [x] Vocabulary reuse + gap list  
-- [x] Source / license matrix  
-- [x] Review gates and lifecycle ceiling  
+- [x] Source / license matrix (Phase 2F) + design linkage (Phase 2G)  
+- [x] Dual gates and lifecycle ceiling (`source_linked`)  
 - [x] Test / golden-set / metrics plan  
 - [x] No rule YAML, no code behavior change  
 
 ---
 
-## 35. Related paths
+## 36. Related paths
 
 | Path | Role |
 |------|------|
 | `docs/cardiology_controlled_vocabulary.md` | Vocabulary governance |
-| `clinical_knowledge/rules/cardiology/chest_pain/README.md` | Inert pointer — no rules |
+| `clinical_knowledge/rules/cardiology/chest_pain/README.md` | Inert pointer — dual-gate summary |
+| `docs/chest_pain_source_license_matrix.md` | Verified source license metadata |
 | `clinical_knowledge/README.md` | Catalog lifecycle |
 | `app/domain/clinical_decision/models.py` | Output contracts |
 

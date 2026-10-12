@@ -67,6 +67,8 @@ Before production rule YAML:
 3. `source_linked` + `clinical_review` completed  
 4. No `approved_prod` without cardiologist approval  
 
+**Phase 2G:** Rule-family → source roles, `TO_VERIFY` section convention, and dual-gate checklist are documented in [`docs/cardiology_chest_pain_rule_pack_design.md`](cardiology_chest_pain_rule_pack_design.md) §34. Current pack lifecycle ceiling: **`source_linked`** only.
+
 ## Schema (Phase 2F + pre-commit ESC semantics fix)
 
 - `license_status` already included `permission_required`.
