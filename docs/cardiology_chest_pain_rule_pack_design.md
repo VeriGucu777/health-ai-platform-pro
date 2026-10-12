@@ -730,6 +730,9 @@ No real rule record in Phase 2G.
 | `docs/chest_pain_source_license_matrix.md` | Verified source license metadata |
 | `docs/technical_synthetic_evaluation_scenarios.md` | Phase 2H technical fixtures (not clinical golden set) |
 | `docs/chest_pain_verified_source_references.md` | Phase 2I verified section anchors (not rules) |
+| `docs/chest_pain_governance_status.md` | Phase 2J dual-gate dashboard |
+| `docs/clinical_source_permission_tracker.md` | Phase 2J permission tracking |
+| `docs/cardiology_chest_pain_clinician_review_pack.md` | Phase 2J cardiologist workshop pack |
 | `clinical_knowledge/README.md` | Catalog lifecycle |
 | `app/domain/clinical_decision/models.py` | Output contracts |
 
