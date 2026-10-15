@@ -1,6 +1,6 @@
-# Clinical Source Permission Tracker (Chest Pain Pilot)
+# Clinical Source Permission Tracker (Cardiology Pilots)
 
-**Phase 2J** · Operational tracking only · **Does not change** catalog `license_status` fields until written permission exists.
+**Phase H2** · Operational tracking only · **Does not change** catalog `license_status` fields until written permission exists.
 
 ## Intended product use (reference)
 
@@ -64,8 +64,8 @@ Potential future use of third-party guideline material (subject to permission):
 | rule_derivation_requested | **YES** (if permitted) |
 | display/reproduction_requested | Independent CDS wording + provenance; no table/algorithm copy |
 | permission_channel | ESC / Oxford University Press permissions |
-| request_status | **NOT_SUBMITTED** |
-| request_date | — |
+| request_status | **SUBMITTED / PENDING** (operational, off-repo) |
+| request_date | **TO_RECORD** (off-repo) |
 | response_date | — |
 | permission_reference | — |
 | license_term | — |
@@ -76,15 +76,66 @@ Potential future use of third-party guideline material (subject to permission):
 | prohibited_use | — |
 | renewal_required | — |
 | legal_review_status | **PENDING_INTERNAL** |
-| notes | No ESC license on file. Correction DOI **10.1093/eurheartj/ehad870** — review before citing biomarker algorithm sections. Draft: [`permission_requests/esc_ai_cds_license_request.md`](permission_requests/esc_ai_cds_license_request.md). **ESC HTN 2024 not bundled** in initial request. |
+| notes | No ESC license **on file** in repo. Scope: **ACS 2023 only**. Correction DOI **10.1093/eurheartj/ehad870**. Draft: [`permission_requests/esc_ai_cds_license_request.md`](permission_requests/esc_ai_cds_license_request.md). **Does not cover** `guideline:esc:htn:2024`. |
 
 ---
 
-## Out of scope (chest-pain pack)
+## Tracker — ESC Hypertension 2024 (Pilot #1)
 
-| `source_id` | Note |
-|-------------|------|
-| `guideline:esc:htn:2024` | Hypertension module only; separate permission track if HTN pack proceeds |
+| Field | Value |
+|-------|--------|
+| `source_id` | `guideline:esc:htn:2024` |
+| organization | ESC / OUP (*European Heart Journal*) |
+| document_title | 2024 ESC Guidelines for the **management** of elevated blood pressure and hypertension |
+| official DOI | [10.1093/eurheartj/ehae178](https://doi.org/10.1093/eurheartj/ehae178) |
+| intended_product_use | Hypertension Pilot #1 CDS — missing-info / review domains (future deterministic rules) |
+| intended_AI_CDS_use | ESC AI/CDS licensing path — deterministic rules, not LLM training |
+| commercial_intent | Potential commercial SaaS (TO_CONFIRM with legal) |
+| requested_material_scope | Selected HTN sections/recommendation IDs; metadata only |
+| guideline_text_ingestion_requested | **NO** |
+| rule_derivation_requested | **YES** (if permitted) |
+| permission_channel | ESC licensing form (AI/CDS); OUP for non-AI reproduction |
+| request_status | **NOT_SUBMITTED** |
+| request_date | — |
+| response_date | — |
+| permission_reference | — |
+| legal_review_status | **PENDING_INTERNAL** |
+| notes | Catalog metadata present. Corrigenda: **ehaf031**, **ehaf659** — verify before rule refs. Draft: [`permission_requests/esc_hypertension_ai_cds_license_request.md`](permission_requests/esc_hypertension_ai_cds_license_request.md). **Separate** from ACS submission. |
+
+---
+
+## Tracker — AHA/ACC Hypertension 2025
+
+| Field | Value |
+|-------|--------|
+| `source_id` | `guideline:aha-acc:hypertension:2025` (**proposed** — not in catalog H2) |
+| organization | AHA / ACC (+ collaborator societies listed on guideline) |
+| document_title | 2025 AHA/ACC/... Guideline for the Prevention, Detection, Evaluation, and Management of High Blood Pressure in Adults |
+| official DOI (primary) | [10.1016/j.jacc.2025.05.007](https://doi.org/10.1016/j.jacc.2025.05.007) |
+| intended_product_use | Secondary / comparison HTN evidence for Pilot #1 (dual-provenance policy TBD) |
+| intended_AI_CDS_use | **UNKNOWN** — confirm with AHA/ACC / publisher |
+| commercial_intent | Potential commercial SaaS (TO_CONFIRM) |
+| guideline_text_ingestion_requested | **NO** |
+| rule_derivation_requested | **YES** (if permitted) |
+| permission_channel | AHA/ACC / publisher permissions |
+| request_status | **NOT_SUBMITTED** |
+| legal_review_status | **PENDING_INTERNAL** |
+| notes | Replaces **2017** ACC/AHA HTN guideline per publisher. Default-deny: AI/commercial **unknown**, ingestion **false**. Draft: [`permission_requests/aha_acc_hypertension_permission_request.md`](permission_requests/aha_acc_hypertension_permission_request.md). |
+
+---
+
+## Tracker — TKD Hypertension Consensus 2025 (national)
+
+| Field | Value |
+|-------|--------|
+| `source_id` | `guideline:tkd:hypertension-consensus:2025` (**proposed** — not in catalog H2) |
+| organization | Türk Kardiyoloji Derneği |
+| document_title | Türk Hipertansiyon Uzlaşı Raporu 2025 |
+| official URL | [tkd.org.tr](https://tkd.org.tr/hipertansiyon-calisma-grubu/sayfa/turk-hipertansiyon-uzlasi-raporu-2025) |
+| AI/CDS / commercial | **UNKNOWN** |
+| content ingestion | **false** (default) |
+| request_status | **NOT_SUBMITTED** |
+| notes | National alignment candidate; **not** a substitute for ESC/AHA permission. No unofficial PDF mirrors. |
 
 ---
 
@@ -92,7 +143,10 @@ Potential future use of third-party guideline material (subject to permission):
 
 | Date | Source | Event | Gate impact |
 |------|--------|-------|-------------|
-| — | — | *(no submissions yet)* | License gate **CLOSED** |
+| 2026-10-15 | H2 verification | Official **ESC 2024 HTN** (DOI ehae178) and **ACC/AHA 2025 HTN** (DOI j.jacc.2025.05.007) identities verified; TKD **2025 uzlaşı** page verified. | Metadata docs updated; **catalog YAML unchanged** |
+| 2026-10 (operational) | `guideline:esc:acs:2023` | External ESC licensing inquiry **SUBMITTED / PENDING** (off-repo). Scope: **2023 ACS only** — **does not cover** HTN 2024. | ACS gate **CLOSED** until permission on file |
+| 2026-10 | Product | Cardiologist **product-direction** for HTN Pilot #1 — **not** rule/license approval. | HTN ESC/AHA requests **NOT SUBMITTED** |
+| — | AHA chest pain | **NOT_SUBMITTED** | License gate **CLOSED** |
 
 ---
 
