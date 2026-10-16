@@ -95,12 +95,17 @@ Potential future use of third-party guideline material (subject to permission):
 | guideline_text_ingestion_requested | **NO** |
 | rule_derivation_requested | **YES** (if permitted) |
 | permission_channel | ESC licensing form (AI/CDS); OUP for non-AI reproduction |
-| request_status | **NOT_SUBMITTED** |
-| request_date | — |
+| request_status | **APPLICATION SUBMITTED — RESPONSE PENDING** |
+| permission_requested | **YES** |
+| permission_granted | **NO / PENDING** |
+| content_ingestion_allowed (product) | **NO** (catalog: **false**) |
+| production_clinical_rule_allowed | **NO** |
+| approved_prod_activation | **BLOCKED** |
+| request_date | **Not recorded in repo** (operational tracking off-repo) |
 | response_date | — |
 | permission_reference | — |
 | legal_review_status | **PENDING_INTERNAL** |
-| notes | Catalog metadata present. Corrigenda: **ehaf031**, **ehaf659** — verify before rule refs. Draft: [`permission_requests/esc_hypertension_ai_cds_license_request.md`](permission_requests/esc_hypertension_ai_cds_license_request.md). **Separate** from ACS submission. |
+| notes | Catalog metadata present; `license_status` remains **`permission_required`** until written terms. Corrigenda: **ehaf031**, **ehaf659** — verify before rule refs. Template: [`permission_requests/esc_hypertension_ai_cds_license_request.md`](permission_requests/esc_hypertension_ai_cds_license_request.md). **Separate** from ACS submission. Submission date/status reflects operational tracking supplied by the project owner. Written permission has not yet been received. |
 
 ---
 
@@ -145,7 +150,8 @@ Potential future use of third-party guideline material (subject to permission):
 |------|--------|-------|-------------|
 | 2026-10-15 | H2 verification | Official **ESC 2024 HTN** (DOI ehae178) and **ACC/AHA 2025 HTN** (DOI j.jacc.2025.05.007) identities verified; TKD **2025 uzlaşı** page verified. | Metadata docs updated; **catalog YAML unchanged** |
 | 2026-10 (operational) | `guideline:esc:acs:2023` | External ESC licensing inquiry **SUBMITTED / PENDING** (off-repo). Scope: **2023 ACS only** — **does not cover** HTN 2024. | ACS gate **CLOSED** until permission on file |
-| 2026-10 | Product | Cardiologist **product-direction** for HTN Pilot #1 — **not** rule/license approval. | HTN ESC/AHA requests **NOT SUBMITTED** |
+| 2026-10 (operational) | `guideline:esc:htn:2024` | ESC **2024 Hypertension** AI/CDS inquiry **APPLICATION SUBMITTED — RESPONSE PENDING** (off-repo). **Not** a license grant. | HTN license gate **CLOSED** until written permission; catalog YAML unchanged |
+| 2026-10 | Product | Cardiologist **product-direction** for HTN Pilot #1 — **not** rule/license approval. | ACC/AHA HTN request remains **NOT SUBMITTED** |
 | — | AHA chest pain | **NOT_SUBMITTED** | License gate **CLOSED** |
 
 ---

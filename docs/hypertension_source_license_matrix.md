@@ -25,7 +25,20 @@
 | **Explicitly excluded from ACS draft pack** | **2024 ESC Hypertension** — see [`permission_requests/esc_ai_cds_license_request.md`](permission_requests/esc_ai_cds_license_request.md) line “Not in this initial request” |
 | **Does ACS permission cover ESC HTN 2024?** | **NO** — separate guideline document, separate DOI, separate task force; ESC CDS/AI licensing is **per use case / content scope** ([ESC AI/CDS licensing page](https://www.escardio.org/guidelines/clinical-practice-guidelines/esc-guidelines-licensing-for-ai-llms-and-cds-tools/)) |
 | **ESC ACS permission (operational)** | **SUBMITTED / PENDING** (off-repo; catalog unchanged until written terms) |
-| **ESC HTN permission (operational)** | **NOT SUBMITTED** |
+| **ESC HTN permission (operational)** | **APPLICATION SUBMITTED — RESPONSE PENDING** (off-repo; **separate** from ACS inquiry) |
+
+**ESC HTN 2024 — operational permission tracking (not a license grant):**
+
+| Check | Status |
+|-------|--------|
+| Permission requested | **YES** (2024 ESC Hypertension AI/CDS inquiry) |
+| Permission granted | **NO / PENDING** — waiting for written ESC response |
+| `content_ingestion_allowed` (catalog) | **NO** (`false`) |
+| Production clinical rule allowed | **NO** |
+| `approved_prod` activation | **BLOCKED** |
+| Catalog `license_status` | **`permission_required`** (unchanged until written terms on file) |
+
+Submission date/status reflects operational tracking supplied by the project owner. Written permission has not yet been received.
 
 ---
 
@@ -56,9 +69,10 @@
 | `commercial_usage_status` | `permission_required` |
 | `content_ingestion_allowed` | **false** |
 | Non-AI reproduction | OUP / [Journals.Permissions@oup.com](mailto:Journals.Permissions@oup.com) per [ESC copyright](https://www.escardio.org/Guidelines/Clinical-Practice-Guidelines/ESC-Guidelines-Copyright) |
-| AI / CDS integration | ESC licensing form — **separate request for HTN document** |
+| AI / CDS integration | ESC licensing form — **HTN document** (submitted operationally; response pending) |
+| Operational AI/CDS request | **APPLICATION SUBMITTED — RESPONSE PENDING** |
 
-**Separate ESC HTN request required:** **YES** (different guideline; not in ACS submission scope).
+**Separate from ACS:** **YES** (different guideline; ACS submission does **not** cover HTN 2024).
 
 ---
 

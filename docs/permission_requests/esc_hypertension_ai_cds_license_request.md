@@ -1,6 +1,18 @@
 # DRAFT — ESC AI / CDS License Inquiry (2024 Hypertension Guidelines)
 
-**Status:** DRAFT · **NOT SUBMITTED** · **Not legal advice**
+**Operational request status:** **APPLICATION SUBMITTED — RESPONSE PENDING** · **Not legal advice**
+
+**Document role:** DRAFT template (applicant `TO_FILL` fields may remain for internal archive). Submission to ESC does **not** imply permission granted.
+
+| Gate | Status |
+|------|--------|
+| Permission requested | **YES** |
+| Permission granted | **NO / PENDING** |
+| `content_ingestion_allowed` | **NO** |
+| Production clinical rule / `approved_prod` | **NO / BLOCKED** |
+| Waiting for | Written ESC response |
+
+Submission date/status reflects operational tracking supplied by the project owner. Written permission has not yet been received.
 
 ## Project
 

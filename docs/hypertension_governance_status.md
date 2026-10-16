@@ -1,6 +1,6 @@
 # Hypertension Pilot — Governance Status Dashboard
 
-**Last updated:** 2026-10-15 (Phase H2) · **Pilot priority:** **PRIMARY (#1)**
+**Last updated:** 2026-10-16 (ESC HTN operational permission docs) · **Pilot priority:** **PRIMARY (#1)**
 
 ## Clinician governance (separate from license)
 
@@ -28,7 +28,7 @@
 | Source metadata | **VERIFIED_METADATA (H2)** — ESC HTN 2024 in catalog; ACC/AHA 2025 + TKD 2025 documented in matrix (**not** in catalog yet) |
 | Source verification doc | [`hypertension_source_license_matrix.md`](hypertension_source_license_matrix.md) |
 | Section-level verified refs (HTN) | **NOT STARTED** — all recommendation anchors **TO_VERIFY** |
-| Permission drafts | ESC HTN + ACC/AHA HTN (**NOT SUBMITTED**) |
+| Permission drafts | ESC HTN: **APPLICATION SUBMITTED — RESPONSE PENDING**; ACC/AHA HTN (**NOT SUBMITTED**) |
 | Clinical rules | **0** |
 | Rule YAML | **0** |
 | Active production rules | **0** |
@@ -37,12 +37,14 @@
 
 | Source | Catalog | Permission (operational) |
 |--------|---------|---------------------------|
-| `guideline:esc:htn:2024` | `permission_required`, ingestion **false** | **NOT SUBMITTED** — separate draft [`permission_requests/esc_hypertension_ai_cds_license_request.md`](permission_requests/esc_hypertension_ai_cds_license_request.md) |
+| `guideline:esc:htn:2024` | `permission_required`, ingestion **false** | **APPLICATION SUBMITTED — RESPONSE PENDING** — permission **not granted**; catalog unchanged; draft pack [`permission_requests/esc_hypertension_ai_cds_license_request.md`](permission_requests/esc_hypertension_ai_cds_license_request.md) |
 | `guideline:esc:acs:2023` | Chest-pain / deferred pilot | **SUBMITTED / PENDING** (ACS only — **does not cover HTN**) |
 | ACC/AHA HTN **2025** | **Not in catalog** (proposed `guideline:aha-acc:hypertension:2025`) | **NOT_SUBMITTED** — verified official source H2 |
 | TKD Hipertansiyon Uzlaşı **2025** | **Not in catalog** | **UNKNOWN** license — national candidate only |
 
 Update operational permission in [`clinical_source_permission_tracker.md`](clinical_source_permission_tracker.md) decision log when responses arrive. **Do not** change catalog YAML without written terms.
+
+**ESC HTN 2024 operational note:** Permission requested **YES**; permission granted **NO / PENDING**; `content_ingestion_allowed` **NO**; production clinical rules / `approved_prod` **BLOCKED** until written ESC response. Submission date/status reflects operational tracking supplied by the project owner. Written permission has not yet been received.
 
 ## Product requirements captured
 
