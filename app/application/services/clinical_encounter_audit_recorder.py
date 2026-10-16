@@ -20,6 +20,8 @@ def _action_for_event(event: ClinicalEncounterAuditEvent) -> AuditAction:
         return AuditAction.LIST
     if event.operation == "child_deactivated":
         return AuditAction.DEACTIVATE
+    if event.operation.startswith("copilot_evaluation_"):
+        return AuditAction.EXECUTE
     return AuditAction.UPDATE
 
 
@@ -47,6 +49,14 @@ def _build_metadata(event: ClinicalEncounterAuditEvent) -> dict[str, Any]:
         meta["specialty_key"] = event.specialty_key
     if event.result_count is not None:
         meta["result_count"] = event.result_count
+    if event.context_profile is not None:
+        meta["context_profile"] = event.context_profile
+    if event.input_snapshot_id is not None:
+        meta["input_snapshot_id"] = event.input_snapshot_id
+    if event.engine_version is not None:
+        meta["engine_version"] = event.engine_version
+    if event.evaluation_id is not None:
+        meta["evaluation_id"] = str(event.evaluation_id)
     return meta
 
 
@@ -56,11 +66,16 @@ class ClinicalEncounterAuditRecorder:
     def __init__(self, audit_service: AuditService) -> None:
         self._audit = audit_service
 
-    async def record(self, event: ClinicalEncounterAuditEvent) -> None:
+    async def record(
+        self,
+        event: ClinicalEncounterAuditEvent,
+        *,
+        outcome: AuditOutcome = AuditOutcome.SUCCESS,
+    ) -> None:
         entry = AuditRecordInput(
             resource_type=AuditResourceType.CLINICAL_ENCOUNTER,
             action=_action_for_event(event),
-            outcome=AuditOutcome.SUCCESS,
+            outcome=outcome,
             http_status=None,
             actor_id=event.actor_id,
             actor_role=event.actor_role,

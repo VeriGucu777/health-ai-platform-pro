@@ -167,6 +167,16 @@ export type CommonContent = {
       genericError: string;
       accessDenied: string;
       clinicianNoteLabel: string;
+      copilot: {
+        title: string;
+        disclaimer: string;
+        idleHint: string;
+        evaluateButton: string;
+        evaluatePending: string;
+        noActiveRulesMessage: string;
+        errorMessage: string;
+        readOnlyHint: string;
+      };
       workspace: {
         recordsHeading: string;
         readOnlyFinalized: string;

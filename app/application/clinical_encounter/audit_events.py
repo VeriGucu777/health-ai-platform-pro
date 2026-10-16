@@ -26,3 +26,7 @@ class ClinicalEncounterAuditEvent:
     negated: bool | None = None
     specialty_key: str | None = None
     result_count: int | None = None
+    context_profile: str | None = None
+    input_snapshot_id: str | None = None
+    engine_version: str | None = None
+    evaluation_id: UUID | None = None

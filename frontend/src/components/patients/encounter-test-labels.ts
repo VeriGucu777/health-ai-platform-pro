@@ -145,6 +145,17 @@ export function makeEncounterDetailTestLabels(): EncounterDetailLabels {
     loadingLabel: "Loading…",
     retryLabel: "Retry",
     clinicianNoteLabel: "Note",
+    copilot: {
+      title: "Clinical Copilot",
+      disclaimer: "Klinik karar desteği sağlar. Tanı veya tedavi kararı vermez.",
+      idleHint: "Henüz değerlendirme yapılmadı.",
+      evaluateButton: "Clinical Copilot ile değerlendir",
+      evaluatePending: "Değerlendiriliyor…",
+      noActiveRulesMessage:
+        "Bu pilot sürümünde henüz onaylanmış klinik kural aktif değildir.",
+      errorMessage: "Değerlendirme tamamlanamadı.",
+      readOnlyHint: "Salt okunur.",
+    },
     workspace: makeEncounterWorkspaceTestLabels(),
     terminal: makeEncounterTerminalTestLabels(),
   };

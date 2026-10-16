@@ -4,6 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import {
+  ClinicalCopilotPanel,
+  type ClinicalCopilotPanelLabels,
+} from "@/components/patients/ClinicalCopilotPanel";
+import {
   EncounterDetailWriteWorkspace,
   type EncounterWorkspaceLabels,
 } from "@/components/patients/EncounterDetailWriteWorkspace";
@@ -36,6 +40,7 @@ export type EncounterDetailLabels = {
   retryLabel: string;
   clinicianNoteLabel: string;
   workspace: EncounterWorkspaceLabels;
+  copilot: ClinicalCopilotPanelLabels;
   terminal: EncounterTerminalLabels;
 };
 
@@ -191,16 +196,26 @@ export function EncounterDetailPageContent({
         onStatusMessage={setStatusMessage}
       />
 
-      <EncounterDetailWriteWorkspace
-        encounterId={encounterId}
-        accessToken={accessToken ?? ""}
-        detail={detail}
-        labels={labels.workspace}
-        formatDateTime={formatDateTime}
-        onRefresh={() => loadDetail({ silent: true })}
-        onUnauthorized={onUnauthorized}
-        onStatusMessage={setStatusMessage}
-      />
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_min(22rem,100%)] lg:items-start">
+        <EncounterDetailWriteWorkspace
+          encounterId={encounterId}
+          accessToken={accessToken ?? ""}
+          detail={detail}
+          labels={labels.workspace}
+          formatDateTime={formatDateTime}
+          onRefresh={() => loadDetail({ silent: true })}
+          onUnauthorized={onUnauthorized}
+          onStatusMessage={setStatusMessage}
+        />
+        <ClinicalCopilotPanel
+          patientId={patientId}
+          encounterId={encounterId}
+          encounterStatus={enc.status}
+          accessToken={accessToken ?? ""}
+          labels={labels.copilot}
+          onUnauthorized={onUnauthorized}
+        />
+      </div>
 
       {detail.final_summary ? (
         <section aria-labelledby="enc-final-summary-heading">

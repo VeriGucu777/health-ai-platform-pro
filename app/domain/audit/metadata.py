@@ -47,6 +47,10 @@ ALLOWED_METADATA_KEYS = frozenset(
         "negated",
         "specialty_key",
         "result_count",
+        "context_profile",
+        "input_snapshot_id",
+        "engine_version",
+        "evaluation_id",
     }
 )
 

@@ -318,6 +318,18 @@ export const commonContent: CommonContent = {
       genericError: "Muayene kaydı işlemi sırasında bir sorun oluştu.",
       accessDenied: "Bu işlem için yetkiniz bulunmuyor.",
       clinicianNoteLabel: "Hekim notu",
+      copilot: {
+        title: "Clinical Copilot",
+        disclaimer:
+          "Klinik karar desteği sağlar. Tanı veya tedavi kararı vermez.",
+        idleHint: "Henüz değerlendirme yapılmadı.",
+        evaluateButton: "Clinical Copilot ile değerlendir",
+        evaluatePending: "Değerlendiriliyor…",
+        noActiveRulesMessage:
+          "Bu pilot sürümünde henüz onaylanmış klinik kural aktif değildir.",
+        errorMessage: "Değerlendirme tamamlanamadı. Lütfen tekrar deneyin.",
+        readOnlyHint: "Muayene tamamlandı; değerlendirme salt okunurdur.",
+      },
       workspace: {
         recordsHeading: "Muayene kayıtları",
         readOnlyFinalized: "Bu muayene tamamlandı ve yalnızca görüntülenebilir.",

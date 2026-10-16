@@ -321,6 +321,18 @@ export const commonContent: CommonContent = {
       genericError: "Something went wrong while processing the encounter.",
       accessDenied: "You do not have permission for this action.",
       clinicianNoteLabel: "Clinician note",
+      copilot: {
+        title: "Clinical Copilot",
+        disclaimer:
+          "Provides clinical decision support. It does not make diagnoses or treatment decisions.",
+        idleHint: "No evaluation has been run yet.",
+        evaluateButton: "Evaluate with Clinical Copilot",
+        evaluatePending: "Evaluating…",
+        noActiveRulesMessage:
+          "No approved clinical rules are active in this pilot release.",
+        errorMessage: "Evaluation could not be completed. Please try again.",
+        readOnlyHint: "This encounter is finalized; evaluation is read-only.",
+      },
       workspace: {
         recordsHeading: "Encounter records",
         readOnlyFinalized: "This encounter is completed and can only be viewed.",

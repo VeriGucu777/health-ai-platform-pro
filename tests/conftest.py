@@ -16,6 +16,7 @@ from app.api.deps import (
     get_health_measurement_analytics_service,
     get_health_measurement_service,
     get_medical_record_service,
+    get_clinical_copilot_evaluation_service,
     get_clinical_encounter_service,
     get_clinical_narrative_service,
     get_clinical_retrieval_service,
@@ -73,6 +74,9 @@ from tests.support.memory_email_verification_token_repository import (
 )
 from tests.support.memory_user_repository import InMemoryUserRepository
 from app.infrastructure.email.recording_email_sender import RecordingEmailSender
+from tests.support.clinical_copilot_evaluation_service_factory import (
+    build_clinical_copilot_evaluation_service,
+)
 from tests.support.clinical_read_service_factory import (
     build_clinical_narrative_service,
     build_clinical_retrieval_service,
@@ -463,6 +467,17 @@ async def client(
             audit_log_repository=audit_log_repository,
         )
 
+    def override_clinical_copilot_evaluation_service(_request: Request):
+        return build_clinical_copilot_evaluation_service(
+            encounter_repository=clinical_encounter_repository,
+            patient_repository=patient_repository,
+            membership_repository=membership_repository,
+            assignment_repository=assignment_repository,
+            settings=test_settings,
+            consent_repository=consent_repository,
+            audit_log_repository=audit_log_repository,
+        )
+
     app.dependency_overrides[get_audit_service] = override_audit_service
     app.dependency_overrides[get_email_verification_service] = override_email_verification_service
     app.dependency_overrides[get_auth_service] = override_auth_service
@@ -501,6 +516,9 @@ async def client(
         override_risk_assessment_history_service
     )
     app.dependency_overrides[get_clinical_encounter_service] = override_clinical_encounter_service
+    app.dependency_overrides[get_clinical_copilot_evaluation_service] = (
+        override_clinical_copilot_evaluation_service
+    )
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac

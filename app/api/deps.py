@@ -31,8 +31,17 @@ from app.application.services.clinic_admin_organization_service import (
 from app.application.services.patient_consent_service import PatientConsentService
 from app.application.services.clinical_evidence_service import ClinicalEvidenceService
 from app.application.services.clinical_retrieval_index_service import ClinicalRetrievalIndexService
+from app.application.clinical_decision.clinical_decision_orchestrator import ClinicalDecisionOrchestrator
+from app.application.clinical_decision.default_registry import build_default_specialty_registry
+from app.application.services.clinical_copilot_evaluation_service import ClinicalCopilotEvaluationService
 from app.application.services.clinical_encounter_audit_recorder import ClinicalEncounterAuditRecorder
 from app.application.services.clinical_encounter_service import ClinicalEncounterService
+from app.infrastructure.clinical_knowledge.validated_catalog_provider import (
+    ValidatedFilesystemClinicalRuleCatalogProvider,
+)
+from app.infrastructure.clinical_vocabulary.filesystem_registry import (
+    FilesystemClinicalVocabularyRegistry,
+)
 from app.application.services.clinical_narrative_service import ClinicalNarrativeService
 from app.application.services.clinical_retrieval_service import ClinicalRetrievalService
 from app.application.services.patient_clinical_summary_service import (
@@ -385,6 +394,41 @@ def get_patient_clinical_timeline_service(
         access_policy,
         settings=settings,
         consent_repository=consent_repository,
+    )
+
+
+def _clinical_decision_engine_for_specialty(specialty_key: str) -> ClinicalDecisionOrchestrator:
+    catalog = ValidatedFilesystemClinicalRuleCatalogProvider.load()
+    return ClinicalDecisionOrchestrator(
+        specialty_registry=build_default_specialty_registry(),
+        rule_catalog_view=catalog.rule_catalog_view(specialty_key),
+    )
+
+
+def get_clinical_copilot_evaluation_service(
+    session: Annotated[AsyncSession, Depends(get_db_session_from_app)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
+) -> ClinicalCopilotEvaluationService:
+    """Clinical Copilot evaluate flow — orchestrator with validated catalog (default-deny rules)."""
+    (
+        patient_repository,
+        membership_repository,
+        _assignment_repository,
+        access_policy,
+    ) = _patient_access_policy_bundle(session)
+    audit_service = AuditService(SQLAlchemyAuditLogRepository(session))
+    audit_recorder = ClinicalEncounterAuditRecorder(audit_service)
+    vocabulary = FilesystemClinicalVocabularyRegistry.default_cardiology()
+    return ClinicalCopilotEvaluationService(
+        SQLAlchemyClinicalEncounterRepository(session),
+        patient_repository,
+        access_policy=access_policy,
+        membership_repository=membership_repository,
+        settings=settings,
+        consent_repository=_patient_consent_repository(session),
+        vocabulary_registry=vocabulary,
+        engine_factory=_clinical_decision_engine_for_specialty,
+        audit_hook=audit_recorder,
     )
 
 

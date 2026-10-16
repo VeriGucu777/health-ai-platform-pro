@@ -7,7 +7,16 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.api.deps import ClinicalUser, get_clinical_encounter_service
+from app.api.deps import (
+    ClinicalUser,
+    get_clinical_copilot_evaluation_service,
+    get_clinical_encounter_service,
+)
+from app.api.mappers.clinical_copilot_evaluation import clinical_copilot_evaluation_response
+from app.api.schemas.clinical_copilot_evaluation import (
+    ClinicalCopilotEvaluateRequest,
+    ClinicalCopilotEvaluationResponse,
+)
 from app.api.mappers.clinical_encounter import (
     encounter_detail_response,
     encounter_list_response,
@@ -27,6 +36,9 @@ from app.api.schemas.clinical_encounter import (
     EncounterFindingResponse,
     EncounterQuestionResponseItem,
     EncounterQuestionResponseUpsert,
+)
+from app.application.services.clinical_copilot_evaluation_service import (
+    ClinicalCopilotEvaluationService,
 )
 from app.application.services.clinical_encounter_service import ClinicalEncounterService
 
@@ -105,6 +117,33 @@ async def list_patient_clinical_encounters(
         limit=limit,
         offset=offset,
     )
+
+
+@patient_encounters_router.post(
+    "/{patient_id}/encounters/{encounter_id}/evaluate",
+    response_model=ClinicalCopilotEvaluationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Run Clinical Copilot technical evaluation for an encounter",
+)
+async def evaluate_clinical_copilot(
+    patient_id: UUID,
+    encounter_id: UUID,
+    current_user: ClinicalUser,
+    service: Annotated[
+        ClinicalCopilotEvaluationService,
+        Depends(get_clinical_copilot_evaluation_service),
+    ],
+    body: ClinicalCopilotEvaluateRequest | None = None,
+) -> ClinicalCopilotEvaluationResponse:
+    request_body = body or ClinicalCopilotEvaluateRequest()
+    data = await service.evaluate_encounter(
+        current_user.id,
+        current_user.role,
+        patient_id=patient_id,
+        encounter_id=encounter_id,
+        context_profile=request_body.context_profile,
+    )
+    return clinical_copilot_evaluation_response(data)
 
 
 @encounters_router.get(

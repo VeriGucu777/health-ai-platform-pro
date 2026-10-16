@@ -50,6 +50,7 @@ export default function PatientEncounterDetailPage() {
           loadingLabel: content.common.loading,
           retryLabel: content.common.retry,
           clinicianNoteLabel: enc.clinicianNoteLabel,
+          copilot: enc.copilot,
           workspace: {
             recordsHeading: ws.recordsHeading,
             complaintsHeading: enc.complaintsHeading,
