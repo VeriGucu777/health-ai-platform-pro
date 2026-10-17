@@ -123,9 +123,19 @@ Potential future use of third-party guideline material (subject to permission):
 | guideline_text_ingestion_requested | **NO** |
 | rule_derivation_requested | **YES** (if permitted) |
 | permission_channel | AHA/ACC / publisher permissions |
-| request_status | **NOT_SUBMITTED** |
+| request_status | **APPLICATION SUBMITTED — RESPONSE PENDING** |
+| permission_requested | **YES** |
+| permission_granted | **NO / PENDING** |
+| written_permission_received | **NO** |
+| response | **PENDING** |
+| content_ingestion_allowed (product) | **NO** (default-deny; no catalog YAML until licensed) |
+| production_clinical_rule_allowed | **NO** |
+| approved_prod_activation | **BLOCKED** |
+| production_clinical_rule_count | **0** |
+| request_date | **Not recorded in repo** (tracked by project owner; submission date not recorded in repository) |
+| response_date | — |
 | legal_review_status | **PENDING_INTERNAL** |
-| notes | Replaces **2017** ACC/AHA HTN guideline per publisher. Default-deny: AI/commercial **unknown**, ingestion **false**. Draft: [`permission_requests/aha_acc_hypertension_permission_request.md`](permission_requests/aha_acc_hypertension_permission_request.md). |
+| notes | Replaces **2017** ACC/AHA HTN guideline per publisher. Default-deny: AI/commercial **unknown**, ingestion **false**. Draft: [`permission_requests/aha_acc_hypertension_permission_request.md`](permission_requests/aha_acc_hypertension_permission_request.md). **Separate permission track** from ESC HTN 2024 and from AHA/ACC chest pain 2021. **Application submission does not constitute permission or license grant.** Submission status reflects operational tracking supplied by the project owner. Written permission has not yet been received. |
 
 ---
 
@@ -151,7 +161,8 @@ Potential future use of third-party guideline material (subject to permission):
 | 2026-10-15 | H2 verification | Official **ESC 2024 HTN** (DOI ehae178) and **ACC/AHA 2025 HTN** (DOI j.jacc.2025.05.007) identities verified; TKD **2025 uzlaşı** page verified. | Metadata docs updated; **catalog YAML unchanged** |
 | 2026-10 (operational) | `guideline:esc:acs:2023` | External ESC licensing inquiry **SUBMITTED / PENDING** (off-repo). Scope: **2023 ACS only** — **does not cover** HTN 2024. | ACS gate **CLOSED** until permission on file |
 | 2026-10 (operational) | `guideline:esc:htn:2024` | ESC **2024 Hypertension** AI/CDS inquiry **APPLICATION SUBMITTED — RESPONSE PENDING** (off-repo). **Not** a license grant. | HTN license gate **CLOSED** until written permission; catalog YAML unchanged |
-| 2026-10 | Product | Cardiologist **product-direction** for HTN Pilot #1 — **not** rule/license approval. | ACC/AHA HTN request remains **NOT SUBMITTED** |
+| 2026-10 (operational) | `guideline:aha-acc:hypertension:2025` (proposed) | ACC/AHA **2025 Hypertension** permission inquiry **APPLICATION SUBMITTED — RESPONSE PENDING** (off-repo). **Not** a license grant. **Separate** from ESC HTN track. | ACC/AHA HTN gate **CLOSED**; no catalog YAML; ingestion **false**; `approved_prod` **BLOCKED** |
+| 2026-10 | Product | Cardiologist **product-direction** for HTN Pilot #1 — **not** rule/license approval. | Does not open license or production rule gates |
 | — | AHA chest pain | **NOT_SUBMITTED** | License gate **CLOSED** |
 
 ---

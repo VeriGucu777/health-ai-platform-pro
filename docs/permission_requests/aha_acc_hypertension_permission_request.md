@@ -1,6 +1,19 @@
 # DRAFT — AHA/ACC Hypertension Guideline Permission Inquiry (2025)
 
-**Status:** DRAFT · **NOT SUBMITTED** · **Not legal advice**
+**Operational status:** **APPLICATION SUBMITTED — RESPONSE PENDING** · Applicant/contact fields below remain **TO_FILL** · **Not legal advice**
+
+| Governance field | Value |
+|------------------|--------|
+| Permission requested | **YES** |
+| Permission granted | **NO / PENDING** |
+| Written permission received | **NO** |
+| Response | **PENDING** |
+| Request / submission date (repo) | **Not recorded in repository** |
+| Content ingestion allowed | **NO** |
+| Production rule activation (`approved_prod`) | **BLOCKED** |
+| Production clinical rule count | **0** |
+
+**Application submission does not constitute permission or license grant.** Separate permission track from ESC HTN 2024 and from AHA/ACC chest pain 2021. Tracker: [`../clinical_source_permission_tracker.md`](../clinical_source_permission_tracker.md).
 
 ## Project
 

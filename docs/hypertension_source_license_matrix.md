@@ -96,7 +96,23 @@ Submission date/status reflects operational tracking supplied by the project own
 | `ai_usage_status` | `unknown` (confirm with AHA/ACC / Elsevier — OUP AI terms not applicable) |
 | `commercial_usage_status` | `unknown` |
 | `content_ingestion_allowed` | **false** |
-| Permission request | **NOT SUBMITTED** — draft [`permission_requests/aha_acc_hypertension_permission_request.md`](permission_requests/aha_acc_hypertension_permission_request.md) |
+| Operational permission request | **APPLICATION SUBMITTED — RESPONSE PENDING** — draft pack [`permission_requests/aha_acc_hypertension_permission_request.md`](permission_requests/aha_acc_hypertension_permission_request.md) |
+
+**ACC/AHA HTN 2025 — operational permission tracking (not a license grant; separate from ESC HTN 2024):**
+
+| Check | Status |
+|-------|--------|
+| Permission requested | **YES** |
+| Permission granted | **NO / PENDING** — waiting for written AHA/ACC / publisher response |
+| Written permission received | **NO** |
+| Response | **PENDING** |
+| `content_ingestion_allowed` | **NO** (`false` — no catalog entry; default-deny unchanged) |
+| Production clinical rule allowed | **NO** |
+| `approved_prod` activation | **BLOCKED** |
+| Production clinical rule count | **0** |
+| Request date in repo | **Not recorded in repository** (tracked by project owner) |
+
+Submission status reflects operational tracking supplied by the project owner. **Application submission does not constitute permission or license grant.** Written permission has not yet been received.
 
 ---
 

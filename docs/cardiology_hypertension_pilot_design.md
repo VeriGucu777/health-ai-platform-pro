@@ -143,7 +143,7 @@ Link: [`evaluation_context_snapshot`](evaluation_context_snapshot.md) / mapper �
 | Priority | Candidate | Catalog status |
 |----------|-----------|----------------|
 | Primary | **2024 ESC** hypertension (`guideline:esc:htn:2024`) | Registered; license **closed** |
-| Secondary | **ACC/AHA** current HTN guideline (e.g. 2025 cited in planning) | **TO_VERIFY_CURRENT_OFFICIAL_SOURCE** — no YAML until verified |
+| Secondary | **ACC/AHA 2025** HTN (proposed `guideline:aha-acc:hypertension:2025`) | Verified official identity (H2); **not in catalog**; permission **APPLICATION SUBMITTED — RESPONSE PENDING** |
 | National | Official Turkish source if verified | **Not in catalog** |
 
 Rule gate remains **closed** until permission + section/recommendation verification (HTN section refs **not** done in 2I).
@@ -152,6 +152,7 @@ Rule gate remains **closed** until permission + section/recommendation verificat
 
 - **ESC ACS 2023:** external request reported **SUBMITTED / PENDING** — scope likely **ACS-only** per draft pack; **do not assume HTN coverage**.  
 - **ESC HTN 2024:** **APPLICATION SUBMITTED — RESPONSE PENDING** (separate from ACS). Permission requested **YES**; permission granted **NO / PENDING**; `content_ingestion_allowed` **NO**; production clinical rules / `approved_prod` **BLOCKED** until written ESC response. Catalog YAML **`permission_required`** unchanged until written terms on file. Submission date/status reflects operational tracking supplied by the project owner. Written permission has not yet been received.  
+- **ACC/AHA HTN 2025:** **APPLICATION SUBMITTED — RESPONSE PENDING** (**separate** from ESC HTN and from chest-pain sources). Permission requested **YES**; permission granted **NO / PENDING**; written permission received **NO**; `content_ingestion_allowed` **NO**; production clinical rules / `approved_prod` **BLOCKED**; production rule count **0**. **Not in catalog YAML.** Request date **not recorded in repository**. **Application submission does not constitute permission or license grant.**
 - Catalog YAML **unchanged** in 3A (no `licensed` promotion without written permission).
 
 ## Alert-fatigue requirements (formal)
