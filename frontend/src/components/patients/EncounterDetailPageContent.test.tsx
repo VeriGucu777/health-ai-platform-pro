@@ -69,6 +69,43 @@ describe("EncounterDetailPageContent", () => {
     expect(screen.queryByRole("button", { name: "Add complaint" })).not.toBeInTheDocument();
   });
 
+  it("renders Clinical Copilot panel on active cardiology encounter", async () => {
+    fetchClinicalEncounterDetail.mockResolvedValue({
+      encounter: {
+        id: "e-active",
+        patient_id: "p1",
+        organization_id: "o1",
+        clinician_user_id: "d1",
+        specialty_key: "cardiology",
+        status: "active",
+        locale: "tr",
+        started_at: "2026-01-01T10:00:00Z",
+        ended_at: null,
+        appointment_id: null,
+        version: 1,
+      },
+      complaints: [],
+      findings: [],
+      question_responses: [],
+      final_summary: null,
+    });
+
+    render(
+      <EncounterDetailPageContent
+        patientId="p1"
+        encounterId="e-active"
+        accessToken="token"
+        labels={labels}
+        formatDateTime={(v) => v}
+        onUnauthorized={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByRole("heading", { name: labels.copilot.title })).toBeInTheDocument();
+    expect(screen.getByText(labels.copilot.disclaimer)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: labels.copilot.evaluateButton })).toBeInTheDocument();
+  });
+
   it("shows safe 404 masking message", async () => {
     const { ApiClientError } = await import("@/lib/api/client");
     fetchClinicalEncounterDetail.mockRejectedValue(new ApiClientError("missing", 404, { message: "secret" }));
